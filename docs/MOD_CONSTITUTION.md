@@ -242,7 +242,7 @@ No agent can grant exceptions to Prohibited Content rules. Restricted Content ru
 Jawwing is committed to full transparency about the AI models used to enforce this Constitution.
 
 ### T-6: Current Model
-Moderation decisions are made by **`gemini-2.0-flash`** (Google). This model was selected for its fast inference (~200ms), cost-effectiveness at scale, strong instruction-following for rule-based decisions, and sufficient capability for text content moderation.
+Moderation decisions are made by **`gemini-2.5-flash`** (Google). This model was selected for its fast inference (~200ms), cost-effectiveness at scale, strong instruction-following for rule-based decisions, and sufficient capability for text content moderation.
 
 ### T-7: Model Selection Criteria
 Any model used for moderation must meet all of the following constitutional standards:

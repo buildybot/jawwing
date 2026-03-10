@@ -35,6 +35,7 @@ export default function Header({
         zIndex: 40,
       }}
     >
+      {/* Main row */}
       <div
         style={{ maxWidth: "640px" }}
         className="mx-auto flex items-center justify-between px-4 py-3"
@@ -54,8 +55,8 @@ export default function Header({
           JAWWING
         </Link>
 
-        {/* Right side */}
-        <div className="flex items-center gap-4">
+        {/* Center: location / territory selector */}
+        <div className="flex-1 flex justify-center">
           {showSelector ? (
             <TerritorySelector
               userLat={userLat}
@@ -75,44 +76,74 @@ export default function Header({
               {location.toUpperCase()}
             </span>
           )}
-
-          {user ? (
-            /* Authenticated: show display name + territory */
-            <Link
-              href="/profile"
-              style={{
-                ...MONO,
-                color: "#C0C0C0",
-                fontSize: "0.6875rem",
-                letterSpacing: "0.06em",
-                textDecoration: "none",
-              }}
-              className="hover:text-white transition-colors hidden sm:inline"
-            >
-              {user.displayName.toUpperCase()}
-              {user.territory ? ` · ${user.territory.toUpperCase()}` : ""}
-            </Link>
-          ) : (
-            /* Unauthenticated: show LOGIN button */
-            <Link
-              href="/login"
-              style={{
-                ...MONO,
-                letterSpacing: "0.08em",
-                fontSize: "0.6875rem",
-                fontWeight: 600,
-                color: "#FFFFFF",
-                background: "transparent",
-                border: "1px solid #FFFFFF",
-                padding: "5px 14px",
-                textDecoration: "none",
-              }}
-              className="hover:bg-white hover:text-black transition-colors"
-            >
-              LOGIN
-            </Link>
-          )}
         </div>
+
+        {/* Right side: auth state */}
+        {user ? (
+          <Link
+            href="/profile"
+            style={{
+              ...MONO,
+              color: "#C0C0C0",
+              fontSize: "0.6875rem",
+              letterSpacing: "0.06em",
+              textDecoration: "none",
+            }}
+            className="hover:text-white transition-colors"
+          >
+            {user.displayName.toUpperCase()}
+            {user.territory ? ` · ${user.territory.toUpperCase()}` : ""}
+          </Link>
+        ) : (
+          <Link
+            href="/login"
+            style={{
+              ...MONO,
+              letterSpacing: "0.08em",
+              fontSize: "0.6875rem",
+              fontWeight: 600,
+              color: "#FFFFFF",
+              background: "transparent",
+              border: "1px solid #FFFFFF",
+              padding: "5px 14px",
+              textDecoration: "none",
+              whiteSpace: "nowrap",
+            }}
+            className="hover:bg-white hover:text-black transition-colors"
+          >
+            SIGN UP
+          </Link>
+        )}
+      </div>
+
+      {/* Sub-nav row */}
+      <div
+        style={{
+          maxWidth: "640px",
+          borderTop: "1px solid #0F0F0F",
+        }}
+        className="mx-auto flex items-center gap-5 px-4 py-1"
+      >
+        {[
+          { href: "/about", label: "ABOUT" },
+          { href: "/constitution", label: "CONSTITUTION" },
+          { href: "/transparency", label: "TRANSPARENCY" },
+        ].map(({ href, label }) => (
+          <Link
+            key={href}
+            href={href}
+            style={{
+              ...MONO,
+              fontSize: "0.5625rem",
+              letterSpacing: "0.08em",
+              color: "#333333",
+              textDecoration: "none",
+            }}
+            className="hover:text-[#777777] transition-colors"
+          >
+            {label}
+          </Link>
+        ))}
       </div>
     </header>
   );

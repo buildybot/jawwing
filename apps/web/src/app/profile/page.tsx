@@ -86,7 +86,7 @@ function ProfileContent() {
 
   const handleDeleteAccount = () => {
     // Future: call DELETE /api/v1/users/me
-    alert("DELETE ACCOUNT — Not yet implemented.");
+    alert("DELETE ACCOUNT - Not yet implemented.");
     setShowDeleteConfirm(false);
   };
 

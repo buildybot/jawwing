@@ -208,7 +208,7 @@ const MOD_ACTION_DEFS = [
     id: SEED_PREFIX+"modact000000001",
     post_id: POST_DEFS[13].id, // "Congress actually passed something"
     action: "approve" as const,
-    rule_cited: "Rule 1 — No targeted harassment or personal attacks",
+    rule_cited: "Rule 1 - No targeted harassment or personal attacks",
     reasoning: "Post is political satire with no specific target. Content is clearly humorous, widely relatable, and does not violate community standards. Political commentary is protected expression under the Jawwing Constitution. Approving for public visibility.",
     hoursOld: 0.9,
   },
@@ -216,7 +216,7 @@ const MOD_ACTION_DEFS = [
     id: SEED_PREFIX+"modact000000002",
     post_id: POST_DEFS[19].id, // "raccoon walked into CVS"
     action: "approve" as const,
-    rule_cited: "Rule 3 — No spam or repetitive low-effort content",
+    rule_cited: "Rule 3 - No spam or repetitive low-effort content",
     reasoning: "Post is original, locally specific, and genuinely entertaining. First-person observation of a local wildlife encounter. No spam indicators. Score trajectory positive (+141 in 1hr). Approved.",
     hoursOld: 0.6,
   },
@@ -224,7 +224,7 @@ const MOD_ACTION_DEFS = [
     id: SEED_PREFIX+"modact000000003",
     post_id: POST_DEFS[8].id, // "Ben's Chili Bowl is overrated"
     action: "flag" as const,
-    rule_cited: "Rule 5 — No content designed to harass local businesses",
+    rule_cited: "Rule 5 - No content designed to harass local businesses",
     reasoning: "Post singles out a specific local business by name with strong negative framing. While opinion posts are generally allowed, this one has generated significant heated discussion (20 replies). Flagging for human review to determine if it crosses into targeted business harassment territory. Not removing pending review.",
     hoursOld: 11.2,
   },
@@ -232,7 +232,7 @@ const MOD_ACTION_DEFS = [
     id: SEED_PREFIX+"modact000000004",
     post_id: POST_DEFS[6].id, // "someone reading a newspaper"
     action: "warn" as const,
-    rule_cited: "Rule 4 — Do not post identifying information about individuals",
+    rule_cited: "Rule 4 - Do not post identifying information about individuals",
     reasoning: "Original version of post contained a physical description of the commuter. Edited version reviewed here is acceptable, but issuing warning to poster account that describing specific individuals' appearance is not permitted even in humorous contexts. No further action required on this version.",
     hoursOld: 19.5,
   },
@@ -240,7 +240,7 @@ const MOD_ACTION_DEFS = [
     id: SEED_PREFIX+"modact000000005",
     post_id: POST_DEFS[20].id, // "Tenleytown Whole Foods"
     action: "remove" as const,
-    rule_cited: "Rule 2 — No content that constitutes defamation or false statements of fact",
+    rule_cited: "Rule 2 - No content that constitutes defamation or false statements of fact",
     reasoning: "Post was edited after initial approval to include a false claim that a specific named store employee engaged in misconduct. This constitutes a false statement of fact about an identifiable individual. Post removed under Rule 2. Poster account flagged for review. Original harmless version did not violate policy; this edit does.",
     hoursOld: 17.8,
   },

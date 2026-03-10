@@ -231,7 +231,7 @@ export default function ConstitutionPage() {
               CURRENT MODEL
             </div>
             <div style={{ ...MONO, color: "#FFFFFF", fontSize: "1.125rem", letterSpacing: "0.04em", fontWeight: 700, marginBottom: "6px" }}>
-              gemini-2.0-flash
+              gemini-2.5-flash
             </div>
             <div style={{ ...MONO, color: "#555555", fontSize: "0.6875rem", letterSpacing: "0.04em", marginBottom: "14px" }}>
               GOOGLE · ACTIVE

@@ -79,7 +79,7 @@ export const CONSTITUTION_RULES = {
       id: "R-5",
       name: "Graphic Violence",
       description:
-        "Gratuitous graphic violence — shock content posted for its own sake — restricted in general communities. News, journalism, documentation of real events, and safety information may involve graphic elements and will be evaluated in context.",
+        "Gratuitous graphic violence (shock content posted for its own sake) is restricted in general communities. News, journalism, documentation of real events, and safety information may involve graphic elements and will be evaluated in context.",
       clarification: null,
     },
   ],
@@ -91,7 +91,7 @@ export const CONSTITUTION_RULES = {
     "Transparency. Every moderation action is logged with rule cited and reasoning.",
   ],
   technology: {
-    currentModel: "gemini-2.0-flash",
+    currentModel: "gemini-2.5-flash",
     modelProvider: "Google",
     rationale:
       "Fast inference (~200ms), cost-effective for high-volume content review, strong instruction following for rule-based decisions, sufficient capability for text content moderation.",
@@ -207,7 +207,7 @@ export async function reviewPost(post: Post): Promise<ModerationDecision> {
     const fallbackDecision: ModerationDecision = {
       action: "approve",
       ruleCited: null,
-      reasoning: "Moderation service unavailable — auto-approved",
+      reasoning: "Moderation service unavailable. Auto-approved.",
       confidence: 1,
     };
     try {
@@ -229,7 +229,7 @@ export async function reviewPost(post: Post): Promise<ModerationDecision> {
   }
 
   const model = genAI.getGenerativeModel({
-    model: "gemini-2.0-flash",
+    model: "gemini-2.5-flash",
     systemInstruction: SYSTEM_PROMPT,
   });
 
@@ -263,7 +263,7 @@ export async function reviewPost(post: Post): Promise<ModerationDecision> {
     decision = {
       action: "flag",
       ruleCited: null,
-      reasoning: "AI review failed — flagged for secondary review.",
+      reasoning: "AI review failed. Flagged for secondary review.",
       confidence: 0,
     };
   }

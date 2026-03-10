@@ -83,7 +83,7 @@ export async function handleAppeal(modActionId: string): Promise<AppealResult> {
 
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
-    model: "gemini-2.0-flash",
+    model: "gemini-2.5-flash",
     systemInstruction: buildAppealSystemPrompt(),
   });
 
@@ -174,7 +174,7 @@ export async function communityVote(
     return {
       voteId: "",
       triggered: false,
-      reason: `Only ${appealCount} appeal(s) — need ${APPEAL_THRESHOLD_FOR_COMMUNITY_VOTE} to trigger community vote.`,
+      reason: `Only ${appealCount} appeal(s). Need ${APPEAL_THRESHOLD_FOR_COMMUNITY_VOTE} to trigger community vote.`,
     };
   }
 

@@ -99,12 +99,14 @@ export default function PostCard({ post, onLoginRequired }: PostCardProps) {
   const [score, setScore] = useState(post.score);
   const [voted, setVoted] = useState<"up" | "down" | null>(null);
   const [voting, setVoting] = useState(false);
+  const [showVotePrompt, setShowVotePrompt] = useState(false);
   const toast = useToast();
 
   const vote = async (dir: "up" | "down") => {
     if (voting) return;
 
     if (!isAuthenticated()) {
+      setShowVotePrompt(true);
       onLoginRequired?.();
       return;
     }
