@@ -17,11 +17,11 @@ Jawwing does not currently operate as a registered legal entity. References to "
   },
   {
     title: "2. Age Requirements",
-    body: `You must be at least 13 years old to use Jawwing. No one under 13 may use the Service, create an account, or post content — this is a hard floor required by U.S. law (COPPA).
+    body: `You must be at least 18 years old to use Jawwing. No one under 18 may use the Service, create an account, or post content.
 
-The platform carries a 17+ content rating. The Service may contain mature themes or adult content not suitable for minors. We strongly recommend users be at least 17.
+The Service is available only to users located in the United States. By using Jawwing, you represent that you are at least 18 years old and located in the United States.
 
-If you believe your child under 13 has used Jawwing, contact legal@jawwing.com immediately. We will delete any associated data.
+If you believe a minor has used Jawwing, contact legal@jawwing.com immediately. We will delete any associated data.
 
 By using the Service, you represent that you are at least 13 years old.`,
   },
@@ -132,10 +132,10 @@ To opt out of arbitration, email legal@jawwing.com within 30 days of first using
     body: `These Terms are governed by the laws of the United States and the State of Delaware, without regard to conflict-of-law principles. To the extent any dispute is heard in court, you consent to jurisdiction in federal or state courts located in Delaware.`,
   },
   {
-    title: "19. International Users",
-    body: `The Service is operated from the United States and governed by U.S. law. If you access the Service from outside the U.S., you are responsible for compliance with local laws.
+    title: "19. Geographic Restriction",
+    body: `The Service is available only within the United States. By using Jawwing, you represent that you are physically located in the United States. We reserve the right to restrict access from outside the U.S. at any time.
 
-EU/EEA Users: If GDPR applies to you, our legal basis for processing is legitimate interests. You may have rights of access, deletion, and portability. Contact privacy@jawwing.com. You may also have the right to lodge a complaint with your local data protection authority.`,
+The Service is operated from the United States and governed exclusively by U.S. law.`,
   },
   {
     title: "20. Changes to These Terms",

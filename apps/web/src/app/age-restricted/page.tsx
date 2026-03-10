@@ -55,7 +55,7 @@ export default function AgeRestrictedPage() {
               margin: 0,
             }}
           >
-            Jawwing is for users 17 and older.
+            Jawwing is for users 18 and older, located in the United States.
           </p>
         </div>
 

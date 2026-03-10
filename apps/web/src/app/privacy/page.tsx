@@ -122,10 +122,10 @@ Resend — email verification one-time codes (resend.com/privacy).
 We do not sell your data to any third party. We do not share data with data brokers, advertisers, or analytics companies.`,
   },
   {
-    title: "14. Children's Privacy (COPPA)",
-    body: `Jawwing is not directed to children under 13. We do not knowingly collect personal information from anyone under 13. If we become aware we have collected data from someone under 13, we will delete it immediately.
+    title: "14. Age Restriction",
+    body: `Jawwing is restricted to users 18 years of age or older. We do not knowingly collect personal information from anyone under 18. If we become aware we have collected data from someone under 18, we will delete it immediately.
 
-If you are a parent or guardian and believe your child under 13 has used Jawwing, contact legal@jawwing.com.`,
+If you are a parent or guardian and believe a minor has used Jawwing, contact legal@jawwing.com.`,
   },
   {
     title: "15. International Users and GDPR",

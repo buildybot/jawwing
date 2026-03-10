@@ -24,7 +24,7 @@ export default function AgeGate({ children }: { children: React.ReactNode }) {
     setConfirmed(true);
   };
 
-  const handleUnder17 = () => {
+  const handleUnder18 = () => {
     router.push("/age-restricted");
   };
 
@@ -93,7 +93,7 @@ export default function AgeGate({ children }: { children: React.ReactNode }) {
               marginBottom: "20px",
             }}
           >
-            JAWWING IS FOR<br />USERS 17 AND OLDER
+            JAWWING IS FOR<br />USERS 18 AND OLDER
           </p>
           <p
             style={{
@@ -103,7 +103,7 @@ export default function AgeGate({ children }: { children: React.ReactNode }) {
               margin: 0,
             }}
           >
-            By continuing, you confirm you are at least 17 years old.
+            By continuing, you confirm you are at least 18 years old and located in the United States.
           </p>
         </div>
 
@@ -125,10 +125,10 @@ export default function AgeGate({ children }: { children: React.ReactNode }) {
               transition: "background 150ms",
             }}
           >
-            I AM 17 OR OLDER
+            I AM 18+ AND IN THE US
           </button>
           <button
-            onClick={handleUnder17}
+            onClick={handleUnder18}
             style={{
               ...MONO,
               background: "transparent",
@@ -143,7 +143,7 @@ export default function AgeGate({ children }: { children: React.ReactNode }) {
               transition: "color 150ms, border-color 150ms",
             }}
           >
-            I AM UNDER 17
+            I AM UNDER 18
           </button>
         </div>
       </div>

@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { db, mod_actions, posts, nanoid, now } from "@jawwing/db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import type { Post } from "@jawwing/db";
 
 // ─── Constitution Rules (parseable constant) ──────────────────────────────────
@@ -373,23 +373,13 @@ export async function reviewPost(post: Post): Promise<ModerationDecision> {
       appeal_result: null,
     });
 
-    // Update post status if action warrants it, and store confidence score
+    // Update post status and store confidence score (raw SQL for reliability)
     if (decision.action === "remove") {
-      await db
-        .update(posts)
-        .set({ status: "removed", mod_action_id: actionId, mod_confidence: decision.confidence })
-        .where(eq(posts.id, post.id));
+      await db.execute(sql`UPDATE posts SET status = 'removed', mod_action_id = ${actionId}, mod_confidence = ${decision.confidence} WHERE id = ${post.id}`);
     } else if (decision.action === "flag" || decision.action === "warn") {
-      await db
-        .update(posts)
-        .set({ status: "moderated", mod_action_id: actionId, mod_confidence: decision.confidence })
-        .where(eq(posts.id, post.id));
+      await db.execute(sql`UPDATE posts SET status = 'moderated', mod_action_id = ${actionId}, mod_confidence = ${decision.confidence} WHERE id = ${post.id}`);
     } else {
-      // approve or other — still store confidence
-      await db
-        .update(posts)
-        .set({ mod_confidence: decision.confidence })
-        .where(eq(posts.id, post.id));
+      await db.execute(sql`UPDATE posts SET mod_confidence = ${decision.confidence} WHERE id = ${post.id}`);
     }
   } catch (dbErr) {
     console.error("[mod/engine] Failed to log mod action:", dbErr);
