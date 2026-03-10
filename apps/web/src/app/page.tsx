@@ -269,77 +269,78 @@ export default function FeedPage() {
         const currentOffset = reset ? 0 : offset;
         let fetchedPosts: Post[];
 
-        if (selectedTerritory.type === "city") {
-          // Remote city selected — fetch using city center coords + territory mode
-          const data = await fetchPosts(
-            selectedTerritory.city.lat,
-            selectedTerritory.city.lng,
-            activeTab as "hot" | "new" | "top",
-            LIMIT,
-            currentOffset,
-            "territory"
-          );
-          fetchedPosts = data.posts;
+        // Determine feed coordinates — remote city center or user GPS
+        const feedLat = isRemoteTerritory ? selectedTerritory.city.lat : userLat;
+        const feedLng = isRemoteTerritory ? selectedTerritory.city.lng : userLng;
+
+        // Scope determines API mode for both local and remote browsing
+        let apiMode: "auto" | "radius" | "territory" | "everywhere" = "auto";
+        let radiusMeters: number | undefined;
+
+        if (feedScope === "local") {
+          apiMode = "radius";
+          radiusMeters = 5000; // 5km neighborhood
+        } else if (feedScope === "metro") {
+          if (isRemoteTerritory) {
+            // Remote city: use 30km radius around city center (no H3 territory)
+            apiMode = "radius";
+            radiusMeters = 30000;
+          } else {
+            apiMode = "territory"; // Local: use H3 hex territory
+          }
         } else {
-          // Scope-based feed
-          let apiMode: "auto" | "radius" | "territory" | "everywhere" = "auto";
-          let radiusMeters: number | undefined;
+          apiMode = "everywhere";
+        }
+
+        const data = await fetchPosts(
+          feedLat,
+          feedLng,
+          activeTab as "hot" | "new" | "top",
+          LIMIT,
+          currentOffset,
+          apiMode,
+          radiusMeters
+        );
+        fetchedPosts = data.posts;
+
+        // Auto-expand: if fewer than 10 posts, progressively widen
+        const MIN_POSTS = 10;
+        if (reset && fetchedPosts.length < MIN_POSTS) {
+          const expansionSteps: Array<{ mode: "radius" | "territory" | "everywhere"; radius?: number; label: string }> = [];
 
           if (feedScope === "local") {
-            apiMode = "radius";
-            radiusMeters = 5000;
+            expansionSteps.push(
+              { mode: "radius", radius: 10000, label: "10KM" },
+              { mode: "radius", radius: 20000, label: "20KM" },
+            );
+            if (isRemoteTerritory) {
+              expansionSteps.push({ mode: "radius", radius: 30000, label: "METRO" });
+            } else {
+              expansionSteps.push({ mode: "territory", label: "METRO" });
+            }
+            expansionSteps.push({ mode: "everywhere", label: "EVERYWHERE" });
           } else if (feedScope === "metro") {
-            apiMode = "territory";
-          } else {
-            apiMode = "everywhere";
+            expansionSteps.push(
+              { mode: "everywhere", label: "EVERYWHERE" },
+            );
           }
 
-          const data = await fetchPosts(
-            userLat,
-            userLng,
-            activeTab as "hot" | "new" | "top",
-            LIMIT,
-            currentOffset,
-            apiMode,
-            radiusMeters
-          );
-          fetchedPosts = data.posts;
-
-          // Auto-expand: if fewer than 10 posts, progressively widen radius
-          const MIN_POSTS = 10;
-          if (reset && fetchedPosts.length < MIN_POSTS) {
-            const expansionSteps: Array<{ mode: "radius" | "territory" | "everywhere"; radius?: number; label: string }> = [];
-            
-            if (feedScope === "local") {
-              expansionSteps.push(
-                { mode: "radius", radius: 10000, label: "10KM" },
-                { mode: "radius", radius: 20000, label: "20KM" },
-                { mode: "territory", label: "DC METRO" },
-                { mode: "everywhere", label: "EVERYWHERE" },
-              );
-            } else if (feedScope === "metro") {
-              expansionSteps.push(
-                { mode: "everywhere", label: "EVERYWHERE" },
-              );
-            }
-            // Keep expanding until we have enough posts or run out of steps
-            for (const step of expansionSteps) {
-              if (fetchedPosts.length >= MIN_POSTS) break;
-              const fallback = await fetchPosts(
-                userLat, userLng, activeTab as "hot" | "new" | "top", LIMIT, 0, step.mode, step.radius
-              );
-              if (fallback.posts.length > fetchedPosts.length) {
-                fetchedPosts = fallback.posts;
-                setExpandedScope(true);
-                setExpandedLabel(step.label);
-              }
+          for (const step of expansionSteps) {
+            if (fetchedPosts.length >= MIN_POSTS) break;
+            const fallback = await fetchPosts(
+              feedLat, feedLng, activeTab as "hot" | "new" | "top", LIMIT, 0, step.mode, step.radius
+            );
+            if (fallback.posts.length > fetchedPosts.length) {
+              fetchedPosts = fallback.posts;
+              setExpandedScope(true);
+              setExpandedLabel(step.label);
             }
           }
         }
 
         // Client-side distance-boosted sort for HOT tab
-        if (activeTab === "hot" && selectedTerritory.type !== "city") {
-          fetchedPosts = sortPostsHot(fetchedPosts, userLat, userLng, feedScope);
+        if (activeTab === "hot") {
+          fetchedPosts = sortPostsHot(fetchedPosts, feedLat, feedLng, feedScope);
         }
 
         if (reset) {
