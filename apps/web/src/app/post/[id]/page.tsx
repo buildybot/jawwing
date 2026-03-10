@@ -20,6 +20,38 @@ const MONO = { fontFamily: "var(--font-mono), monospace" } as const;
 const MAX_CHARS = 300;
 const MAX_DEPTH = 4;
 
+// ─── URL / media helpers ─────────────────────────────────────────────────────
+
+const URL_RE = /https?:\/\/[^\s<>"')\]]+/gi;
+const IMAGE_RE = /https?:\/\/[^\s<>"')\]]+\.(?:jpg|jpeg|png|gif|webp)(\?[^\s<>"')\]]*)?/gi;
+const VIDEO_DOMAIN_RE = /(?:youtube\.com|youtu\.be|tiktok\.com|vimeo\.com)/i;
+
+function extractYouTubeId(url: string): string | null {
+  const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([a-zA-Z0-9_-]{11})/);
+  return m ? m[1] : null;
+}
+
+function ContentWithLinks({ content, fontSize }: { content: string; fontSize?: string }) {
+  const parts: React.ReactNode[] = [];
+  let last = 0;
+  const re = new RegExp(URL_RE.source, "gi");
+  let match;
+  while ((match = re.exec(content)) !== null) {
+    if (match.index > last) parts.push(content.slice(last, match.index));
+    const url = match[0].replace(/[.,;:!?)]+$/, "");
+    parts.push(
+      <a key={match.index} href={url} target="_blank" rel="noopener noreferrer"
+        style={{ color: "#888888", textDecoration: "underline", textUnderlineOffset: "3px", wordBreak: "break-all" }}
+        className="hover:text-[#CCCCCC]">
+        {url.replace(/^https?:\/\/(www\.)?/, "").slice(0, 50)}{url.replace(/^https?:\/\/(www\.)?/, "").length > 50 ? "..." : ""}
+      </a>
+    );
+    last = match.index + match[0].length;
+  }
+  if (last < content.length) parts.push(content.slice(last));
+  return <span style={{ fontSize }}>{parts}</span>;
+}
+
 // ─── Reply vote state (client-side only, optimistic) ─────────────────────────
 
 interface ReplyVoteState {
@@ -508,9 +540,86 @@ export default function PostPage() {
                 padding: "20px 16px",
               }}
             >
-              <p style={{ color: "#FFFFFF", fontSize: "1.0625rem", lineHeight: "1.65", marginBottom: "20px" }}>
-                {post.content}
+              {/* Content with clickable links */}
+              <p style={{ color: "#FFFFFF", fontSize: "1.0625rem", lineHeight: "1.65", marginBottom: "16px" }}>
+                <ContentWithLinks content={post.content} />
               </p>
+
+              {/* Post image */}
+              {post.image_url && (
+                <div style={{
+                  width: "100%", maxHeight: "500px", overflow: "hidden",
+                  background: "#0A0A0A", border: "1px solid #1F1F1F",
+                  marginBottom: "16px", display: "flex", justifyContent: "center",
+                }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={post.image_url} alt="" loading="lazy"
+                    style={{ width: "100%", maxHeight: "500px", objectFit: "contain", display: "block" }} />
+                </div>
+              )}
+
+              {/* YouTube / video preview */}
+              {(() => {
+                const ytId = extractYouTubeId(post.content);
+                if (ytId) return (
+                  <div style={{
+                    width: "100%", aspectRatio: "16/9", background: "#0A0A0A",
+                    border: "1px solid #1F1F1F", marginBottom: "16px", overflow: "hidden",
+                  }}>
+                    <iframe
+                      src={`https://www.youtube.com/embed/${ytId}`}
+                      style={{ width: "100%", height: "100%", border: "none" }}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      title="Video"
+                    />
+                  </div>
+                );
+                if (post.video_url && post.video_thumbnail) {
+                  const vidYtId = extractYouTubeId(post.video_url);
+                  if (vidYtId) return (
+                    <div style={{
+                      width: "100%", aspectRatio: "16/9", background: "#0A0A0A",
+                      border: "1px solid #1F1F1F", marginBottom: "16px", overflow: "hidden",
+                    }}>
+                      <iframe
+                        src={`https://www.youtube.com/embed/${vidYtId}`}
+                        style={{ width: "100%", height: "100%", border: "none" }}
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        title="Video"
+                      />
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+
+              {/* Link preview for non-image, non-video URLs */}
+              {(() => {
+                const urls = post.content.match(URL_RE);
+                if (!urls) return null;
+                const linkUrl = urls.find(u => !IMAGE_RE.test(u) && !VIDEO_DOMAIN_RE.test(u));
+                if (!linkUrl) return null;
+                const clean = linkUrl.replace(/[.,;:!?)]+$/, "");
+                const domain = clean.replace(/^https?:\/\/(www\.)?/, "").split("/")[0];
+                return (
+                  <a href={clean} target="_blank" rel="noopener noreferrer"
+                    style={{
+                      display: "block", border: "1px solid #1F1F1F", background: "#0A0A0A",
+                      padding: "12px 14px", marginBottom: "16px", textDecoration: "none",
+                      transition: "border-color 150ms",
+                    }}
+                    className="hover:border-[#333]">
+                    <span style={{ ...MONO, color: "#555", fontSize: "0.625rem", letterSpacing: "0.06em", display: "block", marginBottom: "4px" }}>
+                      {domain.toUpperCase()}
+                    </span>
+                    <span style={{ color: "#AAAAAA", fontSize: "0.8125rem", wordBreak: "break-all" }}>
+                      {clean.slice(0, 80)}{clean.length > 80 ? "..." : ""}
+                    </span>
+                  </a>
+                );
+              })()}
 
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
