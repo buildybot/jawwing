@@ -39,6 +39,7 @@ export interface Post {
   image_url?: string | null;
   image_width?: number | null;
   image_height?: number | null;
+  metro?: string | null;
   // computed client-side
   timeAgo?: string;
   distance?: string;

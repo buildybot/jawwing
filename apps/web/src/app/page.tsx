@@ -100,6 +100,7 @@ function toCardPost(
     expires_at: post.expires_at,
     territoryName,
     user_id: post.user_id,
+    metro: post.metro ?? null,
   };
 }
 
@@ -822,6 +823,7 @@ export default function FeedPage() {
                   >
                     <PostCard
                       post={toCardPost(post, userLat, userLng, territoryName)}
+                      feedScope={feedScope}
                     />
                   </div>
                 ))}

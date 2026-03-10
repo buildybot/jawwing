@@ -19,12 +19,14 @@ export interface Post {
   expires_at?: number;
   territoryName?: string;
   user_id?: string;
+  metro?: string | null;
 }
 
 export interface PostCardProps {
   post: Post;
   /** "card" = standard list layout (default). "fullscreen" = TikTok-style snap layout. */
   variant?: "card" | "fullscreen";
+  feedScope?: string;
 }
 
 const MONO = { fontFamily: "var(--font-mono), monospace" } as const;
@@ -330,7 +332,7 @@ function ExpiryIndicator({ expiresAt }: { expiresAt: number }) {
 
 // ─── PostCard ─────────────────────────────────────────────────────────────────
 
-function PostCard({ post, variant = "card" }: PostCardProps) {
+function PostCard({ post, variant = "card", feedScope }: PostCardProps) {
   const replyCount = post.reply_count ?? post.replyCount ?? 0;
   const [score, setScore] = useState(post.score);
   const [voted, setVoted] = useState<"up" | "down" | null>(null);
@@ -487,7 +489,12 @@ function PostCard({ post, variant = "card" }: PostCardProps) {
                 {post.timeAgo}
               </span>
             )}
-
+            {feedScope === "country" && post.metro && (
+              <>
+                <span style={{ color: "#1F1F1F" }}>·</span>
+                <span style={{ ...MONO, fontSize: "0.625rem", letterSpacing: "0.08em", color: "#555555", textTransform: "uppercase" }}>{post.metro}</span>
+              </>
+            )}
           </div>
         </div>
 
@@ -715,6 +722,12 @@ function PostCard({ post, variant = "card" }: PostCardProps) {
             <>
               <span style={{ color: "#1F1F1F" }}>·</span>
               <span>{post.timeAgo}</span>
+            </>
+          )}
+          {feedScope === "country" && post.metro && (
+            <>
+              <span style={{ color: "#1F1F1F" }}>·</span>
+              <span style={{ ...MONO, fontSize: "0.625rem", letterSpacing: "0.08em", color: "#555555", textTransform: "uppercase" }}>{post.metro}</span>
             </>
           )}
         </Link>
