@@ -2,35 +2,27 @@
   "name": "@jawwing/api",
   "version": "0.1.0",
   "description": "Shared API utilities for Jawwing",
-  "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./index.ts",
+  "types": "./index.ts",
   "exports": {
-    ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
-    },
-    "./geo": {
-      "import": "./dist/geo.js",
-      "types": "./dist/geo.d.ts"
-    },
-    "./feed": {
-      "import": "./dist/feed.js",
-      "types": "./dist/feed.d.ts"
-    },
-    "./middleware": {
-      "import": "./dist/middleware.js",
-      "types": "./dist/middleware.d.ts"
-    }
+    ".": "./index.ts",
+    "./geo": "./geo.ts",
+    "./feed": "./feed.ts",
+    "./middleware": "./middleware.ts",
+    "./auth": "./auth.ts"
   },
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch"
   },
   "dependencies": {
-    "h3-js": "^4.1.0"
+    "h3-js": "^4.1.0",
+    "jsonwebtoken": "^9.0.0",
+    "nanoid": "^5.0.0",
+    "twilio": "^5.0.0"
   },
   "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.0",
     "@types/node": "^22.0.0",
     "typescript": "^5.0.0"
   }

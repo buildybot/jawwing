@@ -2,34 +2,20 @@
   "name": "@jawwing/mod",
   "version": "0.1.0",
   "description": "AI moderation engine for Jawwing",
-  "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./index.ts",
+  "types": "./index.ts",
   "exports": {
-    ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
-    },
-    "./engine": {
-      "import": "./dist/engine.js",
-      "types": "./dist/engine.d.ts"
-    },
-    "./reviewer": {
-      "import": "./dist/reviewer.js",
-      "types": "./dist/reviewer.d.ts"
-    },
-    "./automod": {
-      "import": "./dist/automod.js",
-      "types": "./dist/automod.d.ts"
-    }
+    ".": "./index.ts",
+    "./engine": "./engine.ts",
+    "./reviewer": "./reviewer.ts",
+    "./automod": "./automod.ts"
   },
   "scripts": {
     "build": "tsc",
     "dev": "tsx watch index.ts"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.21.0",
-    "@jawwing/db": "workspace:*"
+    "@google/generative-ai": "^0.21.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

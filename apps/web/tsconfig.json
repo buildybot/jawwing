@@ -22,7 +22,9 @@
       "@/*": ["./src/*"],
       "@jawwing/api": ["../../packages/api/index.ts"],
       "@jawwing/api/*": ["../../packages/api/*.ts"],
-      "@jawwing/db": ["../../packages/db/index.ts"]
+      "@jawwing/db": ["../../packages/db/index.ts"],
+      "@jawwing/mod": ["../../packages/mod/index.ts"],
+      "@jawwing/mod/*": ["../../packages/mod/*.ts"]
     }
   },
   "include": [

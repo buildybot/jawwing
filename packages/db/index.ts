@@ -2,23 +2,31 @@ import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
 import * as schema from "./schema";
 
-// ─── Client ───────────────────────────────────────────────────────────────────
+// ─── Client (lazy init so build doesn't fail without env vars) ────────────────
 
-const url = process.env.TURSO_DATABASE_URL;
-const authToken = process.env.TURSO_AUTH_TOKEN;
+type DbInstance = ReturnType<typeof drizzle<typeof schema>>;
 
-if (!url) {
-  throw new Error("TURSO_DATABASE_URL is required");
+let _db: DbInstance | null = null;
+
+function getDbInstance(): DbInstance {
+  if (!_db) {
+    const url = process.env.TURSO_DATABASE_URL;
+    if (!url) throw new Error("TURSO_DATABASE_URL is required");
+    const authToken = process.env.TURSO_AUTH_TOKEN;
+    const client = createClient({ url, authToken });
+    _db = drizzle(client, { schema });
+  }
+  return _db;
 }
-
-const client = createClient({
-  url,
-  authToken,
-});
 
 // ─── DB instance ──────────────────────────────────────────────────────────────
 
-export const db = drizzle(client, { schema });
+// Proxy so `db` can be imported at module load without env vars present
+export const db = new Proxy({} as DbInstance, {
+  get(_target, prop) {
+    return (getDbInstance() as unknown as Record<string | symbol, unknown>)[prop];
+  },
+});
 
 // ─── Re-export tables ─────────────────────────────────────────────────────────
 

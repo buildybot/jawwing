@@ -1,110 +1,337 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import FeedTabs, { SortTab } from "@/components/FeedTabs";
-import PostCard, { Post } from "@/components/PostCard";
+import PostCard, { Post as PostCardPost } from "@/components/PostCard";
 import CreatePostModal from "@/components/CreatePostModal";
+import { fetchPosts, createPost, isAuthenticated, type Post } from "@/lib/api";
+import { requestLocation, reverseGeocode } from "@/lib/location";
+import { formatTimeAgo, formatDistance } from "@/lib/api";
 
-const MOCK_POSTS: Post[] = [
-  {
-    id: "1",
-    content:
-      "The new coffee shop on Main St is actually incredible. Best espresso I've had in years. They open at 6:30am if anyone needs the early fix.",
-    score: 142,
-    replyCount: 23,
-    timeAgo: "2h ago",
-    distance: "0.3mi",
-  },
-  {
-    id: "2",
-    content:
-      "Why is there always a cop parked in the bike lane outside the library? Cyclists have to swerve into traffic. Someone should report this.",
-    score: 87,
-    replyCount: 41,
-    timeAgo: "4h ago",
-    distance: "0.7mi",
-  },
-  {
-    id: "3",
-    content:
-      "Lost a black lab mix near Riverside Park around noon. She's friendly, answers to Biscuit. Please DM if you see her.",
-    score: 214,
-    replyCount: 18,
-    timeAgo: "6h ago",
-    distance: "1.1mi",
-  },
-  {
-    id: "4",
-    content:
-      "The city repaved Oak Ave and somehow made it worse. New potholes appeared within a week. $2M contract for this?",
-    score: 56,
-    replyCount: 67,
-    timeAgo: "8h ago",
-    distance: "1.4mi",
-  },
-  {
-    id: "5",
-    content:
-      "Farmers market is back this Saturday, 8am–2pm at the usual spot. Vendor list looks stacked this week.",
-    score: 193,
-    replyCount: 12,
-    timeAgo: "10h ago",
-    distance: "0.5mi",
-  },
-  {
-    id: "6",
-    content:
-      "Overheard at the gym: \"I just think people should be more accountable.\" Sir this is a Planet Fitness.",
-    score: 512,
-    replyCount: 88,
-    timeAgo: "14h ago",
-    distance: "0.2mi",
-  },
-];
+const MONO = { fontFamily: "var(--font-mono), monospace" } as const;
+const LIMIT = 20;
+
+function toCardPost(post: Post, userLat?: number, userLng?: number): PostCardPost {
+  return {
+    id: post.id,
+    content: post.content,
+    score: post.score,
+    reply_count: post.reply_count,
+    timeAgo: formatTimeAgo(post.created_at),
+    distance:
+      userLat != null && userLng != null
+        ? formatDistance(userLat, userLng, post.lat, post.lng)
+        : undefined,
+  };
+}
 
 export default function FeedPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<SortTab>("hot");
   const [showModal, setShowModal] = useState(false);
+  const [showLoginBanner, setShowLoginBanner] = useState(false);
 
-  const sortedPosts = [...MOCK_POSTS].sort((a, b) => {
-    if (activeTab === "hot") return b.score - a.score;
-    if (activeTab === "top") return b.score + b.replyCount - (a.score + a.replyCount);
-    return 0;
-  });
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [offset, setOffset] = useState(0);
+
+  const [userLat, setUserLat] = useState<number | undefined>();
+  const [userLng, setUserLng] = useState<number | undefined>();
+  const [locationLabel, setLocationLabel] = useState("Getting location...");
+  const [locationError, setLocationError] = useState(false);
+
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
+  // Get location on mount
+  useEffect(() => {
+    requestLocation()
+      .then(async ({ lat, lng }) => {
+        setUserLat(lat);
+        setUserLng(lng);
+        const label = await reverseGeocode(lat, lng);
+        setLocationLabel(label);
+      })
+      .catch(() => {
+        setLocationError(true);
+        setLocationLabel("Location unavailable");
+      });
+  }, []);
+
+  // Load feed
+  const loadFeed = useCallback(
+    async (reset = false) => {
+      if (locationError && !userLat) {
+        setError("Location required to load feed.");
+        setLoading(false);
+        return;
+      }
+      if (userLat == null || userLng == null) return;
+
+      if (reset) {
+        setLoading(true);
+        setOffset(0);
+        setHasMore(true);
+        setError(null);
+      } else {
+        setLoadingMore(true);
+      }
+
+      try {
+        const currentOffset = reset ? 0 : offset;
+        const data = await fetchPosts(userLat, userLng, activeTab as "hot" | "new" | "top", LIMIT, currentOffset);
+        if (reset) {
+          setPosts(data.posts);
+        } else {
+          setPosts((prev) => [...prev, ...data.posts]);
+        }
+        setOffset(currentOffset + data.posts.length);
+        setHasMore(data.posts.length === LIMIT);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load posts.");
+      } finally {
+        setLoading(false);
+        setLoadingMore(false);
+      }
+    },
+    [userLat, userLng, activeTab, offset, locationError]
+  );
+
+  // Reload when location or tab changes
+  useEffect(() => {
+    if (userLat != null && userLng != null) {
+      loadFeed(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userLat, userLng, activeTab]);
+
+  // Infinite scroll
+  useEffect(() => {
+    if (!loadMoreRef.current) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loadingMore && !loading) {
+          loadFeed(false);
+        }
+      },
+      { threshold: 0.1 }
+    );
+    observer.observe(loadMoreRef.current);
+    return () => observer.disconnect();
+  }, [hasMore, loadingMore, loading, loadFeed]);
+
+  const handleTabChange = (tab: SortTab) => {
+    setActiveTab(tab);
+  };
+
+  const handleCreatePost = async (content: string) => {
+    if (!isAuthenticated()) {
+      setShowLoginBanner(true);
+      throw new Error("Login required");
+    }
+    if (userLat == null || userLng == null) {
+      throw new Error("Location required to post.");
+    }
+    await createPost(content, userLat, userLng);
+    // Reload from top
+    loadFeed(true);
+  };
+
+  const handleFabClick = () => {
+    if (!isAuthenticated()) {
+      setShowLoginBanner(true);
+      return;
+    }
+    setShowModal(true);
+  };
 
   return (
     <div style={{ background: "#000000", minHeight: "100vh" }}>
-      <Header location="Bethesda, MD" />
+      <Header location={locationLabel} />
 
-      <main style={{ maxWidth: "480px" }} className="mx-auto">
-        {/* Tabs */}
-        <FeedTabs active={activeTab} onChange={setActiveTab} />
-
-        {/* Posts — tight stacking, 1px gap */}
-        <div className="flex flex-col" style={{ gap: "2px", paddingTop: "2px" }}>
-          {sortedPosts.map((post) => (
-            <PostCard key={post.id} post={post} />
-          ))}
-        </div>
-
-        <p
+      {/* Login banner */}
+      {showLoginBanner && (
+        <div
           style={{
-            fontFamily: "var(--font-mono), monospace",
-            color: "#333333",
-            fontSize: "0.6875rem",
-            letterSpacing: "0.06em",
-            textAlign: "center",
-            padding: "40px 0 80px",
+            background: "#0A0A0A",
+            border: "1px solid #1F1F1F",
+            borderLeft: "2px solid #FFFFFF",
+            padding: "12px 16px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "12px",
+            maxWidth: "480px",
+            margin: "0 auto",
           }}
         >
-          5 MILE RADIUS · ANONYMOUS
-        </p>
+          <span style={{ ...MONO, color: "#A0A0A0", fontSize: "0.75rem", letterSpacing: "0.04em" }}>
+            SIGN IN TO POST OR VOTE
+          </span>
+          <div style={{ display: "flex", gap: "8px" }}>
+            <button
+              onClick={() => router.push("/login")}
+              style={{
+                ...MONO,
+                background: "#FFFFFF",
+                color: "#000000",
+                border: "none",
+                padding: "6px 14px",
+                fontSize: "0.75rem",
+                fontWeight: 600,
+                letterSpacing: "0.06em",
+                cursor: "pointer",
+              }}
+            >
+              LOGIN
+            </button>
+            <button
+              onClick={() => setShowLoginBanner(false)}
+              style={{
+                ...MONO,
+                background: "none",
+                color: "#555555",
+                border: "none",
+                padding: "6px",
+                fontSize: "0.875rem",
+                cursor: "pointer",
+              }}
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
+      <main style={{ maxWidth: "480px" }} className="mx-auto">
+        <FeedTabs active={activeTab} onChange={handleTabChange} />
+
+        {/* Loading skeleton */}
+        {loading && (
+          <div className="flex flex-col" style={{ gap: "2px", paddingTop: "2px" }}>
+            {[...Array(5)].map((_, i) => (
+              <div
+                key={i}
+                style={{
+                  background: "#0A0A0A",
+                  border: "1px solid #1F1F1F",
+                  padding: "16px",
+                  height: "100px",
+                }}
+              >
+                <div style={{ background: "#1F1F1F", height: "12px", marginBottom: "8px", width: `${70 + i * 5}%` }} />
+                <div style={{ background: "#1F1F1F", height: "12px", marginBottom: "8px", width: "90%" }} />
+                <div style={{ background: "#1F1F1F", height: "12px", width: "60%" }} />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Error state */}
+        {!loading && error && (
+          <div style={{ padding: "40px 16px", textAlign: "center" }}>
+            <p style={{ ...MONO, color: "#FF3333", fontSize: "0.75rem", letterSpacing: "0.04em", marginBottom: "16px" }}>
+              {error.toUpperCase()}
+            </p>
+            <button
+              onClick={() => loadFeed(true)}
+              style={{
+                ...MONO,
+                background: "transparent",
+                color: "#A0A0A0",
+                border: "1px solid #333333",
+                padding: "8px 20px",
+                fontSize: "0.75rem",
+                letterSpacing: "0.06em",
+                cursor: "pointer",
+              }}
+            >
+              RETRY
+            </button>
+          </div>
+        )}
+
+        {/* Empty state */}
+        {!loading && !error && posts.length === 0 && (
+          <div style={{ padding: "60px 16px", textAlign: "center" }}>
+            <p style={{ ...MONO, color: "#333333", fontSize: "0.75rem", letterSpacing: "0.06em", marginBottom: "8px" }}>
+              NO POSTS YET
+            </p>
+            <p style={{ color: "#555555", fontSize: "0.875rem" }}>
+              Be the first to post in your area.
+            </p>
+          </div>
+        )}
+
+        {/* Posts */}
+        {!loading && !error && posts.length > 0 && (
+          <div className="flex flex-col" style={{ gap: "2px", paddingTop: "2px" }}>
+            {posts.map((post) => (
+              <PostCard
+                key={post.id}
+                post={toCardPost(post, userLat, userLng)}
+                onLoginRequired={() => setShowLoginBanner(true)}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Load more sentinel */}
+        <div ref={loadMoreRef} style={{ height: "1px" }} />
+
+        {/* Loading more indicator */}
+        {loadingMore && (
+          <p style={{ ...MONO, color: "#333333", fontSize: "0.625rem", letterSpacing: "0.08em", textAlign: "center", padding: "16px 0" }}>
+            LOADING...
+          </p>
+        )}
+
+        {/* End of feed */}
+        {!loading && !hasMore && posts.length > 0 && (
+          <p
+            style={{
+              ...MONO,
+              color: "#333333",
+              fontSize: "0.6875rem",
+              letterSpacing: "0.06em",
+              textAlign: "center",
+              padding: "40px 0 80px",
+            }}
+          >
+            5 MILE RADIUS · ANONYMOUS
+          </p>
+        )}
+
+        {/* Refresh button */}
+        {!loading && !error && (
+          <div style={{ textAlign: "center", paddingBottom: "80px", paddingTop: posts.length === 0 ? "0" : "8px" }}>
+            <button
+              onClick={() => loadFeed(true)}
+              style={{
+                ...MONO,
+                background: "none",
+                color: "#333333",
+                border: "none",
+                fontSize: "0.625rem",
+                letterSpacing: "0.08em",
+                cursor: "pointer",
+                padding: "8px",
+              }}
+              className="hover:text-[#555555] transition-colors"
+            >
+              ↻ REFRESH
+            </button>
+          </div>
+        )}
       </main>
 
       {/* FAB */}
       <button
-        onClick={() => setShowModal(true)}
+        onClick={handleFabClick}
         style={{
           position: "fixed",
           bottom: "24px",
@@ -130,7 +357,11 @@ export default function FeedPage() {
         +
       </button>
 
-      <CreatePostModal open={showModal} onClose={() => setShowModal(false)} />
+      <CreatePostModal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        onSubmit={handleCreatePost}
+      />
     </div>
   );
 }

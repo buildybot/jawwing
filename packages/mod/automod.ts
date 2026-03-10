@@ -8,7 +8,7 @@
 import crypto from "crypto";
 import { db, posts, reports, mod_actions, nanoid, now } from "@jawwing/db"; // reports used for count query
 import { eq, and, gte, count, sql } from "drizzle-orm";
-import { reviewPost } from "./engine.js";
+import { reviewPost } from "./engine";
 import type { Post } from "@jawwing/db";
 
 // ─── Constants ────────────────────────────────────────────────────────────────

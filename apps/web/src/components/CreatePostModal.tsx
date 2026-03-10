@@ -5,27 +5,40 @@ import { useState } from "react";
 interface CreatePostModalProps {
   open: boolean;
   onClose: () => void;
+  onSubmit?: (content: string) => Promise<void>;
 }
 
-export default function CreatePostModal({ open, onClose }: CreatePostModalProps) {
+export default function CreatePostModal({ open, onClose, onSubmit }: CreatePostModalProps) {
   const [content, setContent] = useState("");
-  const MAX = 500;
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const MAX = 300;
 
   if (!open) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!content.trim()) return;
-    console.log("New post:", content);
-    setContent("");
-    onClose();
+    setError(null);
+    setLoading(true);
+    try {
+      if (onSubmit) {
+        await onSubmit(content.trim());
+      }
+      setContent("");
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to post.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div
       style={{ background: "rgba(0,0,0,0.85)" }}
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      onClick={(e) => { if (e.target === e.currentTarget && !loading) onClose(); }}
     >
       <div
         style={{
@@ -51,6 +64,7 @@ export default function CreatePostModal({ open, onClose }: CreatePostModalProps)
           </span>
           <button
             onClick={onClose}
+            disabled={loading}
             style={{ color: "#555555", cursor: "pointer", background: "none", border: "none", fontSize: "1rem" }}
             className="hover:text-white transition-colors"
           >
@@ -65,6 +79,7 @@ export default function CreatePostModal({ open, onClose }: CreatePostModalProps)
             placeholder="What's happening around you?"
             rows={6}
             autoFocus
+            disabled={loading}
             style={{
               background: "transparent",
               border: "none",
@@ -81,6 +96,20 @@ export default function CreatePostModal({ open, onClose }: CreatePostModalProps)
             className="placeholder:text-[#555555]"
           />
 
+          {error && (
+            <p
+              style={{
+                fontFamily: "var(--font-mono), monospace",
+                color: "#FF3333",
+                fontSize: "0.75rem",
+                marginBottom: "8px",
+                letterSpacing: "0.02em",
+              }}
+            >
+              {error}
+            </p>
+          )}
+
           <div className="flex items-center justify-between">
             <span
               style={{
@@ -95,6 +124,7 @@ export default function CreatePostModal({ open, onClose }: CreatePostModalProps)
               <button
                 type="button"
                 onClick={onClose}
+                disabled={loading}
                 style={{
                   color: "#555555",
                   background: "none",
@@ -110,12 +140,12 @@ export default function CreatePostModal({ open, onClose }: CreatePostModalProps)
               </button>
               <button
                 type="submit"
-                disabled={!content.trim()}
+                disabled={!content.trim() || loading}
                 style={{
-                  background: content.trim() ? "#FFFFFF" : "transparent",
-                  color: content.trim() ? "#000000" : "#555555",
-                  border: `1px solid ${content.trim() ? "#FFFFFF" : "#333333"}`,
-                  cursor: content.trim() ? "pointer" : "not-allowed",
+                  background: content.trim() && !loading ? "#FFFFFF" : "transparent",
+                  color: content.trim() && !loading ? "#000000" : "#555555",
+                  border: `1px solid ${content.trim() && !loading ? "#FFFFFF" : "#333333"}`,
+                  cursor: content.trim() && !loading ? "pointer" : "not-allowed",
                   fontFamily: "var(--font-mono), monospace",
                   letterSpacing: "0.06em",
                   fontSize: "0.8125rem",
@@ -124,7 +154,7 @@ export default function CreatePostModal({ open, onClose }: CreatePostModalProps)
                   transition: "all 150ms",
                 }}
               >
-                POST
+                {loading ? "POSTING..." : "POST"}
               </button>
             </div>
           </div>

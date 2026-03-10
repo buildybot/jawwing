@@ -1,7 +1,7 @@
-export { reviewPost, CONSTITUTION_RULES } from "./engine.js";
-export type { ModerationDecision, ModerationAction } from "./engine.js";
+export { reviewPost, CONSTITUTION_RULES } from "./engine";
+export type { ModerationDecision, ModerationAction } from "./engine";
 
-export { handleAppeal, communityVote } from "./reviewer.js";
-export type { AppealResult, CommunityVoteResult } from "./reviewer.js";
+export { handleAppeal, communityVote } from "./reviewer";
+export type { AppealResult, CommunityVoteResult } from "./reviewer";
 
-export { onPostCreated, onPostReported } from "./automod.js";
+export { onPostCreated, onPostReported } from "./automod";

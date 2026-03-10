@@ -1,34 +1,69 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { votePost, isAuthenticated } from "@/lib/api";
 
 export interface Post {
   id: string;
   content: string;
   score: number;
-  replyCount: number;
-  timeAgo: string;
-  distance: string;
+  reply_count?: number;
+  replyCount?: number; // legacy
+  timeAgo?: string;
+  distance?: string;
+  created_at?: number;
 }
 
 interface PostCardProps {
   post: Post;
+  onLoginRequired?: () => void;
 }
 
-export default function PostCard({ post }: PostCardProps) {
+export default function PostCard({ post, onLoginRequired }: PostCardProps) {
+  const replyCount = post.reply_count ?? post.replyCount ?? 0;
   const [score, setScore] = useState(post.score);
   const [voted, setVoted] = useState<"up" | "down" | null>(null);
+  const [voting, setVoting] = useState(false);
 
-  const vote = (dir: "up" | "down") => {
+  const vote = async (dir: "up" | "down") => {
+    if (voting) return;
+
+    if (!isAuthenticated()) {
+      onLoginRequired?.();
+      return;
+    }
+
+    // Optimistic update
+    let newScore = score;
+    let newVoted: "up" | "down" | null;
+
     if (voted === dir) {
-      setScore(post.score);
-      setVoted(null);
+      newScore = post.score + (voted === "up" ? 0 : 0);
+      // unvote — compute delta reversal
+      newScore = score + (dir === "up" ? -1 : 1);
+      newVoted = null;
     } else if (voted === null) {
-      setScore((s) => s + (dir === "up" ? 1 : -1));
-      setVoted(dir);
+      newScore = score + (dir === "up" ? 1 : -1);
+      newVoted = dir;
     } else {
-      setScore((s) => s + (dir === "up" ? 2 : -2));
-      setVoted(dir);
+      newScore = score + (dir === "up" ? 2 : -2);
+      newVoted = dir;
+    }
+
+    setScore(newScore);
+    setVoted(newVoted);
+    setVoting(true);
+
+    try {
+      await votePost(post.id, dir === "up" ? 1 : -1);
+    } catch (err) {
+      // Revert on failure
+      setScore(score);
+      setVoted(voted);
+      console.error("[vote] failed:", err);
+    } finally {
+      setVoting(false);
     }
   };
 
@@ -53,11 +88,15 @@ export default function PostCard({ post }: PostCardProps) {
         <div className="flex items-center gap-3">
           <button
             onClick={() => vote("up")}
+            disabled={voting}
             style={{
               color: voted === "up" ? "#FFFFFF" : "#555555",
               transition: "color 150ms, transform 150ms",
+              background: "none",
+              border: "none",
+              cursor: voting ? "wait" : "pointer",
             }}
-            className={`text-xs cursor-pointer hover:text-white ${voted === "up" ? "scale-[1.15]" : ""}`}
+            className={`text-xs hover:text-white ${voted === "up" ? "scale-[1.15]" : ""}`}
             aria-label="Upvote"
           >
             ▲
@@ -73,12 +112,16 @@ export default function PostCard({ post }: PostCardProps) {
           </span>
           <button
             onClick={() => vote("down")}
+            disabled={voting}
             style={{
-              color: voted === "down" ? "#555555" : "#555555",
+              color: voted === "down" ? "#A0A0A0" : "#555555",
               opacity: voted === "down" ? 1 : 0.6,
               transition: "color 150ms, transform 150ms",
+              background: "none",
+              border: "none",
+              cursor: voting ? "wait" : "pointer",
             }}
-            className={`text-xs cursor-pointer hover:opacity-100 hover:text-[#A0A0A0] ${voted === "down" ? "scale-[1.15]" : ""}`}
+            className={`text-xs hover:opacity-100 hover:text-[#A0A0A0] ${voted === "down" ? "scale-[1.15]" : ""}`}
             aria-label="Downvote"
           >
             ▼
@@ -94,11 +137,25 @@ export default function PostCard({ post }: PostCardProps) {
           }}
           className="flex items-center gap-3 text-xs"
         >
-          <span>↩ {post.replyCount}</span>
-          <span style={{ color: "#1F1F1F" }}>·</span>
-          <span>{post.distance}</span>
-          <span style={{ color: "#1F1F1F" }}>·</span>
-          <span>{post.timeAgo}</span>
+          <Link
+            href={`/post/${post.id}`}
+            style={{ color: "#555555", textDecoration: "none" }}
+            className="hover:text-[#A0A0A0] transition-colors"
+          >
+            ↩ {replyCount}
+          </Link>
+          {post.distance && (
+            <>
+              <span style={{ color: "#1F1F1F" }}>·</span>
+              <span>{post.distance}</span>
+            </>
+          )}
+          {post.timeAgo && (
+            <>
+              <span style={{ color: "#1F1F1F" }}>·</span>
+              <span>{post.timeAgo}</span>
+            </>
+          )}
         </div>
       </div>
     </article>
