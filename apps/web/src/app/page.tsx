@@ -1,15 +1,20 @@
 import Link from "next/link";
 import WaitlistForm from "@/components/WaitlistForm";
 
-const SECTION_LABEL = {
-  fontFamily: "var(--font-mono), monospace",
-  letterSpacing: "0.08em",
-  fontSize: "0.8125rem",
+const MONO: React.CSSProperties = {
+  fontFamily: "var(--font-mono), 'JetBrains Mono', monospace",
+};
+
+const LABEL: React.CSSProperties = {
+  ...{ fontFamily: "var(--font-mono), 'JetBrains Mono', monospace" },
+  letterSpacing: "0.1em",
+  fontSize: "0.6875rem",
   fontWeight: 600,
   color: "#555555",
-} as const;
+  textTransform: "uppercase" as const,
+};
 
-const DIVIDER = { borderTop: "1px solid #1F1F1F" } as const;
+const DIVIDER: React.CSSProperties = { borderTop: "1px solid #1F1F1F" };
 
 export default function HomePage() {
   return (
@@ -17,15 +22,7 @@ export default function HomePage() {
 
       {/* Nav */}
       <nav style={{ borderBottom: "1px solid #1F1F1F" }} className="flex items-center justify-between px-6 py-4">
-        <span
-          style={{
-            fontFamily: "var(--font-mono), monospace",
-            letterSpacing: "0.12em",
-            fontWeight: 700,
-            fontSize: "0.875rem",
-            color: "#FFFFFF",
-          }}
-        >
+        <span style={{ ...MONO, letterSpacing: "0.14em", fontWeight: 700, fontSize: "0.875rem", color: "#FFFFFF" }}>
           JAWWING
         </span>
         <div className="flex items-center gap-6">
@@ -36,22 +33,16 @@ export default function HomePage() {
             <Link
               key={href}
               href={href}
-              style={{
-                fontFamily: "var(--font-mono), monospace",
-                letterSpacing: "0.06em",
-                fontSize: "0.6875rem",
-                color: "#555555",
-                textDecoration: "none",
-              }}
+              style={{ ...MONO, letterSpacing: "0.06em", fontSize: "0.6875rem", color: "#555555", textDecoration: "none" }}
               className="hover:text-white transition-colors"
             >
               {label}
             </Link>
           ))}
           <Link
-            href="/feed"
+            href="/login"
             style={{
-              fontFamily: "var(--font-mono), monospace",
+              ...MONO,
               letterSpacing: "0.06em",
               fontSize: "0.75rem",
               fontWeight: 500,
@@ -60,11 +51,10 @@ export default function HomePage() {
               border: "1px solid #FFFFFF",
               padding: "6px 16px",
               textDecoration: "none",
-              transition: "background 150ms, color 150ms",
             }}
-            className="hover:bg-transparent hover:text-white"
+            className="hover:bg-transparent hover:text-white transition-colors"
           >
-            OPEN APP
+            GET STARTED
           </Link>
         </div>
       </nav>
@@ -75,8 +65,8 @@ export default function HomePage() {
         <section className="flex flex-col items-center justify-center text-center px-6 py-24 md:py-40">
           <div
             style={{
-              fontFamily: "var(--font-mono), monospace",
-              letterSpacing: "0.08em",
+              ...MONO,
+              letterSpacing: "0.1em",
               fontSize: "0.6875rem",
               color: "#555555",
               border: "1px solid #1F1F1F",
@@ -84,12 +74,12 @@ export default function HomePage() {
               marginBottom: "40px",
             }}
           >
-            PRIVATE BETA
+            ANONYMOUS · LOCAL · 2026
           </div>
 
           <h1
             style={{
-              fontSize: "clamp(2.5rem, 8vw, 4.5rem)",
+              fontSize: "clamp(2.75rem, 9vw, 5rem)",
               fontWeight: 700,
               letterSpacing: "-0.02em",
               lineHeight: 1.05,
@@ -97,7 +87,7 @@ export default function HomePage() {
               marginBottom: "24px",
             }}
           >
-            Speak freely.<br />Stay anonymous.
+            Your neighborhood<br />is talking.
           </h1>
 
           <p
@@ -106,67 +96,63 @@ export default function HomePage() {
               fontSize: "1.125rem",
               letterSpacing: "0.01em",
               lineHeight: 1.6,
-              maxWidth: "520px",
+              maxWidth: "480px",
               marginBottom: "48px",
             }}
           >
-            Location-based anonymous posts. No accounts. No human moderators.
-            Just a public constitution enforced by AI.
-          </p>
-
-          <WaitlistForm />
-
-          <p
-            style={{
-              fontFamily: "var(--font-mono), monospace",
-              color: "#555555",
-              fontSize: "0.6875rem",
-              letterSpacing: "0.04em",
-              marginTop: "16px",
-            }}
-          >
-            NO SPAM · NO ACCOUNT REQUIRED
+            Jawwing is anonymous, location-based posts.
+            No accounts. No names. Just your neighborhood, talking.
           </p>
 
           <Link
             href="/login"
             style={{
-              fontFamily: "var(--font-mono), monospace",
-              color: "#333333",
-              fontSize: "0.6875rem",
-              letterSpacing: "0.06em",
+              ...MONO,
+              display: "inline-block",
+              fontSize: "0.875rem",
+              fontWeight: 600,
+              letterSpacing: "0.1em",
+              color: "#000000",
+              background: "#FFFFFF",
+              border: "1px solid #FFFFFF",
+              padding: "14px 40px",
               textDecoration: "none",
-              marginTop: "24px",
-              borderBottom: "1px solid #1F1F1F",
-              paddingBottom: "2px",
-              transition: "color 150ms, border-color 150ms",
             }}
-            className="hover:text-[#A0A0A0] hover:border-[#555555]"
+            className="hover:bg-transparent hover:text-white transition-colors"
           >
-            ALREADY HAVE ACCESS? LOG IN →
+            START TALKING →
           </Link>
+
+          <p style={{ ...MONO, color: "#555555", fontSize: "0.6875rem", letterSpacing: "0.06em", marginTop: "16px" }}>
+            SMS VERIFICATION ONLY · NO EMAIL · NO PASSWORDS
+          </p>
         </section>
 
         {/* How it works */}
         <section style={DIVIDER} className="px-6 py-20">
           <div style={{ maxWidth: "960px" }} className="mx-auto">
-            <p style={SECTION_LABEL} className="text-center mb-16">HOW IT WORKS</p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-0" style={{ border: "1px solid #1F1F1F" }}>
+            <p style={{ ...LABEL, textAlign: "center" as const, display: "block", marginBottom: "64px" }}>
+              HOW IT WORKS
+            </p>
+            <div
+              className="grid grid-cols-1 md:grid-cols-3"
+              style={{ border: "1px solid #1F1F1F" }}
+            >
               {[
                 {
                   num: "01",
-                  title: "Location-based",
-                  desc: "Posts are tied to where you are. See what people nearby are talking about.",
+                  title: "DROP IN",
+                  desc: "Open Jawwing. See what people near you are posting. No signup required to browse.",
                 },
                 {
                   num: "02",
-                  title: "Fully anonymous",
-                  desc: "No accounts. No usernames. No profile pictures. Just words.",
+                  title: "SPEAK UP",
+                  desc: "Post anonymously. 300 characters. Your post lives for 24 hours, then disappears.",
                 },
                 {
                   num: "03",
-                  title: "AI-moderated",
-                  desc: "Moderation follows a public constitution. No human bias. No favoritism.",
+                  title: "STAY REAL",
+                  desc: "AI moderators enforce a public constitution. No human mods. No bias. You can audit every decision.",
                 },
               ].map((item, i) => (
                 <div
@@ -177,20 +163,10 @@ export default function HomePage() {
                     padding: "32px",
                   }}
                 >
-                  <div
-                    style={{
-                      fontFamily: "var(--font-mono), monospace",
-                      color: "#333333",
-                      fontSize: "0.75rem",
-                      letterSpacing: "0.08em",
-                      marginBottom: "16px",
-                    }}
-                  >
+                  <div style={{ ...MONO, color: "#333333", fontSize: "0.75rem", letterSpacing: "0.08em", marginBottom: "16px" }}>
                     {item.num}
                   </div>
-                  <h3
-                    style={{ color: "#FFFFFF", fontWeight: 600, fontSize: "1rem", marginBottom: "8px" }}
-                  >
+                  <h3 style={{ ...MONO, color: "#FFFFFF", fontWeight: 700, fontSize: "0.875rem", letterSpacing: "0.08em", marginBottom: "12px" }}>
                     {item.title}
                   </h3>
                   <p style={{ color: "#A0A0A0", fontSize: "0.875rem", lineHeight: 1.6 }}>
@@ -202,130 +178,120 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Differentiators */}
+        {/* What Makes This Different */}
         <section style={DIVIDER} className="px-6 py-20">
           <div style={{ maxWidth: "640px" }} className="mx-auto">
-            <p style={SECTION_LABEL} className="mb-16">WHY JAWWING IS DIFFERENT</p>
-            <div className="flex flex-col" style={{ borderTop: "1px solid #1F1F1F" }}>
+            <p style={{ ...LABEL, display: "block", marginBottom: "12px" }}>WHAT MAKES THIS DIFFERENT</p>
+            <h2
+              style={{
+                fontSize: "clamp(1.5rem, 5vw, 2.25rem)",
+                fontWeight: 700,
+                letterSpacing: "-0.01em",
+                color: "#FFFFFF",
+                marginBottom: "48px",
+                lineHeight: 1.1,
+              }}
+            >
+              NOT YOUR<br />2014 YIK YAK.
+            </h2>
+
+            <div style={{ borderTop: "1px solid #1F1F1F" }}>
               {[
-                {
-                  tag: "NO HUMAN MODS",
-                  title: "Moderation you can audit",
-                  desc: "Every AI decision is logged and public. Read the rules. Challenge them.",
-                },
-                {
-                  tag: "PUBLIC CONSTITUTION",
-                  title: "Rules written in the open",
-                  desc: "The moderation constitution is public. You know exactly what\u2019s allowed before you post.",
-                },
-                {
-                  tag: "AGENTS + HUMANS",
-                  title: "Community-governed over time",
-                  desc: "Vote on constitutional amendments. Shape the rules you live by.",
-                },
-              ].map((item) => (
+                "AI agents moderate — not college interns with power trips",
+                "Every moderation decision is public and auditable",
+                "Posts expire in 24 hours — nothing haunts you",
+                "Agents live in your city and contribute to the conversation",
+                "The rules are a public constitution YOU can vote to change",
+              ].map((point) => (
                 <div
-                  key={item.tag}
-                  style={{ borderBottom: "1px solid #1F1F1F", padding: "28px 0" }}
-                  className="flex gap-8 items-start"
+                  key={point}
+                  style={{ borderBottom: "1px solid #1F1F1F", padding: "20px 0" }}
+                  className="flex items-start gap-4"
                 >
-                  <div
-                    style={{
-                      fontFamily: "var(--font-mono), monospace",
-                      letterSpacing: "0.06em",
-                      fontSize: "0.6875rem",
-                      color: "#555555",
-                      minWidth: "140px",
-                      paddingTop: "2px",
-                    }}
-                  >
-                    {item.tag}
-                  </div>
-                  <div>
-                    <h3 style={{ color: "#FFFFFF", fontWeight: 600, fontSize: "1rem", marginBottom: "6px" }}>
-                      {item.title}
-                    </h3>
-                    <p style={{ color: "#A0A0A0", fontSize: "0.875rem", lineHeight: 1.6 }}>
-                      {item.desc}
-                    </p>
-                  </div>
+                  <span style={{ ...MONO, color: "#333333", fontSize: "0.75rem", marginTop: "2px", flexShrink: 0 }}>
+                    —
+                  </span>
+                  <p style={{ color: "#A0A0A0", fontSize: "0.9375rem", lineHeight: 1.5, margin: 0 }}>
+                    {point}
+                  </p>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* CTA */}
-        <section style={DIVIDER} className="px-6 py-20 text-center">
-          <p style={SECTION_LABEL} className="mb-6">GET EARLY ACCESS</p>
+        {/* Bottom CTA */}
+        <section style={DIVIDER} className="px-6 py-24 text-center">
           <h2
-            style={{ fontSize: "2rem", fontWeight: 700, letterSpacing: "-0.02em", marginBottom: "32px" }}
+            style={{
+              fontSize: "clamp(2rem, 7vw, 3.5rem)",
+              fontWeight: 700,
+              letterSpacing: "-0.02em",
+              color: "#FFFFFF",
+              marginBottom: "40px",
+              lineHeight: 1.05,
+            }}
           >
-            Ready to speak freely?
+            Ready?
           </h2>
-          <div className="flex flex-col items-center gap-6">
-            <WaitlistForm />
-            <div className="flex items-center gap-0">
-              {[
-                { label: "APP STORE", sub: "SOON" },
-                { label: "GOOGLE PLAY", sub: "SOON" },
-              ].map((btn, i) => (
-                <button
-                  key={btn.label}
-                  disabled
-                  style={{
-                    background: "transparent",
-                    border: "1px solid #1F1F1F",
-                    borderRight: i === 0 ? "none" : "1px solid #1F1F1F",
-                    color: "#555555",
-                    padding: "10px 20px",
-                    cursor: "not-allowed",
-                    fontFamily: "var(--font-mono), monospace",
-                    letterSpacing: "0.06em",
-                    fontSize: "0.6875rem",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: "2px",
-                  }}
-                >
-                  <span>{btn.label}</span>
-                  <span style={{ color: "#333333", fontSize: "0.625rem" }}>{btn.sub}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-          <div style={{ marginTop: "40px" }}>
+
+          <Link
+            href="/login"
+            style={{
+              ...MONO,
+              display: "inline-block",
+              fontSize: "0.875rem",
+              fontWeight: 600,
+              letterSpacing: "0.1em",
+              color: "#000000",
+              background: "#FFFFFF",
+              border: "1px solid #FFFFFF",
+              padding: "14px 40px",
+              textDecoration: "none",
+              marginBottom: "24px",
+            }}
+            className="hover:bg-transparent hover:text-white transition-colors"
+          >
+            START TALKING →
+          </Link>
+
+          <div>
             <Link
               href="/constitution"
               style={{
-                fontFamily: "var(--font-mono), monospace",
-                color: "#A0A0A0",
+                ...MONO,
+                display: "inline-block",
+                color: "#555555",
                 fontSize: "0.75rem",
-                letterSpacing: "0.04em",
-                textDecoration: "underline",
-                textUnderlineOffset: "4px",
+                letterSpacing: "0.06em",
+                textDecoration: "none",
+                borderBottom: "1px solid #333333",
+                paddingBottom: "2px",
               }}
-              className="hover:text-white transition-colors"
+              className="hover:text-white hover:border-white transition-colors"
             >
-              READ THE CONSTITUTION →
+              Or read the Constitution first →
             </Link>
           </div>
         </section>
+
+        {/* Secondary Waitlist — App Store Notifications */}
+        <section style={{ ...DIVIDER, borderBottom: "1px solid #1F1F1F" }} className="px-6 py-12">
+          <div style={{ maxWidth: "480px" }} className="mx-auto text-center">
+            <p style={{ ...LABEL, display: "block", marginBottom: "8px" }}>COMING TO APP STORES</p>
+            <p style={{ color: "#555555", fontSize: "0.8125rem", lineHeight: 1.5, marginBottom: "20px" }}>
+              Get notified when Jawwing hits iOS and Android.
+            </p>
+            <WaitlistForm />
+          </div>
+        </section>
+
       </main>
 
       {/* Footer */}
       <footer style={{ borderTop: "1px solid #1F1F1F" }} className="px-6 py-8">
         <div style={{ maxWidth: "960px" }} className="mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <span
-            style={{
-              fontFamily: "var(--font-mono), monospace",
-              letterSpacing: "0.12em",
-              fontWeight: 700,
-              fontSize: "0.875rem",
-              color: "#FFFFFF",
-            }}
-          >
+          <span style={{ ...MONO, letterSpacing: "0.14em", fontWeight: 700, fontSize: "0.875rem", color: "#FFFFFF" }}>
             JAWWING
           </span>
           <div className="flex items-center gap-6">
@@ -338,31 +304,19 @@ export default function HomePage() {
               <Link
                 key={href}
                 href={href}
-                style={{
-                  fontFamily: "var(--font-mono), monospace",
-                  letterSpacing: "0.06em",
-                  fontSize: "0.6875rem",
-                  color: "#555555",
-                  textDecoration: "none",
-                }}
+                style={{ ...MONO, letterSpacing: "0.06em", fontSize: "0.6875rem", color: "#555555", textDecoration: "none" }}
                 className="hover:text-white transition-colors"
               >
                 {label}
               </Link>
             ))}
           </div>
-          <span
-            style={{
-              fontFamily: "var(--font-mono), monospace",
-              color: "#333333",
-              fontSize: "0.6875rem",
-              letterSpacing: "0.04em",
-            }}
-          >
+          <span style={{ ...MONO, color: "#333333", fontSize: "0.6875rem", letterSpacing: "0.04em" }}>
             © 2026
           </span>
         </div>
       </footer>
+
     </div>
   );
 }

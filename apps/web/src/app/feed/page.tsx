@@ -6,13 +6,15 @@ import Header from "@/components/Header";
 import FeedTabs, { SortTab } from "@/components/FeedTabs";
 import PostCard, { Post as PostCardPost } from "@/components/PostCard";
 import CreatePostModal from "@/components/CreatePostModal";
-import { fetchPosts, createPost, isAuthenticated, getTerritoryFeed, type Post } from "@/lib/api";
+import { ToastProvider } from "@/components/Toast";
+import { fetchPosts, fetchNewPosts, createPost, isAuthenticated, getTerritoryFeed, type Post } from "@/lib/api";
 import { requestLocation, reverseGeocode } from "@/lib/location";
 import { formatTimeAgo, formatDistance } from "@/lib/api";
 import { type TerritorySelection } from "@/components/TerritorySelector";
 
 const MONO = { fontFamily: "var(--font-mono), monospace" } as const;
 const LIMIT = 20;
+const POLL_INTERVAL_MS = 30_000;
 
 function toCardPost(
   post: Post,
@@ -30,6 +32,8 @@ function toCardPost(
       userLat != null && userLng != null
         ? formatDistance(userLat, userLng, post.lat, post.lng)
         : undefined,
+    created_at: post.created_at,
+    expires_at: post.expires_at,
     territoryName,
   };
 }
@@ -46,6 +50,12 @@ export default function FeedPage() {
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [offset, setOffset] = useState(0);
+
+  // New posts polling state
+  const [newPosts, setNewPosts] = useState<Post[]>([]);
+  const [showNewBanner, setShowNewBanner] = useState(false);
+  const latestTimestampRef = useRef<number>(0);
+  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [userLat, setUserLat] = useState<number | undefined>();
   const [userLng, setUserLng] = useState<number | undefined>();
@@ -75,15 +85,12 @@ export default function FeedPage() {
   }, []);
 
   // Check if user is browsing a remote territory (not physically near it)
-  // We disable posting when territory mode is active (GPS-lock)
-  const isRemoteTerritory =
-    selectedTerritory.type === "territory";
+  const isRemoteTerritory = selectedTerritory.type === "territory";
 
   // Load feed
   const loadFeed = useCallback(
     async (reset = false) => {
       if (selectedTerritory.type === "near_me") {
-        // Near me mode requires location
         if (locationError && !userLat) {
           setError("Location required to load feed.");
           setLoading(false);
@@ -97,6 +104,8 @@ export default function FeedPage() {
         setOffset(0);
         setHasMore(true);
         setError(null);
+        setNewPosts([]);
+        setShowNewBanner(false);
       } else {
         setLoadingMore(true);
       }
@@ -126,6 +135,9 @@ export default function FeedPage() {
 
         if (reset) {
           setPosts(fetchedPosts);
+          if (fetchedPosts.length > 0) {
+            latestTimestampRef.current = Math.max(...fetchedPosts.map((p) => p.created_at));
+          }
         } else {
           setPosts((prev) => [...prev, ...fetchedPosts]);
         }
@@ -138,6 +150,7 @@ export default function FeedPage() {
         setLoadingMore(false);
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [userLat, userLng, activeTab, offset, locationError, selectedTerritory]
   );
 
@@ -150,6 +163,54 @@ export default function FeedPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userLat, userLng, activeTab, selectedTerritory]);
+
+  // ─── Poll for new posts (near_me mode only, hot/new tabs) ────────────────
+  const pollForNew = useCallback(async () => {
+    if (userLat == null || userLng == null) return;
+    if (latestTimestampRef.current === 0) return;
+    if (selectedTerritory.type !== "near_me") return;
+    if (activeTab === "top") return;
+
+    try {
+      const data = await fetchNewPosts(userLat, userLng, latestTimestampRef.current);
+      if (data.posts.length > 0) {
+        setNewPosts((prev) => {
+          const existingIds = new Set(prev.map((p) => p.id));
+          const fresh = data.posts.filter((p) => !existingIds.has(p.id));
+          return [...fresh, ...prev];
+        });
+        setShowNewBanner(true);
+      }
+    } catch {
+      // Silent — polling failures don't disrupt the UI
+    }
+  }, [userLat, userLng, activeTab, selectedTerritory]);
+
+  useEffect(() => {
+    if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+    if (userLat != null && userLng != null && !loading) {
+      pollTimerRef.current = setInterval(pollForNew, POLL_INTERVAL_MS);
+    }
+    return () => {
+      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+    };
+  }, [userLat, userLng, loading, pollForNew]);
+
+  // Prepend new posts when banner is clicked
+  const handleShowNewPosts = () => {
+    if (newPosts.length === 0) return;
+    latestTimestampRef.current = Math.max(
+      latestTimestampRef.current,
+      ...newPosts.map((p) => p.created_at)
+    );
+    setPosts((prev) => {
+      const existingIds = new Set(prev.map((p) => p.id));
+      const toAdd = newPosts.filter((p) => !existingIds.has(p.id));
+      return [...toAdd, ...prev];
+    });
+    setNewPosts([]);
+    setShowNewBanner(false);
+  };
 
   // Infinite scroll
   useEffect(() => {
@@ -187,10 +248,7 @@ export default function FeedPage() {
       setShowLoginBanner(true);
       return;
     }
-    if (isRemoteTerritory) {
-      // GPS-lock: show message, don't open modal
-      return;
-    }
+    if (isRemoteTerritory) return;
     setShowModal(true);
   };
 
@@ -200,267 +258,300 @@ export default function FeedPage() {
       : undefined;
 
   return (
-    <div style={{ background: "#000000", minHeight: "100vh" }}>
-      <Header
-        location={locationLabel}
-        userLat={userLat}
-        userLng={userLng}
-        selectedTerritory={selectedTerritory}
-        onTerritoryChange={setSelectedTerritory}
-      />
+    <ToastProvider>
+      <div style={{ background: "#000000", minHeight: "100vh" }}>
+        <Header
+          location={locationLabel}
+          userLat={userLat}
+          userLng={userLng}
+          selectedTerritory={selectedTerritory}
+          onTerritoryChange={setSelectedTerritory}
+        />
 
-      {/* Login banner */}
-      {showLoginBanner && (
-        <div
-          style={{
-            background: "#0A0A0A",
-            border: "1px solid #1F1F1F",
-            borderLeft: "2px solid #FFFFFF",
-            padding: "12px 16px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: "12px",
-            maxWidth: "480px",
-            margin: "0 auto",
-          }}
-        >
-          <span style={{ ...MONO, color: "#A0A0A0", fontSize: "0.75rem", letterSpacing: "0.04em" }}>
-            SIGN IN TO POST OR VOTE
-          </span>
-          <div style={{ display: "flex", gap: "8px" }}>
-            <button
-              onClick={() => router.push("/login")}
-              style={{
-                ...MONO,
-                background: "#FFFFFF",
-                color: "#000000",
-                border: "none",
-                padding: "6px 14px",
-                fontSize: "0.75rem",
-                fontWeight: 600,
-                letterSpacing: "0.06em",
-                cursor: "pointer",
-              }}
-            >
-              LOGIN
-            </button>
-            <button
-              onClick={() => setShowLoginBanner(false)}
-              style={{
-                ...MONO,
-                background: "none",
-                color: "#555555",
-                border: "none",
-                padding: "6px",
-                fontSize: "0.875rem",
-                cursor: "pointer",
-              }}
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* GPS-lock banner */}
-      {isRemoteTerritory && (
-        <div
-          style={{
-            background: "#0A0A0A",
-            border: "1px solid #1F1F1F",
-            borderLeft: "2px solid #333333",
-            padding: "10px 16px",
-            maxWidth: "480px",
-            margin: "0 auto",
-          }}
-        >
-          <span style={{ ...MONO, color: "#555555", fontSize: "0.6875rem", letterSpacing: "0.06em" }}>
-            YOU CAN ONLY POST WHERE YOU ARE
-          </span>
-        </div>
-      )}
-
-      <main style={{ maxWidth: "480px" }} className="mx-auto">
-        <FeedTabs active={activeTab} onChange={handleTabChange} />
-
-        {/* Territory header */}
-        {territoryName && (
+        {/* Login banner */}
+        {showLoginBanner && (
           <div
             style={{
-              ...MONO,
-              padding: "8px 16px",
-              borderBottom: "1px solid #1F1F1F",
-              color: "#333333",
-              fontSize: "0.6875rem",
-              letterSpacing: "0.08em",
+              background: "#0A0A0A",
+              border: "1px solid #1F1F1F",
+              borderLeft: "2px solid #FFFFFF",
+              padding: "12px 16px",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
+              gap: "12px",
+              maxWidth: "480px",
+              margin: "0 auto",
             }}
           >
-            <span>{territoryName.toUpperCase()}</span>
-            <span style={{ color: "#1F1F1F" }}>TERRITORY</span>
-          </div>
-        )}
-
-        {/* Loading skeleton */}
-        {loading && (
-          <div className="flex flex-col" style={{ gap: "2px", paddingTop: "2px" }}>
-            {[...Array(5)].map((_, i) => (
-              <div
-                key={i}
+            <span style={{ ...MONO, color: "#A0A0A0", fontSize: "0.75rem", letterSpacing: "0.04em" }}>
+              SIGN IN TO POST OR VOTE
+            </span>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button
+                onClick={() => router.push("/login")}
                 style={{
-                  background: "#0A0A0A",
-                  border: "1px solid #1F1F1F",
-                  padding: "16px",
-                  height: "100px",
+                  ...MONO,
+                  background: "#FFFFFF",
+                  color: "#000000",
+                  border: "none",
+                  padding: "6px 14px",
+                  fontSize: "0.75rem",
+                  fontWeight: 600,
+                  letterSpacing: "0.06em",
+                  cursor: "pointer",
                 }}
               >
-                <div style={{ background: "#1F1F1F", height: "12px", marginBottom: "8px", width: `${70 + i * 5}%` }} />
-                <div style={{ background: "#1F1F1F", height: "12px", marginBottom: "8px", width: "90%" }} />
-                <div style={{ background: "#1F1F1F", height: "12px", width: "60%" }} />
-              </div>
-            ))}
+                LOGIN
+              </button>
+              <button
+                onClick={() => setShowLoginBanner(false)}
+                style={{
+                  ...MONO,
+                  background: "none",
+                  color: "#555555",
+                  border: "none",
+                  padding: "6px",
+                  fontSize: "0.875rem",
+                  cursor: "pointer",
+                }}
+              >
+                ✕
+              </button>
+            </div>
           </div>
         )}
 
-        {/* Error state */}
-        {!loading && error && (
-          <div style={{ padding: "40px 16px", textAlign: "center" }}>
-            <p style={{ ...MONO, color: "#FF3333", fontSize: "0.75rem", letterSpacing: "0.04em", marginBottom: "16px" }}>
-              {error.toUpperCase()}
-            </p>
-            <button
-              onClick={() => loadFeed(true)}
-              style={{
-                ...MONO,
-                background: "transparent",
-                color: "#A0A0A0",
-                border: "1px solid #333333",
-                padding: "8px 20px",
-                fontSize: "0.75rem",
-                letterSpacing: "0.06em",
-                cursor: "pointer",
-              }}
-            >
-              RETRY
-            </button>
-          </div>
-        )}
-
-        {/* Empty state */}
-        {!loading && !error && posts.length === 0 && (
-          <div style={{ padding: "60px 16px", textAlign: "center" }}>
-            <p style={{ ...MONO, color: "#333333", fontSize: "0.75rem", letterSpacing: "0.06em", marginBottom: "8px" }}>
-              NO POSTS YET
-            </p>
-            <p style={{ color: "#555555", fontSize: "0.875rem" }}>
-              {territoryName ? `Nothing in ${territoryName} yet.` : "Be the first to post in your area."}
-            </p>
-          </div>
-        )}
-
-        {/* Posts */}
-        {!loading && !error && posts.length > 0 && (
-          <div className="flex flex-col" style={{ gap: "2px", paddingTop: "2px" }}>
-            {posts.map((post) => (
-              <PostCard
-                key={post.id}
-                post={toCardPost(post, userLat, userLng, territoryName)}
-                onLoginRequired={() => setShowLoginBanner(true)}
-              />
-            ))}
-          </div>
-        )}
-
-        {/* Load more sentinel */}
-        <div ref={loadMoreRef} style={{ height: "1px" }} />
-
-        {/* Loading more indicator */}
-        {loadingMore && (
-          <p style={{ ...MONO, color: "#333333", fontSize: "0.625rem", letterSpacing: "0.08em", textAlign: "center", padding: "16px 0" }}>
-            LOADING...
-          </p>
-        )}
-
-        {/* End of feed */}
-        {!loading && !hasMore && posts.length > 0 && (
-          <p
+        {/* GPS-lock banner */}
+        {isRemoteTerritory && (
+          <div
             style={{
-              ...MONO,
-              color: "#333333",
-              fontSize: "0.6875rem",
-              letterSpacing: "0.06em",
-              textAlign: "center",
-              padding: "40px 0 80px",
+              background: "#0A0A0A",
+              border: "1px solid #1F1F1F",
+              borderLeft: "2px solid #333333",
+              padding: "10px 16px",
+              maxWidth: "480px",
+              margin: "0 auto",
             }}
           >
-            {territoryName
-              ? `${territoryName.toUpperCase()} · TERRITORY`
-              : "5 MILE RADIUS · ANONYMOUS"}
-          </p>
+            <span style={{ ...MONO, color: "#555555", fontSize: "0.6875rem", letterSpacing: "0.06em" }}>
+              YOU CAN ONLY POST WHERE YOU ARE
+            </span>
+          </div>
         )}
 
-        {/* Refresh button */}
-        {!loading && !error && (
-          <div style={{ textAlign: "center", paddingBottom: "80px", paddingTop: posts.length === 0 ? "0" : "8px" }}>
+        <main style={{ maxWidth: "480px" }} className="mx-auto">
+          {/* Feed tabs + manual refresh button */}
+          <div style={{ display: "flex", alignItems: "center" }}>
+            <div style={{ flex: 1 }}>
+              <FeedTabs active={activeTab} onChange={handleTabChange} />
+            </div>
             <button
               onClick={() => loadFeed(true)}
+              disabled={loading}
               style={{
                 ...MONO,
                 background: "none",
-                color: "#333333",
+                color: loading ? "#333333" : "#555555",
                 border: "none",
-                fontSize: "0.625rem",
-                letterSpacing: "0.08em",
-                cursor: "pointer",
-                padding: "8px",
+                fontSize: "1rem",
+                cursor: loading ? "not-allowed" : "pointer",
+                padding: "8px 12px",
+                lineHeight: 1,
+                transition: "color 150ms",
+                flexShrink: 0,
               }}
-              className="hover:text-[#555555] transition-colors"
+              className="hover:text-[#A0A0A0]"
+              aria-label="Refresh feed"
+              title="Refresh"
             >
-              ↻ REFRESH
+              ↻
             </button>
           </div>
-        )}
-      </main>
 
-      {/* FAB — disabled when browsing remote territory */}
-      <button
-        onClick={handleFabClick}
-        disabled={isRemoteTerritory}
-        style={{
-          position: "fixed",
-          bottom: "24px",
-          right: "24px",
-          width: "48px",
-          height: "48px",
-          background: isRemoteTerritory ? "#1F1F1F" : "#FFFFFF",
-          color: isRemoteTerritory ? "#555555" : "#000000",
-          border: isRemoteTerritory ? "1px solid #333333" : "none",
-          fontSize: "1.5rem",
-          lineHeight: 1,
-          cursor: isRemoteTerritory ? "not-allowed" : "pointer",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontWeight: 300,
-          zIndex: 30,
-          transition: "background 150ms, color 150ms",
-          title: isRemoteTerritory ? "You can only post where you are" : undefined,
-        } as React.CSSProperties}
-        className={isRemoteTerritory ? "" : "hover:bg-[#A0A0A0]"}
-        aria-label={isRemoteTerritory ? "You can only post where you are" : "Create post"}
-        title={isRemoteTerritory ? "You can only post where you are" : undefined}
-      >
-        +
-      </button>
+          {/* Territory header */}
+          {territoryName && (
+            <div
+              style={{
+                ...MONO,
+                padding: "8px 16px",
+                borderBottom: "1px solid #1F1F1F",
+                color: "#333333",
+                fontSize: "0.6875rem",
+                letterSpacing: "0.08em",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <span>{territoryName.toUpperCase()}</span>
+              <span style={{ color: "#1F1F1F" }}>TERRITORY</span>
+            </div>
+          )}
 
-      <CreatePostModal
-        open={showModal}
-        onClose={() => setShowModal(false)}
-        onSubmit={handleCreatePost}
-      />
-    </div>
+          {/* New posts banner */}
+          {showNewBanner && newPosts.length > 0 && (
+            <button
+              onClick={handleShowNewPosts}
+              style={{
+                ...MONO,
+                display: "block",
+                width: "100%",
+                background: "#FFFFFF",
+                color: "#000000",
+                border: "none",
+                padding: "10px 16px",
+                fontSize: "0.6875rem",
+                fontWeight: 700,
+                letterSpacing: "0.1em",
+                cursor: "pointer",
+                textAlign: "center",
+                transition: "background 150ms",
+              }}
+              className="hover:bg-[#E0E0E0]"
+            >
+              ↑ {newPosts.length} NEW {newPosts.length === 1 ? "POST" : "POSTS"}
+            </button>
+          )}
+
+          {/* Loading skeleton */}
+          {loading && (
+            <div className="flex flex-col" style={{ gap: "2px", paddingTop: "2px" }}>
+              {[...Array(5)].map((_, i) => (
+                <div
+                  key={i}
+                  style={{
+                    background: "#0A0A0A",
+                    border: "1px solid #1F1F1F",
+                    padding: "16px",
+                    height: "100px",
+                  }}
+                >
+                  <div style={{ background: "#1F1F1F", height: "12px", marginBottom: "8px", width: `${70 + i * 5}%` }} />
+                  <div style={{ background: "#1F1F1F", height: "12px", marginBottom: "8px", width: "90%" }} />
+                  <div style={{ background: "#1F1F1F", height: "12px", width: "60%" }} />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Error state */}
+          {!loading && error && (
+            <div style={{ padding: "40px 16px", textAlign: "center" }}>
+              <p style={{ ...MONO, color: "#FF3333", fontSize: "0.75rem", letterSpacing: "0.04em", marginBottom: "16px" }}>
+                {error.toUpperCase()}
+              </p>
+              <button
+                onClick={() => loadFeed(true)}
+                style={{
+                  ...MONO,
+                  background: "transparent",
+                  color: "#A0A0A0",
+                  border: "1px solid #333333",
+                  padding: "8px 20px",
+                  fontSize: "0.75rem",
+                  letterSpacing: "0.06em",
+                  cursor: "pointer",
+                }}
+              >
+                RETRY
+              </button>
+            </div>
+          )}
+
+          {/* Empty state */}
+          {!loading && !error && posts.length === 0 && (
+            <div style={{ padding: "60px 16px", textAlign: "center" }}>
+              <p style={{ ...MONO, color: "#333333", fontSize: "0.75rem", letterSpacing: "0.06em", marginBottom: "8px" }}>
+                NO POSTS YET
+              </p>
+              <p style={{ color: "#555555", fontSize: "0.875rem" }}>
+                {territoryName ? `Nothing in ${territoryName} yet.` : "Be the first to post in your area."}
+              </p>
+            </div>
+          )}
+
+          {/* Posts */}
+          {!loading && !error && posts.length > 0 && (
+            <div className="flex flex-col" style={{ gap: "2px", paddingTop: "2px" }}>
+              {posts.map((post) => (
+                <PostCard
+                  key={post.id}
+                  post={toCardPost(post, userLat, userLng, territoryName)}
+                  onLoginRequired={() => setShowLoginBanner(true)}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Load more sentinel */}
+          <div ref={loadMoreRef} style={{ height: "1px" }} />
+
+          {/* Loading more indicator */}
+          {loadingMore && (
+            <p style={{ ...MONO, color: "#333333", fontSize: "0.625rem", letterSpacing: "0.08em", textAlign: "center", padding: "16px 0" }}>
+              LOADING...
+            </p>
+          )}
+
+          {/* End of feed */}
+          {!loading && !hasMore && posts.length > 0 && (
+            <p
+              style={{
+                ...MONO,
+                color: "#333333",
+                fontSize: "0.6875rem",
+                letterSpacing: "0.06em",
+                textAlign: "center",
+                padding: "40px 0 80px",
+              }}
+            >
+              {territoryName
+                ? `${territoryName.toUpperCase()} · TERRITORY`
+                : "5 MILE RADIUS · ANONYMOUS"}
+            </p>
+          )}
+
+          {/* Bottom padding for FAB */}
+          <div style={{ height: "80px" }} />
+        </main>
+
+        {/* FAB — disabled when browsing remote territory */}
+        <button
+          onClick={handleFabClick}
+          disabled={isRemoteTerritory}
+          style={{
+            position: "fixed",
+            bottom: "24px",
+            right: "24px",
+            width: "48px",
+            height: "48px",
+            background: isRemoteTerritory ? "#1F1F1F" : "#FFFFFF",
+            color: isRemoteTerritory ? "#555555" : "#000000",
+            border: isRemoteTerritory ? "1px solid #333333" : "none",
+            fontSize: "1.5rem",
+            lineHeight: 1,
+            cursor: isRemoteTerritory ? "not-allowed" : "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontWeight: 300,
+            zIndex: 30,
+            transition: "background 150ms, color 150ms",
+          } as React.CSSProperties}
+          className={isRemoteTerritory ? "" : "hover:bg-[#A0A0A0]"}
+          aria-label={isRemoteTerritory ? "You can only post where you are" : "Create post"}
+          title={isRemoteTerritory ? "You can only post where you are" : undefined}
+        >
+          +
+        </button>
+
+        <CreatePostModal
+          open={showModal}
+          onClose={() => setShowModal(false)}
+          onSubmit={handleCreatePost}
+        />
+      </div>
+    </ToastProvider>
   );
 }
