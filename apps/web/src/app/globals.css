@@ -45,6 +45,32 @@ html {
   font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
 }
 
+/* ── Responsive feed container ──────────────────────────────────────────────── */
+
+.feed-container {
+  width: 100%;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+@media (min-width: 640px) {
+  .feed-container {
+    max-width: 640px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .feed-container {
+    max-width: 800px;
+    padding-left: 32px;
+    padding-right: 32px;
+  }
+}
+
 /* ── TikTok-style snap scroll (mobile) ─────────────────────────────────────── */
 
 @media (max-width: 639px) {

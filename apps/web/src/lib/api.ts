@@ -2,7 +2,7 @@
 
 const BASE = "/api";
 
-// ─── Token management ─────────────────────────────────────────────────────────
+// ─── Token management (kept for agent API key support only) ──────────────────
 
 export function getToken(): string | null {
   if (typeof window === "undefined") return null;
@@ -17,8 +17,9 @@ export function clearToken(): void {
   localStorage.removeItem("jawwing_token");
 }
 
+/** @deprecated — human auth removed. Always returns false. */
 export function isAuthenticated(): boolean {
-  return !!getToken();
+  return false;
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -77,25 +78,19 @@ async function request<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const token = getToken();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(options.headers as Record<string, string> | undefined),
   };
-  if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  const res = await fetch(`${BASE}${path}`, { ...options, headers });
-
-  if (res.status === 401) {
-    // Clear stored auth and redirect to login
-    clearToken();
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("jawwing_user");
-      const redirect = encodeURIComponent(window.location.pathname);
-      window.location.href = `/login?redirect=${redirect}`;
-    }
-    throw new Error("Session expired. Please log in again.");
+  // Cookies (including jw_session) are sent automatically by the browser.
+  // Only attach Authorization for agent API key calls (programmatic use).
+  const token = getToken();
+  if (token?.startsWith("jw_")) {
+    headers["Authorization"] = `Bearer ${token}`;
   }
+
+  const res = await fetch(`${BASE}${path}`, { ...options, headers, credentials: "same-origin" });
 
   if (!res.ok) {
     let errMsg = `HTTP ${res.status}`;

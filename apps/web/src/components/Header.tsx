@@ -11,8 +11,6 @@ interface HeaderProps {
   userLng?: number;
   selectedTerritory?: TerritorySelection;
   onTerritoryChange?: (selection: TerritorySelection) => void;
-  /** Pass user info when authenticated */
-  user?: { displayName: string; territory?: string } | null;
 }
 
 export default function Header({
@@ -21,7 +19,6 @@ export default function Header({
   userLng,
   selectedTerritory,
   onTerritoryChange,
-  user,
 }: HeaderProps) {
   const showSelector = selectedTerritory !== undefined && onTerritoryChange !== undefined;
 
@@ -33,13 +30,11 @@ export default function Header({
         position: "sticky",
         top: 0,
         zIndex: 40,
+        width: "100%",
       }}
     >
-      {/* Main row */}
-      <div
-        style={{ maxWidth: "640px" }}
-        className="mx-auto flex items-center justify-between px-4 py-3"
-      >
+      {/* Main row — full width, content centered */}
+      <div className="feed-container mx-auto flex items-center justify-between px-4 py-3">
         {/* Wordmark */}
         <Link
           href="/"
@@ -50,13 +45,14 @@ export default function Header({
             fontWeight: 700,
             fontSize: "0.875rem",
             textDecoration: "none",
+            flexShrink: 0,
           }}
         >
           JAWWING
         </Link>
 
         {/* Center: location / territory selector */}
-        <div className="flex-1 flex justify-center">
+        <div className="flex-1 flex justify-center px-4">
           {showSelector ? (
             <TerritorySelector
               userLat={userLat}
@@ -78,51 +74,27 @@ export default function Header({
           )}
         </div>
 
-        {/* Right side: auth state */}
-        {user ? (
-          <Link
-            href="/profile"
-            style={{
-              ...MONO,
-              color: "#C0C0C0",
-              fontSize: "0.6875rem",
-              letterSpacing: "0.06em",
-              textDecoration: "none",
-            }}
-            className="hover:text-white transition-colors"
-          >
-            {user.displayName.toUpperCase()}
-            {user.territory ? ` · ${user.territory.toUpperCase()}` : ""}
-          </Link>
-        ) : (
-          <Link
-            href="/login"
-            style={{
-              ...MONO,
-              letterSpacing: "0.08em",
-              fontSize: "0.6875rem",
-              fontWeight: 600,
-              color: "#FFFFFF",
-              background: "transparent",
-              border: "1px solid #FFFFFF",
-              padding: "5px 14px",
-              textDecoration: "none",
-              whiteSpace: "nowrap",
-            }}
-            className="hover:bg-white hover:text-black transition-colors"
-          >
-            SIGN UP
-          </Link>
-        )}
+        {/* Right: info link */}
+        <Link
+          href="/about"
+          style={{
+            ...MONO,
+            color: "#333333",
+            fontSize: "0.6875rem",
+            letterSpacing: "0.06em",
+            textDecoration: "none",
+            flexShrink: 0,
+          }}
+          className="hover:text-[#777777] transition-colors"
+        >
+          ?
+        </Link>
       </div>
 
-      {/* Sub-nav row */}
+      {/* Sub-nav */}
       <div
-        style={{
-          maxWidth: "640px",
-          borderTop: "1px solid #0F0F0F",
-        }}
-        className="mx-auto flex items-center gap-5 px-4 py-1"
+        className="feed-container mx-auto flex items-center gap-5 px-4 py-1"
+        style={{ borderTop: "1px solid #0F0F0F" }}
       >
         {[
           { href: "/about", label: "ABOUT" },

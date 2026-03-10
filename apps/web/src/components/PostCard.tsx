@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { votePost, isAuthenticated } from "@/lib/api";
+import { votePost } from "@/lib/api";
 import { useToast } from "./Toast";
 
 export interface Post {
@@ -20,7 +20,6 @@ export interface Post {
 
 export interface PostCardProps {
   post: Post;
-  onLoginRequired?: () => void;
   /** "card" = standard list layout (default). "fullscreen" = TikTok-style snap layout. */
   variant?: "card" | "fullscreen";
 }
@@ -330,12 +329,11 @@ function ExpiryIndicator({ expiresAt }: { expiresAt: number }) {
 
 // ─── PostCard ─────────────────────────────────────────────────────────────────
 
-export default function PostCard({ post, onLoginRequired, variant = "card" }: PostCardProps) {
+export default function PostCard({ post, variant = "card" }: PostCardProps) {
   const replyCount = post.reply_count ?? post.replyCount ?? 0;
   const [score, setScore] = useState(post.score);
   const [voted, setVoted] = useState<"up" | "down" | null>(null);
   const [voting, setVoting] = useState(false);
-  const [showVotePrompt, setShowVotePrompt] = useState(false);
   const toast = useToast();
 
   const imageUrls = matchImageUrls(post.content);
@@ -343,11 +341,6 @@ export default function PostCard({ post, onLoginRequired, variant = "card" }: Po
 
   const vote = async (dir: "up" | "down") => {
     if (voting) return;
-    if (!isAuthenticated()) {
-      setShowVotePrompt(true);
-      onLoginRequired?.();
-      return;
-    }
 
     let newScore = score;
     let newVoted: "up" | "down" | null;
@@ -478,14 +471,7 @@ export default function PostCard({ post, onLoginRequired, variant = "card" }: Po
                 {post.timeAgo}
               </span>
             )}
-            {showVotePrompt && (
-              <a
-                href="/login"
-                style={{ ...MONO, color: "#C0C0C0", fontSize: "0.625rem", letterSpacing: "0.06em", textDecoration: "none" }}
-              >
-                SIGN UP TO VOTE
-              </a>
-            )}
+
           </div>
         </div>
 
@@ -644,42 +630,24 @@ export default function PostCard({ post, onLoginRequired, variant = "card" }: Po
           >
             ▼
           </button>
-          {showVotePrompt && (
-            <span style={{ ...MONO, fontSize: "0.625rem", letterSpacing: "0.06em", color: "#555555" }}>
-              <a
-                href="/login"
-                style={{ color: "#C0C0C0", textDecoration: "none" }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = "#FFFFFF")}
-                onMouseLeave={(e) => (e.currentTarget.style.color = "#C0C0C0")}
-              >
-                SIGN UP TO VOTE
-              </a>
-            </span>
-          )}
+
         </div>
 
-        {/* Right meta */}
-        <div
-          style={{ color: "#777777", ...MONO, letterSpacing: "0.02em" }}
-          className="flex items-center gap-3 text-xs"
+        {/* Right meta — clicking anywhere navigates to post detail */}
+        <Link
+          href={`/post/${post.id}`}
+          style={{ color: "#777777", textDecoration: "none", display: "flex", alignItems: "center", gap: "10px", ...MONO, letterSpacing: "0.02em" }}
+          className="text-xs hover:text-[#A0A0A0] transition-colors"
+          onClick={(e) => {
+            // Don't intercept the share button click (it's a sibling, not nested here)
+          }}
         >
           {post.expires_at && <ExpiryIndicator expiresAt={post.expires_at} />}
-          <button
-            onClick={handleShare}
-            style={{ color: "#777777", background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: "0.75rem", lineHeight: 1 }}
-            className="hover:text-[#C0C0C0] transition-colors"
-            aria-label="Share post"
-            title="Copy link"
-          >
-            ↗
-          </button>
-          <Link
-            href={`/post/${post.id}`}
-            style={{ color: "#777777", textDecoration: "none" }}
-            className="hover:text-[#C0C0C0] transition-colors"
-          >
-            ↩ {replyCount}
-          </Link>
+          {/* Comment count */}
+          <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+            <span>💬</span>
+            <span style={{ ...MONO, fontSize: "0.75rem" }}>{replyCount}</span>
+          </span>
           {post.distance && (
             <>
               <span style={{ color: "#1F1F1F" }}>·</span>
@@ -692,7 +660,19 @@ export default function PostCard({ post, onLoginRequired, variant = "card" }: Po
               <span>{post.timeAgo}</span>
             </>
           )}
-        </div>
+        </Link>
+      </div>
+      {/* Share button — separate so it doesn't trigger post navigation */}
+      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "6px" }}>
+        <button
+          onClick={handleShare}
+          style={{ color: "#555555", background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: "0.75rem", lineHeight: 1, ...MONO, letterSpacing: "0.04em" }}
+          className="hover:text-[#A0A0A0] transition-colors"
+          aria-label="Share post"
+          title="Copy link"
+        >
+          ↗ SHARE
+        </button>
       </div>
     </article>
   );

@@ -1,8 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
 import Header from "@/components/Header";
 import FeedTabs, { SortTab } from "@/components/FeedTabs";
 import PostCard, { Post as PostCardPost } from "@/components/PostCard";
@@ -12,14 +10,16 @@ import { fetchPosts, fetchNewPosts, createPost, getTerritoryFeed, type Post } fr
 import { requestLocation, reverseGeocode } from "@/lib/location";
 import { formatTimeAgo, formatDistance } from "@/lib/api";
 import { type TerritorySelection } from "@/components/TerritorySelector";
-import { useAuth } from "@/lib/auth";
-
-const HEADER_HEIGHT = 56; // px — keep in sync with Header component
+import Link from "next/link";
 
 const MONO = { fontFamily: "var(--font-mono), monospace" } as const;
 const LIMIT = 20;
 const POLL_INTERVAL_MS = 30_000;
 const WELCOME_DISMISSED_KEY = "jawwing_welcome_dismissed";
+
+// Default coords — DC Metro, shown immediately while GPS resolves
+const DC_LAT = 38.9072;
+const DC_LNG = -77.0369;
 
 function toCardPost(
   post: Post,
@@ -44,24 +44,8 @@ function toCardPost(
 }
 
 export default function FeedPage() {
-  const router = useRouter();
-  const { user, isAuthenticated } = useAuth();
-
   const [activeTab, setActiveTab] = useState<SortTab>("hot");
   const [showModal, setShowModal] = useState(false);
-  const [showLoginPrompt, setShowLoginPrompt] = useState<string | null>(null); // "vote" | "post" | null
-
-  // Mobile detection — snap scroll on <640px
-  const [isMobile, setIsMobile] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia("(max-width: 639px)");
-    setIsMobile(mq.matches);
-    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
-  }, []);
-
-  const snapContainerRef = useRef<HTMLDivElement | null>(null);
 
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -71,7 +55,7 @@ export default function FeedPage() {
   const [offset, setOffset] = useState(0);
 
   // Welcome card
-  const [welcomeDismissed, setWelcomeDismissed] = useState(true); // start hidden, load from LS
+  const [welcomeDismissed, setWelcomeDismissed] = useState(true);
   useEffect(() => {
     try {
       const dismissed = localStorage.getItem(WELCOME_DISMISSED_KEY);
@@ -84,62 +68,39 @@ export default function FeedPage() {
     try { localStorage.setItem(WELCOME_DISMISSED_KEY, "1"); } catch { /* noop */ }
   };
 
-  // New posts polling state
+  // New posts polling
   const [newPosts, setNewPosts] = useState<Post[]>([]);
   const [showNewBanner, setShowNewBanner] = useState(false);
   const latestTimestampRef = useRef<number>(0);
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // DC Metro fallback
-  const DC_LAT = 38.9072;
-  const DC_LNG = -77.0369;
-
-  const [userLat, setUserLat] = useState<number | undefined>();
-  const [userLng, setUserLng] = useState<number | undefined>();
-  const [locationLabel, setLocationLabel] = useState("Getting location...");
-  const [locationError, setLocationError] = useState(false);
+  // Location — start with DC Metro immediately, refine with GPS async
+  const [userLat, setUserLat] = useState<number>(DC_LAT);
+  const [userLng, setUserLng] = useState<number>(DC_LNG);
+  const [locationLabel, setLocationLabel] = useState("DC Metro");
+  const [locationRefined, setLocationRefined] = useState(false);
   const [locationFallback, setLocationFallback] = useState(false);
 
-  const [selectedTerritory, setSelectedTerritory] = useState<TerritorySelection>({
-    type: "near_me",
-  });
+  const [selectedTerritory, setSelectedTerritory] = useState<TerritorySelection>({ type: "near_me" });
 
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
-  const mobileLoadMoreRef = useRef<HTMLDivElement | null>(null);
 
-  // Get location on mount — 5s timeout, fall back to DC Metro
+  // Request real GPS in background — update coords when available
   useEffect(() => {
     let cancelled = false;
-
-    const fallbackToDC = () => {
-      if (cancelled) return;
-      setLocationError(true);
-      setLocationFallback(true);
-      setUserLat(DC_LAT);
-      setUserLng(DC_LNG);
-      setLocationLabel("DC Metro");
-    };
-
-    const timeoutId = setTimeout(fallbackToDC, 5_000);
-
     requestLocation()
       .then(async ({ lat, lng }) => {
         if (cancelled) return;
-        clearTimeout(timeoutId);
         setUserLat(lat);
         setUserLng(lng);
+        setLocationRefined(true);
         const label = await reverseGeocode(lat, lng);
         if (!cancelled) setLocationLabel(label);
       })
       .catch(() => {
-        clearTimeout(timeoutId);
-        fallbackToDC();
+        if (!cancelled) setLocationFallback(true);
       });
-
-    return () => {
-      cancelled = true;
-      clearTimeout(timeoutId);
-    };
+    return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -148,10 +109,6 @@ export default function FeedPage() {
   // Load feed
   const loadFeed = useCallback(
     async (reset = false) => {
-      if (selectedTerritory.type === "near_me") {
-        if (userLat == null || userLng == null) return;
-      }
-
       if (reset) {
         setLoading(true);
         setOffset(0);
@@ -165,8 +122,8 @@ export default function FeedPage() {
 
       try {
         const currentOffset = reset ? 0 : offset;
-
         let fetchedPosts: Post[];
+
         if (selectedTerritory.type === "territory") {
           const data = await getTerritoryFeed(
             selectedTerritory.territory.id,
@@ -177,8 +134,8 @@ export default function FeedPage() {
           fetchedPosts = data.posts;
         } else {
           const data = await fetchPosts(
-            userLat!,
-            userLng!,
+            userLat,
+            userLng,
             activeTab as "hot" | "new" | "top",
             LIMIT,
             currentOffset
@@ -204,21 +161,25 @@ export default function FeedPage() {
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [userLat, userLng, activeTab, offset, locationError, selectedTerritory]
+    [userLat, userLng, activeTab, offset, selectedTerritory]
   );
 
+  // Load on mount + when tab/territory changes
   useEffect(() => {
-    if (selectedTerritory.type === "territory") {
-      loadFeed(true);
-    } else if (userLat != null && userLng != null) {
+    loadFeed(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, selectedTerritory]);
+
+  // Reload with refined coords when GPS comes in
+  useEffect(() => {
+    if (locationRefined) {
       loadFeed(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userLat, userLng, activeTab, selectedTerritory]);
+  }, [locationRefined]);
 
   // Poll for new posts
   const pollForNew = useCallback(async () => {
-    if (userLat == null || userLng == null) return;
     if (latestTimestampRef.current === 0) return;
     if (selectedTerritory.type !== "near_me") return;
     if (activeTab === "top") return;
@@ -233,20 +194,16 @@ export default function FeedPage() {
         });
         setShowNewBanner(true);
       }
-    } catch {
-      // Silent
-    }
+    } catch { /* silent */ }
   }, [userLat, userLng, activeTab, selectedTerritory]);
 
   useEffect(() => {
     if (pollTimerRef.current) clearInterval(pollTimerRef.current);
-    if (userLat != null && userLng != null && !loading) {
+    if (!loading) {
       pollTimerRef.current = setInterval(pollForNew, POLL_INTERVAL_MS);
     }
-    return () => {
-      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
-    };
-  }, [userLat, userLng, loading, pollForNew]);
+    return () => { if (pollTimerRef.current) clearInterval(pollTimerRef.current); };
+  }, [loading, pollForNew]);
 
   const handleShowNewPosts = () => {
     if (newPosts.length === 0) return;
@@ -263,7 +220,7 @@ export default function FeedPage() {
     setShowNewBanner(false);
   };
 
-  // Infinite scroll (desktop)
+  // Infinite scroll
   useEffect(() => {
     if (!loadMoreRef.current) return;
     const observer = new IntersectionObserver(
@@ -278,45 +235,15 @@ export default function FeedPage() {
     return () => observer.disconnect();
   }, [hasMore, loadingMore, loading, loadFeed]);
 
-  // Mobile snap: infinite scroll via last item sentinel
-  useEffect(() => {
-    if (!isMobile || !mobileLoadMoreRef.current) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMore && !loadingMore && !loading) {
-          loadFeed(false);
-        }
-      },
-      {
-        root: snapContainerRef.current,
-        threshold: 0.1,
-      }
-    );
-    observer.observe(mobileLoadMoreRef.current);
-    return () => observer.disconnect();
-  }, [isMobile, hasMore, loadingMore, loading, loadFeed, posts.length]);
-
-  const handleTabChange = (tab: SortTab) => {
-    setActiveTab(tab);
-  };
-
-  const handleCreatePost = async (content: string, imageUrl?: string) => {
-    if (!isAuthenticated) {
-      setShowLoginPrompt("post");
-      throw new Error("Login required");
-    }
+  const handleCreatePost = async (content: string) => {
     if (userLat == null || userLng == null) {
       throw new Error("Location required to post.");
     }
-    await createPost(content, userLat, userLng, imageUrl);
+    await createPost(content, userLat, userLng);
     loadFeed(true);
   };
 
   const handleFabClick = () => {
-    if (!isAuthenticated) {
-      setShowLoginPrompt("post");
-      return;
-    }
     if (isRemoteTerritory) return;
     setShowModal(true);
   };
@@ -335,98 +262,7 @@ export default function FeedPage() {
           userLng={userLng}
           selectedTerritory={selectedTerritory}
           onTerritoryChange={setSelectedTerritory}
-          user={user ? { displayName: user.displayName } : null}
         />
-
-        {/* Anonymous browsing banner — shown when not logged in */}
-        {!isAuthenticated && (
-          <div
-            style={{
-              background: "#000000",
-              borderBottom: "1px solid #1F1F1F",
-              padding: "8px 16px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              maxWidth: "480px",
-              margin: "0 auto",
-            }}
-          >
-            <span style={{ ...MONO, color: "#555555", fontSize: "0.625rem", letterSpacing: "0.1em" }}>
-              JAWWING · ANONYMOUS LOCAL POSTS
-            </span>
-            <Link
-              href="/login"
-              style={{
-                ...MONO,
-                color: "#FFFFFF",
-                fontSize: "0.625rem",
-                fontWeight: 600,
-                letterSpacing: "0.1em",
-                border: "1px solid #333333",
-                padding: "4px 10px",
-                textDecoration: "none",
-              }}
-              className="hover:border-white transition-colors"
-            >
-              SIGN UP
-            </Link>
-          </div>
-        )}
-
-        {/* Login prompt banner — triggered by vote/post actions */}
-        {showLoginPrompt && (
-          <div
-            style={{
-              background: "#0A0A0A",
-              border: "1px solid #1F1F1F",
-              borderLeft: "2px solid #FFFFFF",
-              padding: "12px 16px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: "12px",
-              maxWidth: "480px",
-              margin: "0 auto",
-            }}
-          >
-            <span style={{ ...MONO, color: "#C0C0C0", fontSize: "0.75rem", letterSpacing: "0.04em" }}>
-              {showLoginPrompt === "vote" ? "SIGN UP TO VOTE" : "SIGN UP TO POST"}
-            </span>
-            <div style={{ display: "flex", gap: "8px" }}>
-              <button
-                onClick={() => router.push("/login")}
-                style={{
-                  ...MONO,
-                  background: "#FFFFFF",
-                  color: "#000000",
-                  border: "none",
-                  padding: "6px 14px",
-                  fontSize: "0.75rem",
-                  fontWeight: 600,
-                  letterSpacing: "0.06em",
-                  cursor: "pointer",
-                }}
-              >
-                SIGN UP
-              </button>
-              <button
-                onClick={() => setShowLoginPrompt(null)}
-                style={{
-                  ...MONO,
-                  background: "none",
-                  color: "#777777",
-                  border: "none",
-                  padding: "6px",
-                  fontSize: "0.875rem",
-                  cursor: "pointer",
-                }}
-              >
-                ✕
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Location fallback banner */}
         {locationFallback && !isRemoteTerritory && (
@@ -436,12 +272,12 @@ export default function FeedPage() {
               border: "1px solid #3D2E00",
               borderLeft: "3px solid #F5A500",
               padding: "10px 16px",
-              maxWidth: "480px",
               margin: "0 auto",
               display: "flex",
               alignItems: "center",
               gap: "8px",
             }}
+            className="feed-container"
           >
             <span style={{ fontSize: "0.875rem", lineHeight: "1" }}>⚠</span>
             <span style={{ ...MONO, color: "#F5A500", fontSize: "0.6875rem", letterSpacing: "0.06em" }}>
@@ -450,7 +286,7 @@ export default function FeedPage() {
           </div>
         )}
 
-        {/* GPS-lock banner */}
+        {/* GPS-lock banner for remote territories */}
         {isRemoteTerritory && (
           <div
             style={{
@@ -458,9 +294,9 @@ export default function FeedPage() {
               border: "1px solid #1F1F1F",
               borderLeft: "2px solid #333333",
               padding: "10px 16px",
-              maxWidth: "480px",
               margin: "0 auto",
             }}
+            className="feed-container"
           >
             <span style={{ ...MONO, color: "#777777", fontSize: "0.6875rem", letterSpacing: "0.06em" }}>
               YOU CAN ONLY POST WHERE YOU ARE
@@ -468,11 +304,11 @@ export default function FeedPage() {
           </div>
         )}
 
-        <main style={{ maxWidth: "480px" }} className="mx-auto">
-          {/* Feed tabs + manual refresh button */}
+        <main className="feed-container mx-auto">
+          {/* Feed tabs + refresh */}
           <div style={{ display: "flex", alignItems: "center" }}>
             <div style={{ flex: 1 }}>
-              <FeedTabs active={activeTab} onChange={handleTabChange} />
+              <FeedTabs active={activeTab} onChange={setActiveTab} />
             </div>
             <button
               onClick={() => loadFeed(true)}
@@ -517,7 +353,7 @@ export default function FeedPage() {
             </div>
           )}
 
-          {/* Welcome card — first-time visitors */}
+          {/* Welcome card */}
           {!welcomeDismissed && (
             <div
               style={{
@@ -537,7 +373,7 @@ export default function FeedPage() {
                   WELCOME TO JAWWING
                 </p>
                 <p style={{ color: "#777777", fontSize: "0.8125rem", lineHeight: 1.5, marginBottom: "10px" }}>
-                  Anonymous, location-based posts. AI-moderated.
+                  Anonymous, location-based posts. No account required. AI-moderated.
                 </p>
                 <Link
                   href="/about"
@@ -613,7 +449,7 @@ export default function FeedPage() {
             </div>
           )}
 
-          {/* Error state */}
+          {/* Error */}
           {!loading && error && (
             <div style={{ padding: "40px 16px", textAlign: "center" }}>
               <p style={{ ...MONO, color: "#FF3333", fontSize: "0.75rem", letterSpacing: "0.04em", marginBottom: "16px" }}>
@@ -637,7 +473,7 @@ export default function FeedPage() {
             </div>
           )}
 
-          {/* Empty state */}
+          {/* Empty */}
           {!loading && !error && posts.length === 0 && (
             <div style={{ padding: "60px 16px", textAlign: "center" }}>
               <p style={{ ...MONO, color: "#333333", fontSize: "0.75rem", letterSpacing: "0.06em", marginBottom: "8px" }}>
@@ -649,178 +485,62 @@ export default function FeedPage() {
             </div>
           )}
 
-          {/* Posts — desktop card list */}
-          {!loading && !error && posts.length > 0 && !isMobile && (
+          {/* Posts */}
+          {!loading && !error && posts.length > 0 && (
             <div className="flex flex-col" style={{ gap: "2px", paddingTop: "2px" }}>
               {posts.map((post) => (
                 <PostCard
                   key={post.id}
                   post={toCardPost(post, userLat, userLng, territoryName)}
-                  onLoginRequired={() => setShowLoginPrompt("vote")}
-                  variant="card"
                 />
               ))}
             </div>
           )}
 
-          {/* Load more sentinel (desktop) */}
-          {!isMobile && <div ref={loadMoreRef} style={{ height: "1px" }} />}
+          <div ref={loadMoreRef} style={{ height: "1px" }} />
 
-          {/* Loading more indicator (desktop) */}
-          {!isMobile && loadingMore && (
+          {loadingMore && (
             <p style={{ ...MONO, color: "#333333", fontSize: "0.625rem", letterSpacing: "0.08em", textAlign: "center", padding: "16px 0" }}>
               LOADING...
             </p>
           )}
 
-          {/* End of feed (desktop) */}
-          {!isMobile && !loading && !hasMore && posts.length > 0 && (
-            <p
-              style={{
-                ...MONO,
-                color: "#333333",
-                fontSize: "0.6875rem",
-                letterSpacing: "0.06em",
-                textAlign: "center",
-                padding: "40px 0 80px",
-              }}
-            >
-              {territoryName
-                ? `${territoryName.toUpperCase()} · TERRITORY`
-                : "5 MILE RADIUS · ANONYMOUS"}
+          {!loading && !hasMore && posts.length > 0 && (
+            <p style={{ ...MONO, color: "#333333", fontSize: "0.6875rem", letterSpacing: "0.06em", textAlign: "center", padding: "40px 0 80px" }}>
+              {territoryName ? `${territoryName.toUpperCase()} · TERRITORY` : "5 MILE RADIUS · ANONYMOUS"}
             </p>
           )}
 
-          {/* Bottom padding for FAB (desktop) */}
-          {!isMobile && <div style={{ height: "80px" }} />}
+          <div style={{ height: "80px" }} />
         </main>
-
-        {/* ── Mobile snap scroll feed ───────────────────────────────────────── */}
-        {isMobile && !loading && !error && posts.length > 0 && (
-          <div
-            ref={snapContainerRef}
-            className="feed-scroll-container"
-            style={{
-              position: "fixed",
-              top: `${HEADER_HEIGHT}px`,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              scrollSnapType: "y mandatory",
-              overflowY: "scroll",
-              WebkitOverflowScrolling: "touch",
-              zIndex: 10,
-            } as React.CSSProperties}
-          >
-            {posts.map((post, i) => (
-              <div
-                key={post.id}
-
-                className="feed-snap-item"
-                style={{
-                  scrollSnapAlign: "start",
-                  height: `calc(100vh - ${HEADER_HEIGHT}px)`,
-                  display: "flex",
-                  flexDirection: "column",
-                  overflow: "hidden",
-                }}
-              >
-                <PostCard
-                  post={toCardPost(post, userLat, userLng, territoryName)}
-                  onLoginRequired={() => setShowLoginPrompt("vote")}
-                  variant="fullscreen"
-
-                />
-              </div>
-            ))}
-
-            {/* Mobile load more sentinel */}
-            <div
-              ref={mobileLoadMoreRef}
-              style={{
-                scrollSnapAlign: "start",
-                height: `calc(100vh - ${HEADER_HEIGHT}px)`,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                background: "#000000",
-              }}
-            >
-              {loadingMore ? (
-                <span style={{ ...MONO, color: "#333333", fontSize: "0.625rem", letterSpacing: "0.1em" }}>
-                  LOADING...
-                </span>
-              ) : !hasMore ? (
-                <span style={{ ...MONO, color: "#333333", fontSize: "0.625rem", letterSpacing: "0.08em" }}>
-                  {territoryName ? `${territoryName.toUpperCase()} · TERRITORY` : "5 MILE RADIUS · ANONYMOUS"}
-                </span>
-              ) : null}
-            </div>
-          </div>
-        )}
-
-        {/* Mobile loading skeleton (fixed overlay) */}
-        {isMobile && loading && (
-          <div
-            style={{
-              position: "fixed",
-              top: `${HEADER_HEIGHT}px`,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: "#000000",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "8px",
-              zIndex: 10,
-            }}
-          >
-            <span style={{ ...MONO, color: "#333333", fontSize: "0.625rem", letterSpacing: "0.1em" }}>
-              LOADING...
-            </span>
-          </div>
-        )}
 
         {/* FAB */}
         <button
           onClick={handleFabClick}
-          disabled={isAuthenticated && isRemoteTerritory}
+          disabled={isRemoteTerritory}
           style={{
             position: "fixed",
             bottom: "24px",
             right: "24px",
-            width: "48px",
-            height: "48px",
-            background: (isAuthenticated && isRemoteTerritory) ? "#1F1F1F" : "#FFFFFF",
-            color: (isAuthenticated && isRemoteTerritory) ? "#777777" : "#000000",
-            border: (isAuthenticated && isRemoteTerritory) ? "1px solid #333333" : "none",
+            width: "52px",
+            height: "52px",
+            background: isRemoteTerritory ? "#1F1F1F" : "#FFFFFF",
+            color: isRemoteTerritory ? "#777777" : "#000000",
+            border: isRemoteTerritory ? "1px solid #333333" : "none",
             fontSize: "1.5rem",
             lineHeight: 1,
-            cursor: (isAuthenticated && isRemoteTerritory) ? "not-allowed" : "pointer",
+            cursor: isRemoteTerritory ? "not-allowed" : "pointer",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             fontWeight: 300,
             zIndex: 30,
             transition: "background 150ms, color 150ms",
+            borderRadius: "2px",
           } as React.CSSProperties}
-          className={(isAuthenticated && isRemoteTerritory) ? "" : "hover:bg-[#C0C0C0]"}
-          aria-label={
-            !isAuthenticated
-              ? "Sign up to post"
-              : isRemoteTerritory
-              ? "You can only post where you are"
-              : "Create post"
-          }
-          title={
-            !isAuthenticated
-              ? "Sign up to post"
-              : isRemoteTerritory
-              ? "You can only post where you are"
-              : undefined
-          }
+          className={isRemoteTerritory ? "" : "hover:bg-[#C0C0C0]"}
+          aria-label={isRemoteTerritory ? "You can only post where you are" : "Create post"}
+          title={isRemoteTerritory ? "You can only post where you are" : undefined}
         >
           +
         </button>

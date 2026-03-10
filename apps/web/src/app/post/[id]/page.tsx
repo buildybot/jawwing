@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -8,7 +8,6 @@ import {
   getReplies,
   createReply,
   votePost,
-  isAuthenticated,
   formatTimeAgo,
   type Post,
   type Reply,
@@ -16,7 +15,8 @@ import {
 import { ToastProvider } from "@/components/Toast";
 
 const MONO = { fontFamily: "var(--font-mono), monospace" } as const;
-const MAX_REPLY = 300;
+const MAX_CHARS = 300;
+const MAX_DEPTH = 4;
 
 // ─── Reply vote state (client-side only, optimistic) ─────────────────────────
 
@@ -46,7 +46,140 @@ function buildReplyTree(replies: Reply[]): ReplyNode[] {
       roots.push(node);
     }
   }
+
+  // Sort: top-level by created_at desc (newest first), nested by created_at asc
+  roots.sort((a, b) => b.created_at - a.created_at);
+  sortNestedByDate(roots);
+
   return roots;
+}
+
+function sortNestedByDate(nodes: ReplyNode[]) {
+  for (const node of nodes) {
+    if (node.children.length > 0) {
+      node.children.sort((a, b) => a.created_at - b.created_at);
+      sortNestedByDate(node.children);
+    }
+  }
+}
+
+// ─── InlineReplyInput ─────────────────────────────────────────────────────────
+
+interface InlineReplyInputProps {
+  parentId: string;
+  onSubmit: (parentId: string, content: string) => Promise<void>;
+  onCancel: () => void;
+}
+
+function InlineReplyInput({ parentId, onSubmit, onCancel }: InlineReplyInputProps) {
+  const [content, setContent] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    setTimeout(() => inputRef.current?.focus(), 50);
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!content.trim() || submitting) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      await onSubmit(parentId, content.trim());
+      setContent("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to post.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div
+      style={{
+        marginLeft: "16px",
+        borderLeft: "1px solid #1F1F1F",
+        padding: "8px 12px",
+        background: "#050505",
+      }}
+    >
+      {error && (
+        <p style={{ ...MONO, color: "#FF3333", fontSize: "0.625rem", letterSpacing: "0.04em", marginBottom: "6px" }}>
+          {error.toUpperCase()}
+        </p>
+      )}
+      <form onSubmit={handleSubmit} style={{ display: "flex", gap: "8px", alignItems: "flex-end" }}>
+        <textarea
+          ref={inputRef}
+          value={content}
+          onChange={(e) => setContent(e.target.value.slice(0, MAX_CHARS))}
+          placeholder="Reply..."
+          disabled={submitting}
+          rows={2}
+          style={{
+            flex: 1,
+            background: "#0A0A0A",
+            border: "1px solid #1F1F1F",
+            borderRadius: 0,
+            color: "#FFFFFF",
+            fontSize: "0.875rem",
+            lineHeight: 1.5,
+            padding: "6px 8px",
+            resize: "none",
+            outline: "none",
+            fontFamily: "inherit",
+          }}
+          onFocus={(e) => (e.currentTarget.style.borderColor = "#333333")}
+          onBlur={(e) => (e.currentTarget.style.borderColor = "#1F1F1F")}
+          className="placeholder:text-[#555555]"
+        />
+        <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+          <button
+            type="submit"
+            disabled={!content.trim() || submitting}
+            style={{
+              ...MONO,
+              background: content.trim() && !submitting ? "#FFFFFF" : "transparent",
+              color: content.trim() && !submitting ? "#000000" : "#555555",
+              border: `1px solid ${content.trim() && !submitting ? "#FFFFFF" : "#333333"}`,
+              padding: "5px 12px",
+              fontSize: "0.625rem",
+              fontWeight: 700,
+              letterSpacing: "0.08em",
+              cursor: content.trim() && !submitting ? "pointer" : "not-allowed",
+              transition: "all 150ms",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {submitting ? "..." : "POST"}
+          </button>
+          <button
+            type="button"
+            onClick={onCancel}
+            style={{
+              ...MONO,
+              background: "none",
+              border: "1px solid #1F1F1F",
+              color: "#555555",
+              padding: "5px 12px",
+              fontSize: "0.625rem",
+              letterSpacing: "0.08em",
+              cursor: "pointer",
+            }}
+          >
+            CANCEL
+          </button>
+        </div>
+      </form>
+      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "2px" }}>
+        <span style={{ ...MONO, color: "#333333", fontSize: "0.5625rem" }}>
+          {content.length}/{MAX_CHARS}
+        </span>
+      </div>
+    </div>
+  );
 }
 
 // ─── ReplyItem ────────────────────────────────────────────────────────────────
@@ -56,89 +189,108 @@ interface ReplyItemProps {
   depth: number;
   voteStates: Map<string, ReplyVoteState>;
   onVote: (replyId: string, dir: "up" | "down") => void;
-  onReplyTo: (replyId: string, excerpt: string) => void;
+  activeReplyId: string | null;
+  onSetActiveReply: (replyId: string | null) => void;
+  onSubmitReply: (parentId: string, content: string) => Promise<void>;
 }
 
-function ReplyItem({ reply, depth, voteStates, onVote, onReplyTo }: ReplyItemProps) {
+function ReplyItem({
+  reply,
+  depth,
+  voteStates,
+  onVote,
+  activeReplyId,
+  onSetActiveReply,
+  onSubmitReply,
+}: ReplyItemProps) {
   const vs = voteStates.get(reply.id) ?? { score: 0, voted: null };
-  const indentPx = Math.min(depth * 16, 64);
+  // Cap indent at depth 4; deeper replies render flat under depth 4
+  const effectiveDepth = Math.min(depth, MAX_DEPTH);
+  const indentPx = effectiveDepth * 16;
+  const isReplying = activeReplyId === reply.id;
 
   return (
     <div>
+      {/* Comment row */}
       <div
         style={{
           background: "#0A0A0A",
-          borderBottom: "1px solid #1F1F1F",
-          padding: `12px 16px 12px ${16 + indentPx}px`,
-          borderLeft: depth > 0 ? "2px solid #1F1F1F" : "none",
-          marginLeft: depth > 0 ? `${indentPx}px` : 0,
+          borderBottom: "1px solid #111111",
+          padding: "10px 16px 10px 0",
+          paddingLeft: `${16 + indentPx}px`,
+          borderLeft: effectiveDepth > 0 ? "1px solid #1F1F1F" : "none",
+          marginLeft: effectiveDepth > 0 ? `${indentPx}px` : 0,
         }}
       >
-        <p style={{ color: "#FFFFFF", fontSize: "0.9375rem", lineHeight: 1.6, marginBottom: "8px" }}>
+        <p style={{ color: "#FFFFFF", fontSize: "0.9rem", lineHeight: 1.6, marginBottom: "8px" }}>
           {reply.content}
         </p>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            {/* Upvote */}
+          {/* Votes */}
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <button
               onClick={() => onVote(reply.id, "up")}
               style={{
-                color: vs.voted === "up" ? "#FFFFFF" : "#777777",
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                fontSize: "0.6875rem",
-                transition: "color 150ms",
-                padding: 0,
+                color: vs.voted === "up" ? "#FFFFFF" : "#555555",
+                background: "none", border: "none",
+                cursor: "pointer", fontSize: "0.625rem",
+                transition: "color 150ms", padding: 0,
               }}
               aria-label="Upvote reply"
             >
               ▲
             </button>
-            <span style={{ ...MONO, color: "#777777", fontSize: "0.6875rem", minWidth: "16px", textAlign: "center" }}>
+            <span style={{ ...MONO, color: "#555555", fontSize: "0.625rem", minWidth: "14px", textAlign: "center" }}>
               {vs.score}
             </span>
             <button
               onClick={() => onVote(reply.id, "down")}
               style={{
-                color: vs.voted === "down" ? "#C0C0C0" : "#777777",
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                fontSize: "0.6875rem",
+                color: vs.voted === "down" ? "#A0A0A0" : "#555555",
+                background: "none", border: "none",
+                cursor: "pointer", fontSize: "0.625rem",
                 opacity: vs.voted === "down" ? 1 : 0.6,
-                transition: "color 150ms",
-                padding: 0,
+                transition: "color 150ms", padding: 0,
               }}
               aria-label="Downvote reply"
             >
               ▼
             </button>
           </div>
+          {/* Time + Reply */}
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <span style={{ ...MONO, color: "#777777", fontSize: "0.6875rem", letterSpacing: "0.02em" }}>
+            <span style={{ ...MONO, color: "#555555", fontSize: "0.5625rem", letterSpacing: "0.02em" }}>
               {formatTimeAgo(reply.created_at)}
             </span>
             <button
-              onClick={() => onReplyTo(reply.id, reply.content.slice(0, 40))}
+              onClick={() => onSetActiveReply(isReplying ? null : reply.id)}
               style={{
                 ...MONO,
-                color: "#777777",
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                fontSize: "0.5625rem",
-                letterSpacing: "0.06em",
-                padding: 0,
+                color: isReplying ? "#FFFFFF" : "#555555",
+                background: "none", border: "none",
+                cursor: "pointer", fontSize: "0.5rem",
+                letterSpacing: "0.08em", padding: 0,
                 transition: "color 150ms",
               }}
-              className="hover:text-[#C0C0C0]"
             >
               REPLY
             </button>
           </div>
         </div>
       </div>
+
+      {/* Inline reply input */}
+      {isReplying && (
+        <InlineReplyInput
+          parentId={reply.id}
+          onSubmit={async (parentId, content) => {
+            await onSubmitReply(parentId, content);
+            onSetActiveReply(null);
+          }}
+          onCancel={() => onSetActiveReply(null)}
+        />
+      )}
+
       {/* Nested children */}
       {reply.children.map((child) => (
         <ReplyItem
@@ -147,7 +299,9 @@ function ReplyItem({ reply, depth, voteStates, onVote, onReplyTo }: ReplyItemPro
           depth={depth + 1}
           voteStates={voteStates}
           onVote={onVote}
-          onReplyTo={onReplyTo}
+          activeReplyId={activeReplyId}
+          onSetActiveReply={onSetActiveReply}
+          onSubmitReply={onSubmitReply}
         />
       ))}
     </div>
@@ -170,17 +324,16 @@ export default function PostPage() {
   const [voted, setVoted] = useState<"up" | "down" | null>(null);
   const [voting, setVoting] = useState(false);
 
-  // Reply vote states (client-side)
   const [replyVotes, setReplyVotes] = useState<Map<string, ReplyVoteState>>(new Map());
 
-  const [replyContent, setReplyContent] = useState("");
+  // Top-level comment input (fixed bottom bar)
+  const [commentContent, setCommentContent] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [replyError, setReplyError] = useState<string | null>(null);
+  const [commentError, setCommentError] = useState<string | null>(null);
+  const [posted, setPosted] = useState(false);
 
-  // Threading state
-  const [replyingTo, setReplyingTo] = useState<{ id: string; excerpt: string } | null>(null);
-
-  const replyInputRef = useRef<HTMLTextAreaElement | null>(null);
+  // Inline threading: which reply ID has the open inline input
+  const [activeReplyId, setActiveReplyId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -195,7 +348,6 @@ export default function PostPage() {
     getReplies(id)
       .then((data) => {
         setReplies(data.replies);
-        // Init reply vote states at 0
         const initVotes = new Map<string, ReplyVoteState>();
         for (const r of data.replies) {
           initVotes.set(r.id, { score: 0, voted: null });
@@ -206,20 +358,8 @@ export default function PostPage() {
       .finally(() => setRepliesLoading(false));
   }, [id]);
 
-  // Auto-focus reply input on mount
-  useEffect(() => {
-    if (!postLoading && post && replyInputRef.current && isAuthenticated()) {
-      // Small delay so DOM is ready
-      setTimeout(() => replyInputRef.current?.focus(), 150);
-    }
-  }, [postLoading, post]);
-
   const vote = async (dir: "up" | "down") => {
     if (voting || !post) return;
-    if (!isAuthenticated()) {
-      router.push("/login");
-      return;
-    }
 
     let newScore = score;
     let newVoted: "up" | "down" | null;
@@ -246,12 +386,7 @@ export default function PostPage() {
     }
   };
 
-  // Reply voting (client-side only)
   const handleReplyVote = (replyId: string, dir: "up" | "down") => {
-    if (!isAuthenticated()) {
-      router.push("/login");
-      return;
-    }
     setReplyVotes((prev) => {
       const next = new Map(prev);
       const cur = next.get(replyId) ?? { score: 0, voted: null };
@@ -272,34 +407,36 @@ export default function PostPage() {
     });
   };
 
-  const handleReplyTo = (replyId: string, excerpt: string) => {
-    setReplyingTo({ id: replyId, excerpt });
-    replyInputRef.current?.focus();
-  };
+  // Submit a nested reply (inline, with parentId)
+  const handleSubmitReply = useCallback(async (parentId: string, content: string) => {
+    const data = await createReply(id, content, parentId);
+    setReplies((prev) => [...prev, data.reply]);
+    setReplyVotes((prev) => {
+      const next = new Map(prev);
+      next.set(data.reply.id, { score: 0, voted: null });
+      return next;
+    });
+  }, [id]);
 
-  const clearReplyingTo = () => setReplyingTo(null);
-
-  const handleReplySubmit = async (e: React.FormEvent) => {
+  // Submit a top-level comment (bottom bar)
+  const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!replyContent.trim()) return;
-    if (!isAuthenticated()) {
-      router.push("/login");
-      return;
-    }
-    setReplyError(null);
+    if (!commentContent.trim() || submitting) return;
+    setCommentError(null);
     setSubmitting(true);
     try {
-      const data = await createReply(id, replyContent.trim(), replyingTo?.id);
+      const data = await createReply(id, commentContent.trim(), undefined);
       setReplies((prev) => [...prev, data.reply]);
       setReplyVotes((prev) => {
         const next = new Map(prev);
         next.set(data.reply.id, { score: 0, voted: null });
         return next;
       });
-      setReplyContent("");
-      setReplyingTo(null);
+      setCommentContent("");
+      setPosted(true);
+      setTimeout(() => setPosted(false), 2500);
     } catch (err) {
-      setReplyError(err instanceof Error ? err.message : "Failed to post reply.");
+      setCommentError(err instanceof Error ? err.message : "Failed to post comment.");
     } finally {
       setSubmitting(false);
     }
@@ -314,7 +451,10 @@ export default function PostPage() {
         <nav style={{ borderBottom: "1px solid #1F1F1F" }} className="px-4 py-4 flex items-center gap-3">
           <button
             onClick={() => router.back()}
-            style={{ ...MONO, color: "#777777", background: "none", border: "none", cursor: "pointer", fontSize: "0.875rem", letterSpacing: "0.04em" }}
+            style={{
+              ...MONO, color: "#777777", background: "none", border: "none",
+              cursor: "pointer", fontSize: "0.875rem", letterSpacing: "0.04em",
+            }}
             className="hover:text-white transition-colors"
           >
             ← BACK
@@ -322,7 +462,10 @@ export default function PostPage() {
           <span style={{ color: "#1F1F1F", ...MONO }}>|</span>
           <Link
             href="/"
-            style={{ ...MONO, letterSpacing: "0.12em", fontWeight: 700, fontSize: "0.875rem", color: "#FFFFFF", textDecoration: "none" }}
+            style={{
+              ...MONO, letterSpacing: "0.12em", fontWeight: 700,
+              fontSize: "0.875rem", color: "#FFFFFF", textDecoration: "none",
+            }}
           >
             JAWWING
           </Link>
@@ -364,7 +507,6 @@ export default function PostPage() {
                 {post.content}
               </p>
 
-              {/* Vote + meta */}
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                   <button
@@ -374,8 +516,7 @@ export default function PostPage() {
                       color: voted === "up" ? "#FFFFFF" : "#777777",
                       background: "none", border: "none",
                       cursor: voting ? "wait" : "pointer",
-                      fontSize: "0.875rem",
-                      transition: "color 150ms",
+                      fontSize: "0.875rem", transition: "color 150ms",
                     }}
                     className="hover:text-white"
                   >
@@ -385,10 +526,8 @@ export default function PostPage() {
                     style={{
                       ...MONO,
                       color: voted === "up" ? "#FFFFFF" : voted === "down" ? "#777777" : "#C0C0C0",
-                      fontSize: "1rem",
-                      fontWeight: 600,
-                      minWidth: "28px",
-                      textAlign: "center",
+                      fontSize: "1rem", fontWeight: 600,
+                      minWidth: "28px", textAlign: "center",
                     }}
                   >
                     {score}
@@ -409,43 +548,50 @@ export default function PostPage() {
                     ▼
                   </button>
                 </div>
-
                 <div style={{ ...MONO, color: "#777777", fontSize: "0.6875rem", letterSpacing: "0.02em", display: "flex", gap: "8px" }}>
-                  <span>↩ {post.reply_count}</span>
-                  <span style={{ color: "#1F1F1F" }}>·</span>
                   <span>{formatTimeAgo(post.created_at)}</span>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Replies header */}
+          {/* Comments header — "23 COMMENTS" */}
           {!postLoading && post && (
             <div
               style={{
-                ...MONO,
-                fontSize: "0.625rem",
-                letterSpacing: "0.1em",
-                color: "#777777",
-                padding: "12px 16px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "10px 16px",
                 borderBottom: "1px solid #1F1F1F",
+                borderTop: "1px solid #1F1F1F",
+                background: "#000000",
               }}
             >
-              REPLIES {repliesLoading ? "· LOADING..." : `· ${replies.length}`}
+              <span style={{ ...MONO, fontSize: "0.625rem", letterSpacing: "0.1em", color: "#777777" }}>
+                {repliesLoading
+                  ? "LOADING..."
+                  : `${replies.length} ${replies.length === 1 ? "COMMENT" : "COMMENTS"}`}
+              </span>
+              {!repliesLoading && replies.length > 0 && (
+                <span style={{ ...MONO, fontSize: "0.5625rem", letterSpacing: "0.06em", color: "#333333" }}>
+                  NEWEST FIRST
+                </span>
+              )}
             </div>
           )}
 
-          {/* Replies empty state */}
+          {/* Empty state */}
           {!repliesLoading && replies.length === 0 && !postLoading && post && (
             <div style={{ padding: "40px 16px", textAlign: "center" }}>
-              <p style={{ ...MONO, color: "#333333", fontSize: "0.75rem", letterSpacing: "0.06em" }}>
-                NO REPLIES YET
+              <p style={{ ...MONO, color: "#333333", fontSize: "0.75rem", letterSpacing: "0.08em" }}>
+                NO COMMENTS YET — BE FIRST
               </p>
             </div>
           )}
 
-          {/* Threaded replies */}
-          <div className="flex flex-col" style={{ gap: "1px" }}>
+          {/* Threaded comments */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "1px" }}>
             {replyTree.map((reply) => (
               <ReplyItem
                 key={reply.id}
@@ -453,13 +599,15 @@ export default function PostPage() {
                 depth={0}
                 voteStates={replyVotes}
                 onVote={handleReplyVote}
-                onReplyTo={handleReplyTo}
+                activeReplyId={activeReplyId}
+                onSetActiveReply={setActiveReplyId}
+                onSubmitReply={handleSubmitReply}
               />
             ))}
           </div>
         </main>
 
-        {/* Reply input (fixed bottom) */}
+        {/* Fixed bottom — top-level comment input */}
         {post && (
           <div
             style={{
@@ -471,57 +619,22 @@ export default function PostPage() {
               maxWidth: "480px",
               background: "#000000",
               borderTop: "1px solid #1F1F1F",
-              padding: "12px 16px",
+              padding: "10px 16px 12px",
               zIndex: 20,
             }}
           >
-            {/* Replying to label */}
-            {replyingTo && (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  marginBottom: "6px",
-                  gap: "8px",
-                }}
-              >
-                <span style={{ ...MONO, color: "#777777", fontSize: "0.5625rem", letterSpacing: "0.08em" }}>
-                  REPLYING TO: "{replyingTo.excerpt}{replyingTo.excerpt.length >= 40 ? "..." : ""}"
-                </span>
-                <button
-                  onClick={clearReplyingTo}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    color: "#777777",
-                    cursor: "pointer",
-                    fontSize: "0.75rem",
-                    padding: 0,
-                    lineHeight: 1,
-                    flexShrink: 0,
-                  }}
-                  className="hover:text-white"
-                  aria-label="Cancel replying to"
-                >
-                  ✕
-                </button>
-              </div>
-            )}
-
-            {replyError && (
-              <p style={{ ...MONO, color: "#FF3333", fontSize: "0.6875rem", letterSpacing: "0.02em", marginBottom: "6px" }}>
-                {replyError}
+            {commentError && (
+              <p style={{ ...MONO, color: "#FF3333", fontSize: "0.625rem", letterSpacing: "0.02em", marginBottom: "6px" }}>
+                {commentError.toUpperCase()}
               </p>
             )}
 
-            <form onSubmit={handleReplySubmit} style={{ display: "flex", gap: "8px", alignItems: "flex-end" }}>
+            <form onSubmit={handleCommentSubmit} style={{ display: "flex", gap: "8px", alignItems: "flex-end" }}>
               <textarea
-                ref={replyInputRef}
-                value={replyContent}
-                onChange={(e) => setReplyContent(e.target.value.slice(0, MAX_REPLY))}
-                placeholder={isAuthenticated() ? (replyingTo ? "Reply to this comment..." : "Reply anonymously...") : "Login to reply..."}
-                disabled={submitting || !isAuthenticated()}
+                value={commentContent}
+                onChange={(e) => setCommentContent(e.target.value.slice(0, MAX_CHARS))}
+                placeholder="Add a comment..."
+                disabled={submitting}
                 rows={2}
                 style={{
                   flex: 1,
@@ -538,52 +651,33 @@ export default function PostPage() {
                 }}
                 onFocus={(e) => (e.currentTarget.style.borderColor = "#333333")}
                 onBlur={(e) => (e.currentTarget.style.borderColor = "#1F1F1F")}
-                className="placeholder:text-[#777777]"
+                className="placeholder:text-[#555555]"
               />
-              {isAuthenticated() ? (
-                <button
-                  type="submit"
-                  disabled={!replyContent.trim() || submitting}
-                  style={{
-                    ...MONO,
-                    background: replyContent.trim() && !submitting ? "#FFFFFF" : "transparent",
-                    color: replyContent.trim() && !submitting ? "#000000" : "#777777",
-                    border: `1px solid ${replyContent.trim() && !submitting ? "#FFFFFF" : "#333333"}`,
-                    padding: "8px 16px",
-                    fontSize: "0.75rem",
-                    fontWeight: 600,
-                    letterSpacing: "0.06em",
-                    cursor: replyContent.trim() && !submitting ? "pointer" : "not-allowed",
-                    transition: "all 150ms",
-                    whiteSpace: "nowrap",
-                    height: "fit-content",
-                  }}
-                >
-                  {submitting ? "..." : "REPLY"}
-                </button>
-              ) : (
-                <Link
-                  href="/login"
-                  style={{
-                    ...MONO,
-                    background: "#FFFFFF",
-                    color: "#000000",
-                    border: "1px solid #FFFFFF",
-                    padding: "8px 16px",
-                    fontSize: "0.75rem",
-                    fontWeight: 600,
-                    letterSpacing: "0.06em",
-                    textDecoration: "none",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  LOGIN
-                </Link>
-              )}
+              <button
+                type="submit"
+                disabled={!commentContent.trim() || submitting}
+                style={{
+                  ...MONO,
+                  background: posted ? "#FFFFFF" : (commentContent.trim() && !submitting ? "#FFFFFF" : "transparent"),
+                  color: posted ? "#000000" : (commentContent.trim() && !submitting ? "#000000" : "#555555"),
+                  border: `1px solid ${commentContent.trim() && !submitting ? "#FFFFFF" : "#333333"}`,
+                  padding: "8px 16px",
+                  fontSize: "0.75rem",
+                  fontWeight: 700,
+                  letterSpacing: "0.06em",
+                  cursor: commentContent.trim() && !submitting ? "pointer" : "not-allowed",
+                  transition: "all 150ms",
+                  whiteSpace: "nowrap",
+                  height: "fit-content",
+                }}
+              >
+                {submitting ? "..." : posted ? "POSTED ✓" : "COMMENT"}
+              </button>
             </form>
-            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "4px" }}>
-              <span style={{ ...MONO, color: "#333333", fontSize: "0.625rem" }}>
-                {replyContent.length}/{MAX_REPLY}
+
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "3px" }}>
+              <span style={{ ...MONO, color: "#333333", fontSize: "0.5625rem" }}>
+                {commentContent.length}/{MAX_CHARS}
               </span>
             </div>
           </div>
