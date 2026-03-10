@@ -439,9 +439,19 @@ function ExpiryIndicator({ expiresAt }: { expiresAt: number }) {
 
 // ─── PostCard ─────────────────────────────────────────────────────────────────
 
+function isControversial(post: Post): boolean {
+  const ups = post.upvotes ?? 0;
+  const downs = post.downvotes ?? 0;
+  const engagement = ups + downs;
+  if (engagement <= 10) return false;
+  const controversy = Math.min(ups, downs) / Math.max(ups, downs);
+  return controversy > 0.7;
+}
+
 function PostCard({ post, variant = "card", feedScope }: PostCardProps) {
   const replyCount = post.reply_count ?? post.replyCount ?? 0;
   const [score, setScore] = useState(post.score);
+  const controversial = isControversial(post);
   const [voted, setVoted] = useState<"up" | "down" | null>(null);
   const [voting, setVoting] = useState(false);
   const [voteAnim, setVoteAnim] = useState<"up" | "down" | null>(null);
@@ -648,7 +658,12 @@ function PostCard({ post, variant = "card", feedScope }: PostCardProps) {
             >
               ▲
             </button>
-            <AnimatedScore value={score} voted={voted} />
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "2px" }}>
+              <AnimatedScore value={score} voted={voted} />
+              {controversial && (
+                <span style={{ fontSize: "0.65rem", color: "#FFF", lineHeight: 1 }} title="Hot debate">⚡</span>
+              )}
+            </div>
             <button
               onClick={() => vote("down")}
               disabled={voting}
@@ -789,7 +804,12 @@ function PostCard({ post, variant = "card", feedScope }: PostCardProps) {
           >
             ▲
           </button>
-          <AnimatedScore value={score} voted={voted} />
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "2px" }}>
+            <AnimatedScore value={score} voted={voted} />
+            {controversial && (
+              <span style={{ fontSize: "0.65rem", color: "#FFF", lineHeight: 1 }} title="Hot debate">⚡</span>
+            )}
+          </div>
           <button
             onClick={() => vote("down")}
             disabled={voting}

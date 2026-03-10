@@ -41,12 +41,33 @@ const SCOPE_DISTANCE_SCALE: Record<FeedScope, number> = {
   country: 100,
 };
 
-const HOT_GRAVITY_CLIENT = 1.8;
+const HOT_GRAVITY_CLIENT = 1.2;
 const SECONDS_PER_HOUR = 3600;
 
-function hotScore(score: number, createdAt: number): number {
+function wilsonScore(ups: number, total: number): number {
+  if (total === 0) return 0;
+  const z = 1.96;
+  const p = ups / total;
+  return (
+    (p + (z * z) / (2 * total) - z * Math.sqrt((p * (1 - p) + (z * z) / (4 * total)) / total)) /
+    (1 + (z * z) / total)
+  );
+}
+
+function hotScore(score: number, createdAt: number, upvotes?: number, downvotes?: number): number {
   const ageHours = (Date.now() / 1000 - createdAt) / SECONDS_PER_HOUR;
-  return (score + 1) / Math.pow(ageHours + 2, HOT_GRAVITY_CLIENT);
+  const ups = upvotes ?? 0;
+  const downs = downvotes ?? 0;
+  const total = ups + downs;
+  if (total === 0) {
+    // Legacy fallback
+    return (score + 1) / Math.pow(ageHours + 2, HOT_GRAVITY_CLIENT);
+  }
+  const engagement = total;
+  const controversy = Math.min(ups, downs) / Math.max(ups, downs);
+  const wilson = wilsonScore(ups, total);
+  const numerator = wilson + 0.3 * Math.log(1 + engagement) + 0.2 * controversy;
+  return numerator / Math.pow(ageHours + 2, HOT_GRAVITY_CLIENT);
 }
 
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -70,8 +91,8 @@ function sortPostsHot(rawPosts: Post[], userLat: number, userLng: number, scope:
   return [...rawPosts].sort((a, b) => {
     const distA = haversineKm(userLat, userLng, a.lat, a.lng);
     const distB = haversineKm(userLat, userLng, b.lat, b.lng);
-    const rankA = hotScore(a.score, a.created_at) * distanceBoost(distA, scale);
-    const rankB = hotScore(b.score, b.created_at) * distanceBoost(distB, scale);
+    const rankA = hotScore(a.score, a.created_at, a.upvotes, a.downvotes) * distanceBoost(distA, scale);
+    const rankB = hotScore(b.score, b.created_at, b.upvotes, b.downvotes) * distanceBoost(distB, scale);
     return rankB - rankA;
   });
 }
@@ -90,6 +111,8 @@ function toCardPost(
     id: post.id,
     content: post.content,
     score: post.score,
+    upvotes: post.upvotes,
+    downvotes: post.downvotes,
     reply_count: post.reply_count,
     timeAgo: formatTimeAgo(post.created_at),
     distance:

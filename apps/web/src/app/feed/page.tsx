@@ -25,6 +25,8 @@ function toCardPost(
     id: post.id,
     content: post.content,
     score: post.score,
+    upvotes: post.upvotes,
+    downvotes: post.downvotes,
     reply_count: post.reply_count,
     timeAgo: formatTimeAgo(post.created_at),
     distance:
