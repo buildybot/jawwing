@@ -18,12 +18,382 @@ export interface Post {
   territoryName?: string;
 }
 
-interface PostCardProps {
+export interface PostCardProps {
   post: Post;
   onLoginRequired?: () => void;
+  /** "card" = standard list layout (default). "fullscreen" = TikTok-style snap layout. */
+  variant?: "card" | "fullscreen";
+  /** Whether this card is in the viewport (used for autoplay on fullscreen). */
+  active?: boolean;
 }
 
-// ─── Score display with slide animation ──────────────────────────────────────
+const MONO = { fontFamily: "var(--font-mono), monospace" } as const;
+
+// ─── URL / media detection ────────────────────────────────────────────────────
+
+const URL_RE = /https?:\/\/[^\s<>"')\]]+/gi;
+const IMAGE_RE = /https?:\/\/[^\s<>"')\]]+\.(?:jpg|jpeg|png|gif|webp)(\?[^\s<>"')\]]*)?/gi;
+const YOUTUBE_RE =
+  /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?(?:[^&\s]*&)*v=([\w-]{11})|youtu\.be\/([\w-]{11}))/i;
+const TIKTOK_RE =
+  /https?:\/\/(?:www\.)?tiktok\.com\/@[\w.]+\/video\/\d+/i;
+
+function matchYouTubeId(content: string): string | null {
+  const m = content.match(YOUTUBE_RE);
+  return m ? m[1] || m[2] : null;
+}
+
+function matchTikTokUrl(content: string): string | null {
+  const m = content.match(TIKTOK_RE);
+  return m ? m[0] : null;
+}
+
+function matchImageUrls(content: string): string[] {
+  IMAGE_RE.lastIndex = 0;
+  return Array.from(new Set(content.match(IMAGE_RE) || []));
+}
+
+/** Returns first URL that is not an image/video embed */
+function matchLinkPreviewUrl(content: string): string | null {
+  URL_RE.lastIndex = 0;
+  const all = Array.from(new Set(content.match(URL_RE) || []));
+  IMAGE_RE.lastIndex = 0;
+  return (
+    all.find(
+      (u) => !IMAGE_RE.test(u) && !YOUTUBE_RE.test(u) && !TIKTOK_RE.test(u)
+    ) ?? null
+  );
+}
+
+// ─── Content renderer (text + clickable links) ───────────────────────────────
+
+function ContentWithLinks({
+  content,
+  fontSize,
+}: {
+  content: string;
+  fontSize?: string;
+}) {
+  const parts: React.ReactNode[] = [];
+  const re = new RegExp(URL_RE.source, "gi");
+  let last = 0;
+  let m: RegExpExecArray | null;
+
+  while ((m = re.exec(content)) !== null) {
+    if (m.index > last) parts.push(content.slice(last, m.index));
+    const url = m[0];
+    parts.push(
+      <a
+        key={m.index}
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{ color: "#FFFFFF", textDecoration: "underline" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {url}
+      </a>
+    );
+    last = m.index + url.length;
+  }
+  if (last < content.length) parts.push(content.slice(last));
+
+  return (
+    <p style={{ color: "#FFFFFF", lineHeight: "1.6", fontSize: fontSize ?? "1rem", margin: 0 }}>
+      {parts}
+    </p>
+  );
+}
+
+// ─── YouTube embed ────────────────────────────────────────────────────────────
+
+function YouTubeEmbed({ videoId, active }: { videoId: string; active?: boolean }) {
+  const [muted, setMuted] = useState(true);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  const buildSrc = (autoplay: boolean, m: boolean) =>
+    `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&mute=${m ? 1 : 0}${autoplay ? "&autoplay=1" : ""}`;
+
+  const [src, setSrc] = useState(buildSrc(false, true));
+
+  useEffect(() => {
+    setSrc(buildSrc(!!active, muted));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active]);
+
+  return (
+    <div
+      style={{
+        position: "relative",
+        width: "100%",
+        paddingBottom: "56.25%",
+        background: "#0A0A0A",
+        marginTop: "10px",
+        border: "1px solid #1F1F1F",
+      }}
+    >
+      <iframe
+        ref={iframeRef}
+        src={src}
+        style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: "none" }}
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+      />
+      <button
+        onClick={() => {
+          const next = !muted;
+          setMuted(next);
+          setSrc(buildSrc(!!active, next));
+        }}
+        style={{
+          ...MONO,
+          position: "absolute",
+          bottom: "8px",
+          right: "8px",
+          background: "rgba(0,0,0,0.75)",
+          border: "1px solid #333333",
+          color: "#FFFFFF",
+          padding: "4px 8px",
+          fontSize: "0.5625rem",
+          letterSpacing: "0.08em",
+          cursor: "pointer",
+          zIndex: 1,
+        }}
+      >
+        {muted ? "UNMUTE" : "MUTE"}
+      </button>
+    </div>
+  );
+}
+
+// ─── TikTok embed ─────────────────────────────────────────────────────────────
+
+function TikTokEmbed({ url }: { url: string }) {
+  const videoId = url.match(/\/video\/(\d+)/)?.[1];
+  if (!videoId) return null;
+
+  useEffect(() => {
+    // Load TikTok embed script if not already loaded
+    if (!document.querySelector('script[src*="tiktok.com/embed"]')) {
+      const s = document.createElement("script");
+      s.src = "https://www.tiktok.com/embed.js";
+      s.async = true;
+      document.body.appendChild(s);
+    }
+  }, []);
+
+  return (
+    <div
+      style={{
+        width: "100%",
+        background: "#0A0A0A",
+        marginTop: "10px",
+        display: "flex",
+        justifyContent: "center",
+        border: "1px solid #1F1F1F",
+        overflow: "hidden",
+      }}
+    >
+      {/* eslint-disable-next-line @typescript-eslint/ban-ts-comment */}
+      {/* @ts-ignore */}
+      <blockquote
+        className="tiktok-embed"
+        cite={url}
+        data-video-id={videoId}
+        style={{ maxWidth: "325px", minWidth: "280px", border: "none" }}
+      >
+        <section />
+      </blockquote>
+    </div>
+  );
+}
+
+// ─── Image embed ──────────────────────────────────────────────────────────────
+
+function ImageEmbed({ src, fullscreen }: { src: string; fullscreen?: boolean }) {
+  const [expanded, setExpanded] = useState(false);
+  const maxH = fullscreen ? "50vh" : "300px";
+
+  return (
+    <>
+      <div
+        style={{
+          width: "100%",
+          maxHeight: maxH,
+          overflow: "hidden",
+          background: "#0A0A0A",
+          marginTop: "10px",
+          cursor: "zoom-in",
+          border: "1px solid #1F1F1F",
+        }}
+        onClick={() => setExpanded(true)}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={src}
+          alt=""
+          style={{ width: "100%", height: maxH, objectFit: "cover", display: "block" }}
+          loading="lazy"
+        />
+      </div>
+      {expanded && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.95)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 200,
+            cursor: "zoom-out",
+          }}
+          onClick={() => setExpanded(false)}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={src}
+            alt=""
+            style={{ maxWidth: "100%", maxHeight: "100vh", objectFit: "contain" }}
+          />
+          <button
+            onClick={() => setExpanded(false)}
+            style={{
+              ...MONO,
+              position: "absolute",
+              top: "16px",
+              right: "16px",
+              background: "none",
+              border: "1px solid #333",
+              color: "#FFFFFF",
+              padding: "6px 12px",
+              fontSize: "0.75rem",
+              cursor: "pointer",
+            }}
+          >
+            ✕ CLOSE
+          </button>
+        </div>
+      )}
+    </>
+  );
+}
+
+// ─── Link preview (OG) ───────────────────────────────────────────────────────
+
+interface OGData {
+  url: string;
+  title?: string;
+  description?: string;
+  image?: string;
+  error?: string;
+}
+
+function LinkPreview({ url }: { url: string }) {
+  const [og, setOg] = useState<OGData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`/api/v1/og?url=${encodeURIComponent(url)}`)
+      .then((r) => r.json())
+      .then((data: OGData) => { setOg(data); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [url]);
+
+  if (loading) {
+    return (
+      <div
+        style={{
+          background: "#0A0A0A",
+          border: "1px solid #1F1F1F",
+          height: "64px",
+          marginTop: "8px",
+          display: "flex",
+          alignItems: "center",
+          padding: "0 12px",
+        }}
+      >
+        <span style={{ ...MONO, color: "#333333", fontSize: "0.625rem", letterSpacing: "0.08em" }}>
+          LOADING PREVIEW...
+        </span>
+      </div>
+    );
+  }
+
+  if (!og || og.error || (!og.title && !og.description && !og.image)) {
+    return null; // content already has the link as plain text
+  }
+
+  let hostname = "";
+  try { hostname = new URL(url).hostname.toUpperCase(); } catch { /* noop */ }
+
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{ display: "block", textDecoration: "none", marginTop: "8px" }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div
+        style={{
+          background: "#0A0A0A",
+          border: "1px solid #1F1F1F",
+          display: "flex",
+          overflow: "hidden",
+        }}
+      >
+        {og.image && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={og.image}
+            alt=""
+            style={{ width: "80px", height: "80px", objectFit: "cover", flexShrink: 0 }}
+          />
+        )}
+        <div style={{ padding: "10px 12px", overflow: "hidden", flex: 1 }}>
+          {og.title && (
+            <p
+              style={{
+                color: "#FFFFFF",
+                fontSize: "0.8125rem",
+                fontWeight: 600,
+                marginBottom: "4px",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {og.title}
+            </p>
+          )}
+          {og.description && (
+            <p
+              style={{
+                color: "#777777",
+                fontSize: "0.75rem",
+                overflow: "hidden",
+                display: "-webkit-box",
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: "vertical",
+                marginBottom: "4px",
+              } as React.CSSProperties}
+            >
+              {og.description}
+            </p>
+          )}
+          {hostname && (
+            <p style={{ ...MONO, color: "#333333", fontSize: "0.5625rem", letterSpacing: "0.06em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {hostname}
+            </p>
+          )}
+        </div>
+      </div>
+    </a>
+  );
+}
+
+// ─── Score animation ──────────────────────────────────────────────────────────
 
 function AnimatedScore({ value, voted }: { value: number; voted: "up" | "down" | null }) {
   const [display, setDisplay] = useState(value);
@@ -44,18 +414,14 @@ function AnimatedScore({ value, voted }: { value: number; voted: "up" | "down" |
     <span
       style={{
         color: voted === "up" ? "#FFFFFF" : voted === "down" ? "#777777" : "#C0C0C0",
-        fontFamily: "var(--font-mono), monospace",
+        ...MONO,
         fontSize: "0.875rem",
         fontWeight: 500,
         minWidth: "24px",
         textAlign: "center",
         display: "inline-block",
         transition: "transform 150ms ease, opacity 150ms ease",
-        transform: animDir === "up"
-          ? "translateY(-3px)"
-          : animDir === "down"
-          ? "translateY(3px)"
-          : "translateY(0)",
+        transform: animDir === "up" ? "translateY(-3px)" : animDir === "down" ? "translateY(3px)" : "translateY(0)",
         opacity: animDir ? 0.7 : 1,
       }}
       className="tabular-nums"
@@ -77,16 +443,7 @@ function ExpiryIndicator({ expiresAt }: { expiresAt: number }) {
   const label = hoursLeft > 0 ? `${hoursLeft}H LEFT` : `${minsLeft}M LEFT`;
 
   return (
-    <span
-      style={{
-        fontFamily: "var(--font-mono), monospace",
-        fontSize: "0.5625rem",
-        letterSpacing: "0.08em",
-        color: "#777777",
-        border: "1px solid #1F1F1F",
-        padding: "2px 5px",
-      }}
-    >
+    <span style={{ ...MONO, fontSize: "0.5625rem", letterSpacing: "0.08em", color: "#777777", border: "1px solid #1F1F1F", padding: "2px 5px" }}>
       {label}
     </span>
   );
@@ -94,7 +451,7 @@ function ExpiryIndicator({ expiresAt }: { expiresAt: number }) {
 
 // ─── PostCard ─────────────────────────────────────────────────────────────────
 
-export default function PostCard({ post, onLoginRequired }: PostCardProps) {
+export default function PostCard({ post, onLoginRequired, variant = "card", active }: PostCardProps) {
   const replyCount = post.reply_count ?? post.replyCount ?? 0;
   const [score, setScore] = useState(post.score);
   const [voted, setVoted] = useState<"up" | "down" | null>(null);
@@ -102,9 +459,14 @@ export default function PostCard({ post, onLoginRequired }: PostCardProps) {
   const [showVotePrompt, setShowVotePrompt] = useState(false);
   const toast = useToast();
 
+  const youtubeId = matchYouTubeId(post.content);
+  const tiktokUrl = !youtubeId ? matchTikTokUrl(post.content) : null;
+  const imageUrls = matchImageUrls(post.content);
+  const linkPreviewUrl = matchLinkPreviewUrl(post.content);
+  const hasMedia = !!(youtubeId || tiktokUrl || imageUrls.length > 0);
+
   const vote = async (dir: "up" | "down") => {
     if (voting) return;
-
     if (!isAuthenticated()) {
       setShowVotePrompt(true);
       onLoginRequired?.();
@@ -149,27 +511,265 @@ export default function PostCard({ post, onLoginRequired }: PostCardProps) {
     });
   };
 
+  // ── FULLSCREEN variant (TikTok-style) ──────────────────────────────────────
+  if (variant === "fullscreen") {
+    return (
+      <article
+        style={{
+          background: "#000000",
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          flexDirection: "row",
+          position: "relative",
+          overflow: "hidden",
+        }}
+      >
+        {/* Main content area */}
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "flex-end",
+            padding: "16px 56px 24px 16px",
+            overflow: "hidden",
+          }}
+        >
+          {/* Territory + distance badge at top */}
+          <div
+            style={{
+              position: "absolute",
+              top: "16px",
+              left: "16px",
+              display: "flex",
+              gap: "8px",
+              flexWrap: "wrap",
+            }}
+          >
+            {post.territoryName && (
+              <span
+                style={{
+                  ...MONO,
+                  fontSize: "0.5625rem",
+                  letterSpacing: "0.08em",
+                  color: "#333333",
+                  border: "1px solid #1F1F1F",
+                  padding: "2px 6px",
+                  textTransform: "uppercase",
+                  background: "rgba(0,0,0,0.6)",
+                }}
+              >
+                {post.territoryName}
+              </span>
+            )}
+            {post.distance && (
+              <span
+                style={{
+                  ...MONO,
+                  fontSize: "0.5625rem",
+                  letterSpacing: "0.08em",
+                  color: "#333333",
+                  border: "1px solid #1F1F1F",
+                  padding: "2px 6px",
+                  textTransform: "uppercase",
+                  background: "rgba(0,0,0,0.6)",
+                }}
+              >
+                {post.distance}
+              </span>
+            )}
+            {post.expires_at && <ExpiryIndicator expiresAt={post.expires_at} />}
+          </div>
+
+          {/* Media */}
+          {youtubeId && (
+            <div style={{ marginBottom: "12px" }}>
+              <YouTubeEmbed videoId={youtubeId} active={active} />
+            </div>
+          )}
+          {tiktokUrl && !youtubeId && (
+            <div style={{ marginBottom: "12px" }}>
+              <TikTokEmbed url={tiktokUrl} />
+            </div>
+          )}
+          {imageUrls.length > 0 && !hasMedia && (
+            <div style={{ marginBottom: "12px" }}>
+              <ImageEmbed src={imageUrls[0]} fullscreen />
+            </div>
+          )}
+          {imageUrls.length > 0 && (youtubeId || tiktokUrl) && (
+            <div style={{ marginBottom: "12px" }}>
+              <ImageEmbed src={imageUrls[0]} fullscreen />
+            </div>
+          )}
+
+          {/* Content */}
+          <div style={{ marginBottom: "8px" }}>
+            <ContentWithLinks content={post.content} fontSize="1.125rem" />
+          </div>
+
+          {/* Link preview */}
+          {linkPreviewUrl && <LinkPreview url={linkPreviewUrl} />}
+
+          {/* Bottom meta */}
+          <div
+            style={{
+              display: "flex",
+              gap: "12px",
+              marginTop: "12px",
+              alignItems: "center",
+            }}
+          >
+            {post.timeAgo && (
+              <span style={{ ...MONO, color: "#555555", fontSize: "0.625rem", letterSpacing: "0.06em" }}>
+                {post.timeAgo}
+              </span>
+            )}
+            {showVotePrompt && (
+              <a
+                href="/login"
+                style={{ ...MONO, color: "#C0C0C0", fontSize: "0.625rem", letterSpacing: "0.06em", textDecoration: "none" }}
+              >
+                SIGN UP TO VOTE
+              </a>
+            )}
+          </div>
+        </div>
+
+        {/* Right sidebar: actions */}
+        <div
+          style={{
+            position: "absolute",
+            right: "12px",
+            bottom: "80px",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "20px",
+          }}
+        >
+          {/* Vote up */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
+            <button
+              onClick={() => vote("up")}
+              disabled={voting}
+              style={{
+                color: voted === "up" ? "#FFFFFF" : "#777777",
+                background: "none",
+                border: "none",
+                cursor: voting ? "wait" : "pointer",
+                fontSize: "1.25rem",
+                lineHeight: 1,
+                padding: "4px",
+                transition: "color 150ms",
+              }}
+              aria-label="Upvote"
+            >
+              ▲
+            </button>
+            <AnimatedScore value={score} voted={voted} />
+            <button
+              onClick={() => vote("down")}
+              disabled={voting}
+              style={{
+                color: voted === "down" ? "#C0C0C0" : "#555555",
+                background: "none",
+                border: "none",
+                cursor: voting ? "wait" : "pointer",
+                fontSize: "1.25rem",
+                lineHeight: 1,
+                padding: "4px",
+                transition: "color 150ms",
+              }}
+              aria-label="Downvote"
+            >
+              ▼
+            </button>
+          </div>
+
+          {/* Reply */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
+            <Link
+              href={`/post/${post.id}`}
+              style={{
+                color: "#777777",
+                textDecoration: "none",
+                fontSize: "1.125rem",
+                lineHeight: 1,
+                display: "block",
+                padding: "4px",
+              }}
+              aria-label={`${replyCount} replies`}
+            >
+              ↩
+            </Link>
+            <span style={{ ...MONO, color: "#555555", fontSize: "0.625rem" }}>{replyCount}</span>
+          </div>
+
+          {/* Share */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
+            <button
+              onClick={handleShare}
+              style={{
+                color: "#777777",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                fontSize: "1.125rem",
+                lineHeight: 1,
+                padding: "4px",
+                transition: "color 150ms",
+              }}
+              aria-label="Share"
+            >
+              ↗
+            </button>
+            <span style={{ ...MONO, color: "#555555", fontSize: "0.625rem" }}>SHARE</span>
+          </div>
+        </div>
+
+        {/* Bottom divider */}
+        <div
+          style={{
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: "1px",
+            background: "#1F1F1F",
+          }}
+        />
+      </article>
+    );
+  }
+
+  // ── CARD variant (default) ─────────────────────────────────────────────────
   return (
     <article
-      style={{
-        background: "#0A0A0A",
-        border: "1px solid #1F1F1F",
-      }}
+      style={{ background: "#0A0A0A", border: "1px solid #1F1F1F" }}
       className="p-4 transition-colors hover:border-[#333333]"
     >
-      <p
-        style={{ color: "#FFFFFF", lineHeight: "1.6" }}
-        className="text-base mb-4"
-      >
-        {post.content}
-      </p>
+      <div className="mb-4">
+        <ContentWithLinks content={post.content} />
+      </div>
+
+      {/* Media */}
+      {youtubeId && <YouTubeEmbed videoId={youtubeId} active={active} />}
+      {tiktokUrl && !youtubeId && <TikTokEmbed url={tiktokUrl} />}
+      {imageUrls.map((src, i) => (
+        <ImageEmbed key={i} src={src} />
+      ))}
+
+      {/* Link preview */}
+      {linkPreviewUrl && <LinkPreview url={linkPreviewUrl} />}
 
       {/* Territory badge */}
       {post.territoryName && (
-        <div style={{ marginBottom: "8px" }}>
+        <div style={{ marginTop: "10px", marginBottom: "4px" }}>
           <span
             style={{
-              fontFamily: "var(--font-mono), monospace",
+              ...MONO,
               fontSize: "0.625rem",
               letterSpacing: "0.08em",
               color: "#333333",
@@ -184,7 +784,7 @@ export default function PostCard({ post, onLoginRequired }: PostCardProps) {
       )}
 
       {/* Meta row */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between" style={{ marginTop: "12px" }}>
         {/* Voting */}
         <div className="flex items-center gap-3">
           <button
@@ -220,14 +820,7 @@ export default function PostCard({ post, onLoginRequired }: PostCardProps) {
             ▼
           </button>
           {showVotePrompt && (
-            <span
-              style={{
-                fontFamily: "var(--font-mono), monospace",
-                fontSize: "0.625rem",
-                letterSpacing: "0.06em",
-                color: "#555555",
-              }}
-            >
+            <span style={{ ...MONO, fontSize: "0.625rem", letterSpacing: "0.06em", color: "#555555" }}>
               <a
                 href="/login"
                 style={{ color: "#C0C0C0", textDecoration: "none" }}
@@ -240,37 +833,21 @@ export default function PostCard({ post, onLoginRequired }: PostCardProps) {
           )}
         </div>
 
-        {/* Right side meta */}
+        {/* Right meta */}
         <div
-          style={{
-            color: "#777777",
-            fontFamily: "var(--font-mono), monospace",
-            letterSpacing: "0.02em",
-          }}
+          style={{ color: "#777777", ...MONO, letterSpacing: "0.02em" }}
           className="flex items-center gap-3 text-xs"
         >
-          {/* Expiry */}
           {post.expires_at && <ExpiryIndicator expiresAt={post.expires_at} />}
-
-          {/* Share */}
           <button
             onClick={handleShare}
-            style={{
-              color: "#777777",
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              padding: 0,
-              fontSize: "0.75rem",
-              lineHeight: 1,
-            }}
+            style={{ color: "#777777", background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: "0.75rem", lineHeight: 1 }}
             className="hover:text-[#C0C0C0] transition-colors"
             aria-label="Share post"
             title="Copy link"
           >
             ↗
           </button>
-
           <Link
             href={`/post/${post.id}`}
             style={{ color: "#777777", textDecoration: "none" }}

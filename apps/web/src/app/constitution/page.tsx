@@ -2,9 +2,30 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { getConstitution, type ConstitutionRule } from "@/lib/api";
+import {
+  getConstitution,
+  getConstitutionVersions,
+  getConstitutionVersion,
+  getConstitutionAmendments,
+  submitConstitutionAmendment,
+  isAuthenticated,
+  formatTimeAgo,
+  type ConstitutionRule,
+  type ConstitutionVersionSummary,
+  type ConstitutionAmendment,
+} from "@/lib/api";
 
 const MONO = { fontFamily: "var(--font-mono), monospace" } as const;
+
+const SECTIONS_ORDER = ["prohibited", "restricted", "principles"];
+const SECTION_LABELS: Record<string, string> = {
+  prohibited: "PROHIBITED",
+  restricted: "RESTRICTED",
+  principles: "CORE PRINCIPLES",
+  process: "MODERATION PROCESS",
+  amendments: "AMENDMENTS",
+  other: "OTHER",
+};
 
 interface Section {
   id: string;
@@ -12,7 +33,6 @@ interface Section {
   items: ConstitutionRule[];
 }
 
-// Group flat rules into sections by their section field
 function groupRules(rules: ConstitutionRule[]): Section[] {
   const map = new Map<string, Section>();
   for (const rule of rules) {
@@ -25,7 +45,6 @@ function groupRules(rules: ConstitutionRule[]): Section[] {
   return Array.from(map.values());
 }
 
-// Hardcoded fallback (same as before) used when API unavailable
 const FALLBACK_SECTIONS: Section[] = [
   {
     id: "I",
@@ -80,27 +99,122 @@ const FALLBACK_SECTIONS: Section[] = [
   },
 ];
 
+// ─── Amendment form ────────────────────────────────────────────────────────────
+
+interface AmendmentFormState {
+  title: string;
+  section: string;
+  description: string;
+  proposed_text: string;
+}
+
+const EMPTY_FORM: AmendmentFormState = {
+  title: "",
+  section: "prohibited",
+  description: "",
+  proposed_text: "",
+};
+
+// ─── Main Page ─────────────────────────────────────────────────────────────────
+
 export default function ConstitutionPage() {
   const [sections, setSections] = useState<Section[]>(FALLBACK_SECTIONS);
   const [loading, setLoading] = useState(true);
-  const [version, setVersion] = useState("V1.0 · MARCH 2026");
+  const [activeVersion, setActiveVersion] = useState<ConstitutionVersionSummary | null>(null);
+  const [versions, setVersions] = useState<ConstitutionVersionSummary[]>([]);
+  const [viewingVersion, setViewingVersion] = useState<ConstitutionVersionSummary | null>(null);
+  const [showVersions, setShowVersions] = useState(false);
+  const [amendments, setAmendments] = useState<ConstitutionAmendment[]>([]);
+  const [showAmendments, setShowAmendments] = useState(false);
+  const [showAmendForm, setShowAmendForm] = useState(false);
+  const [form, setForm] = useState<AmendmentFormState>(EMPTY_FORM);
+  const [formError, setFormError] = useState("");
+  const [formSubmitting, setFormSubmitting] = useState(false);
+  const [formSuccess, setFormSuccess] = useState(false);
+  const authed = typeof window !== "undefined" ? isAuthenticated() : false;
 
   useEffect(() => {
-    getConstitution()
-      .then((data) => {
-        if (data.constitution && data.constitution.length > 0) {
-          setSections(groupRules(data.constitution));
-        }
-        // If API returns version metadata
-        if ((data as Record<string, unknown>).version) {
-          setVersion(String((data as Record<string, unknown>).version));
-        }
-      })
-      .catch(() => {
-        // Silently fall back to hardcoded constitution
-      })
-      .finally(() => setLoading(false));
+    // Load active constitution + versions in parallel
+    Promise.all([
+      getConstitution().catch(() => null),
+      getConstitutionVersions().catch(() => null),
+      getConstitutionAmendments("under_vote").catch(() => null),
+    ]).then(([constitutionData, versionsData, amendmentsData]) => {
+      if (constitutionData?.constitution && constitutionData.constitution.length > 0) {
+        setSections(groupRules(constitutionData.constitution));
+      }
+      if (versionsData?.versions) {
+        setVersions(versionsData.versions);
+        const active = versionsData.versions.find((v) => v.status === "active");
+        if (active) setActiveVersion(active);
+      }
+      if (amendmentsData?.amendments) {
+        setAmendments(amendmentsData.amendments);
+      }
+    }).finally(() => setLoading(false));
   }, []);
+
+  // Load a specific historical version's content
+  async function loadVersion(v: ConstitutionVersionSummary) {
+    if (v.status === "active") {
+      setViewingVersion(null);
+      setSections(FALLBACK_SECTIONS);
+      return;
+    }
+    try {
+      const data = await getConstitutionVersion(v.id);
+      const content = data.version.content as Record<string, unknown> | null;
+      if (content && typeof content === "object") {
+        // Convert raw rules object back into Section[] for display
+        const built: Section[] = [];
+        for (const [key, rules] of Object.entries(content)) {
+          if (!Array.isArray(rules)) continue;
+          const label = SECTION_LABELS[key] ?? key.toUpperCase();
+          built.push({
+            id: key,
+            heading: label,
+            items: rules.map((r: Record<string, unknown>, i: number) => ({
+              id: String(r.id ?? `${key}-${i}`),
+              section: key,
+              heading: label,
+              tag: String(r.id ?? `${key}.${i + 1}`),
+              text: typeof r === "string" ? r : `${r.name}: ${r.description}`,
+            })),
+          });
+        }
+        setSections(built.length > 0 ? built : FALLBACK_SECTIONS);
+      }
+      setViewingVersion(v);
+    } catch {
+      // fallback
+    }
+  }
+
+  async function handleAmendSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setFormError("");
+    setFormSubmitting(true);
+    try {
+      await submitConstitutionAmendment(form);
+      setFormSuccess(true);
+      setForm(EMPTY_FORM);
+      setTimeout(() => { setShowAmendForm(false); setFormSuccess(false); }, 3000);
+      // Refresh amendments
+      getConstitutionAmendments("under_vote").then((d) => {
+        if (d?.amendments) setAmendments(d.amendments);
+      }).catch(() => {});
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : "Submission failed");
+    } finally {
+      setFormSubmitting(false);
+    }
+  }
+
+  const displayVersion = viewingVersion ?? activeVersion;
+  const versionLabel = displayVersion
+    ? `VERSION ${displayVersion.version} · ${new Date(displayVersion.created_at * 1000).toLocaleDateString("en-US", { month: "long", year: "numeric" }).toUpperCase()}`
+    : "V1.0 · MARCH 2026";
+  const isViewingArchive = viewingVersion !== null;
 
   return (
     <div style={{ background: "#000000", minHeight: "100vh" }}>
@@ -117,10 +231,53 @@ export default function ConstitutionPage() {
       </nav>
 
       <main style={{ maxWidth: "640px" }} className="mx-auto px-6 py-16">
+
+        {/* Archive banner */}
+        {isViewingArchive && (
+          <div style={{
+            background: "#111",
+            border: "1px solid #F59E0B",
+            padding: "10px 16px",
+            marginBottom: "24px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "12px",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <span style={{
+                ...MONO,
+                background: "#F59E0B",
+                color: "#000",
+                fontSize: "0.625rem",
+                letterSpacing: "0.08em",
+                padding: "2px 8px",
+                fontWeight: 700,
+              }}>ARCHIVED</span>
+              <span style={{ ...MONO, color: "#F59E0B", fontSize: "0.75rem", letterSpacing: "0.06em" }}>
+                VIEWING VERSION {viewingVersion.version}
+              </span>
+            </div>
+            <button
+              onClick={() => { setViewingVersion(null); setSections(FALLBACK_SECTIONS); }}
+              style={{ ...MONO, color: "#777777", fontSize: "0.6875rem", background: "none", border: "none", cursor: "pointer", letterSpacing: "0.04em" }}
+            >
+              VIEW CURRENT ↗
+            </button>
+          </div>
+        )}
+
         {/* Header */}
         <div style={{ marginBottom: "48px" }}>
-          <div
-            style={{
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "12px",
+            marginBottom: "20px",
+          }}>
+            <div style={{
               ...MONO,
               color: "#777777",
               fontSize: "0.6875rem",
@@ -128,21 +285,135 @@ export default function ConstitutionPage() {
               border: "1px solid #1F1F1F",
               display: "inline-block",
               padding: "4px 12px",
-              marginBottom: "20px",
-            }}
-          >
-            GOVERNING DOCUMENT · {version}
-            {loading && <span style={{ marginLeft: "8px", color: "#333333" }}>LOADING...</span>}
+            }}>
+              GOVERNING DOCUMENT · {versionLabel}
+              {loading && <span style={{ marginLeft: "8px", color: "#333333" }}>LOADING...</span>}
+            </div>
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+              {versions.length > 1 && (
+                <button
+                  onClick={() => setShowVersions(!showVersions)}
+                  style={{
+                    ...MONO,
+                    color: showVersions ? "#FFFFFF" : "#777777",
+                    fontSize: "0.625rem",
+                    letterSpacing: "0.08em",
+                    background: "none",
+                    border: `1px solid ${showVersions ? "#333" : "#1F1F1F"}`,
+                    padding: "4px 10px",
+                    cursor: "pointer",
+                  }}
+                >
+                  {showVersions ? "HIDE VERSIONS" : "VIEW PREVIOUS VERSIONS"}
+                </button>
+              )}
+              {amendments.length > 0 && (
+                <button
+                  onClick={() => setShowAmendments(!showAmendments)}
+                  style={{
+                    ...MONO,
+                    color: showAmendments ? "#FFFFFF" : "#777777",
+                    fontSize: "0.625rem",
+                    letterSpacing: "0.08em",
+                    background: "none",
+                    border: `1px solid ${showAmendments ? "#333" : "#1F1F1F"}`,
+                    padding: "4px 10px",
+                    cursor: "pointer",
+                  }}
+                >
+                  OPEN VOTES ({amendments.length})
+                </button>
+              )}
+            </div>
           </div>
-          <h1
-            style={{
-              fontSize: "2rem",
-              fontWeight: 700,
-              letterSpacing: "-0.02em",
-              color: "#FFFFFF",
-              marginBottom: "12px",
-            }}
-          >
+
+          {/* Version history dropdown */}
+          {showVersions && versions.length > 0 && (
+            <div style={{
+              border: "1px solid #1F1F1F",
+              marginBottom: "24px",
+              background: "#080808",
+            }}>
+              {versions.map((v) => (
+                <button
+                  key={v.id}
+                  onClick={() => loadVersion(v)}
+                  style={{
+                    width: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "10px 16px",
+                    background: viewingVersion?.id === v.id ? "#111" : "transparent",
+                    border: "none",
+                    borderBottom: "1px solid #1F1F1F",
+                    cursor: "pointer",
+                    gap: "12px",
+                    textAlign: "left",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <span style={{ ...MONO, color: "#FFFFFF", fontSize: "0.75rem", letterSpacing: "0.06em", minWidth: "40px" }}>
+                      v{v.version}
+                    </span>
+                    <span style={{ color: "#777777", fontSize: "0.8125rem", lineHeight: 1.4, maxWidth: "360px" }}>
+                      {v.summary.slice(0, 80)}{v.summary.length > 80 ? "…" : ""}
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
+                    {v.status === "active" && (
+                      <span style={{ ...MONO, color: "#22C55E", fontSize: "0.5625rem", letterSpacing: "0.08em", border: "1px solid #22C55E", padding: "1px 6px" }}>
+                        ACTIVE
+                      </span>
+                    )}
+                    {v.status === "archived" && (
+                      <span style={{ ...MONO, color: "#F59E0B", fontSize: "0.5625rem", letterSpacing: "0.08em", border: "1px solid #F59E0B", padding: "1px 6px" }}>
+                        ARCHIVED
+                      </span>
+                    )}
+                    <span style={{ ...MONO, color: "#333333", fontSize: "0.625rem" }}>
+                      {formatTimeAgo(v.created_at)}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Open votes */}
+          {showAmendments && amendments.length > 0 && (
+            <div style={{ border: "1px solid #1F1F1F", marginBottom: "24px", background: "#080808" }}>
+              <div style={{ padding: "10px 16px", borderBottom: "1px solid #1F1F1F" }}>
+                <span style={{ ...MONO, color: "#777777", fontSize: "0.6875rem", letterSpacing: "0.08em" }}>
+                  AMENDMENTS UNDER COMMUNITY VOTE
+                </span>
+              </div>
+              {amendments.map((a) => (
+                <div key={a.id} style={{ padding: "14px 16px", borderBottom: "1px solid #1F1F1F" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", gap: "12px" }}>
+                    <span style={{ color: "#FFFFFF", fontSize: "0.875rem", fontWeight: 500 }}>{a.title}</span>
+                    <span style={{ ...MONO, color: "#777777", fontSize: "0.625rem", letterSpacing: "0.06em", flexShrink: 0 }}>
+                      {a.section.toUpperCase()}
+                    </span>
+                  </div>
+                  <p style={{ color: "#777777", fontSize: "0.8125rem", lineHeight: 1.5, marginBottom: "8px" }}>
+                    {a.description.slice(0, 140)}{a.description.length > 140 ? "…" : ""}
+                  </p>
+                  <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                    <span style={{ ...MONO, color: "#22C55E", fontSize: "0.6875rem" }}>↑ {a.votes_for}</span>
+                    <span style={{ ...MONO, color: "#EF4444", fontSize: "0.6875rem" }}>↓ {a.votes_against}</span>
+                    {a.vote_deadline && (
+                      <span style={{ ...MONO, color: "#333333", fontSize: "0.625rem" }}>
+                        CLOSES {formatTimeAgo(a.vote_deadline)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <h1 style={{ fontSize: "2rem", fontWeight: 700, letterSpacing: "-0.02em", color: "#FFFFFF", marginBottom: "12px" }}>
             Moderation Constitution
           </h1>
           <p style={{ color: "#C0C0C0", fontSize: "0.875rem", lineHeight: 1.6 }}>
@@ -153,13 +424,7 @@ export default function ConstitutionPage() {
         </div>
 
         {/* Preamble */}
-        <div
-          style={{
-            borderLeft: "2px solid #1F1F1F",
-            paddingLeft: "20px",
-            marginBottom: "48px",
-          }}
-        >
+        <div style={{ borderLeft: "2px solid #1F1F1F", paddingLeft: "20px", marginBottom: "48px" }}>
           <p style={{ color: "#C0C0C0", fontSize: "0.9375rem", lineHeight: 1.7, fontStyle: "italic" }}>
             Jawwing exists to give people a voice in their communities, free from
             identity-based suppression or human moderator bias. These rules are public,
@@ -185,16 +450,7 @@ export default function ConstitutionPage() {
               <div className="flex flex-col" style={{ gap: "16px" }}>
                 {section.items.map((item) => (
                   <div key={item.id ?? item.tag} className="flex gap-6">
-                    <span
-                      style={{
-                        ...MONO,
-                        color: "#777777",
-                        fontSize: "0.75rem",
-                        letterSpacing: "0.04em",
-                        minWidth: "44px",
-                        paddingTop: "2px",
-                      }}
-                    >
+                    <span style={{ ...MONO, color: "#777777", fontSize: "0.75rem", letterSpacing: "0.04em", minWidth: "44px", paddingTop: "2px" }}>
                       {item.tag}
                     </span>
                     <p style={{ color: "#C0C0C0", fontSize: "0.9375rem", lineHeight: 1.65 }}>
@@ -207,165 +463,161 @@ export default function ConstitutionPage() {
           ))}
         </div>
 
-        {/* Moderation Technology Section */}
-        <div style={{ borderTop: "1px solid #1F1F1F", paddingTop: "32px", paddingBottom: "32px" }}>
-          {/* Section header */}
-          <div className="flex items-baseline gap-4 mb-6">
-            <span style={{ ...MONO, color: "#333333", fontSize: "0.75rem", letterSpacing: "0.08em", minWidth: "28px" }}>
-              VI
-            </span>
-            <span style={{ ...MONO, color: "#FFFFFF", fontSize: "0.8125rem", letterSpacing: "0.08em", fontWeight: 600 }}>
-              MODERATION TECHNOLOGY
-            </span>
-          </div>
-
-          {/* Current model */}
-          <div
-            style={{
-              border: "1px solid #1F1F1F",
-              padding: "20px 24px",
-              marginBottom: "24px",
-            }}
-          >
-            <div style={{ ...MONO, color: "#777777", fontSize: "0.625rem", letterSpacing: "0.10em", marginBottom: "10px" }}>
-              CURRENT MODEL
-            </div>
-            <div style={{ ...MONO, color: "#FFFFFF", fontSize: "1.125rem", letterSpacing: "0.04em", fontWeight: 700, marginBottom: "6px" }}>
-              gemini-2.5-flash
-            </div>
-            <div style={{ ...MONO, color: "#555555", fontSize: "0.6875rem", letterSpacing: "0.04em", marginBottom: "14px" }}>
-              GOOGLE · ACTIVE
-            </div>
-            <p style={{ color: "#C0C0C0", fontSize: "0.875rem", lineHeight: 1.65 }}>
-              Fast inference (~200ms), cost-effective for high-volume content review,
-              strong instruction following for rule-based decisions, sufficient capability
-              for text content moderation.
-            </p>
-          </div>
-
-          {/* Selection criteria */}
-          <div style={{ marginBottom: "24px" }}>
-            <div style={{ ...MONO, color: "#777777", fontSize: "0.625rem", letterSpacing: "0.10em", marginBottom: "14px" }}>
-              MODEL SELECTION CRITERIA
-            </div>
-            <div className="flex flex-col" style={{ gap: "0px" }}>
-              {[
-                { id: "TC-1", label: "SPEED", req: "Must process posts within 2 seconds of submission." },
-                { id: "TC-2", label: "ACCURACY", req: "Must maintain >95% agreement with human reviewers on test set." },
-                { id: "TC-3", label: "COST", req: "Must not exceed $0.001 per moderation decision at scale." },
-                { id: "TC-4", label: "TRANSPARENCY", req: "Model provider must publish safety documentation." },
-                { id: "TC-5", label: "INDEPENDENCE", req: "No single provider lock-in. Model can be swapped with community notice." },
-              ].map((criterion, i, arr) => (
-                <div
-                  key={criterion.id}
-                  className="flex gap-6"
-                  style={{
-                    padding: "14px 0",
-                    borderBottom: i < arr.length - 1 ? "1px solid #1F1F1F" : "none",
-                  }}
-                >
-                  <span style={{ ...MONO, color: "#555555", fontSize: "0.6875rem", letterSpacing: "0.04em", minWidth: "44px", paddingTop: "2px" }}>
-                    {criterion.id}
-                  </span>
-                  <div>
-                    <div style={{ ...MONO, color: "#FFFFFF", fontSize: "0.6875rem", letterSpacing: "0.08em", fontWeight: 600, marginBottom: "4px" }}>
-                      {criterion.label}
-                    </div>
-                    <p style={{ color: "#C0C0C0", fontSize: "0.875rem", lineHeight: 1.6 }}>
-                      {criterion.req}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Change policy */}
-          <div
-            style={{
-              border: "1px solid #1F1F1F",
-              borderLeft: "2px solid #FFFFFF",
-              padding: "16px 20px",
-              marginBottom: "16px",
-            }}
-          >
-            <div style={{ ...MONO, color: "#777777", fontSize: "0.625rem", letterSpacing: "0.10em", marginBottom: "8px" }}>
-              MODEL CHANGE POLICY
-            </div>
-            <p style={{ color: "#C0C0C0", fontSize: "0.875rem", lineHeight: 1.65 }}>
-              Any model change requires <span style={{ color: "#FFFFFF", fontWeight: 600 }}>7-day public notice</span> before
-              deployment. The old and new model&rsquo;s test results must be published
-              side-by-side prior to cutover.
-            </p>
-          </div>
-
-          {/* Audit commitment */}
-          <div
-            style={{
-              border: "1px solid #1F1F1F",
-              borderLeft: "2px solid #FFFFFF",
-              padding: "16px 20px",
-            }}
-          >
-            <div style={{ ...MONO, color: "#777777", fontSize: "0.625rem", letterSpacing: "0.10em", marginBottom: "8px" }}>
-              AUDIT COMMITMENT
-            </div>
-            <p style={{ color: "#C0C0C0", fontSize: "0.875rem", lineHeight: 1.65 }}>
-              Monthly publication of moderation accuracy statistics:{" "}
-              <span style={{ ...MONO, color: "#FFFFFF", fontSize: "0.8125rem" }}>false positive rate</span>,{" "}
-              <span style={{ ...MONO, color: "#FFFFFF", fontSize: "0.8125rem" }}>false negative rate</span>, and{" "}
-              <span style={{ ...MONO, color: "#FFFFFF", fontSize: "0.8125rem" }}>appeal overturn rate</span>.
-            </p>
-          </div>
-        </div>
-
-        {/* CTA */}
-        <div
-          style={{
-            borderTop: "1px solid #1F1F1F",
-            marginTop: "16px",
-            paddingTop: "32px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-            gap: "16px",
-          }}
-        >
+        {/* CTA / Footer */}
+        <div style={{
+          borderTop: "1px solid #1F1F1F",
+          marginTop: "16px",
+          paddingTop: "32px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: "16px",
+        }}>
           <p style={{ color: "#777777", fontSize: "0.875rem" }}>
             Want to propose an amendment?
           </p>
-          <Link
-            href="/"
-            style={{
-              ...MONO,
-              background: "#FFFFFF",
-              color: "#000000",
-              border: "1px solid #FFFFFF",
-              padding: "8px 20px",
-              fontSize: "0.75rem",
-              letterSpacing: "0.06em",
-              fontWeight: 500,
-              textDecoration: "none",
-              transition: "background 150ms, color 150ms",
-            }}
-            className="hover:bg-transparent hover:text-white"
-          >
-            JOIN WAITLIST
-          </Link>
+          <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+            {authed ? (
+              <button
+                onClick={() => setShowAmendForm(!showAmendForm)}
+                style={{
+                  ...MONO,
+                  background: showAmendForm ? "#111" : "#FFFFFF",
+                  color: showAmendForm ? "#FFFFFF" : "#000000",
+                  border: "1px solid #FFFFFF",
+                  padding: "8px 20px",
+                  fontSize: "0.75rem",
+                  letterSpacing: "0.06em",
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  transition: "background 150ms, color 150ms",
+                }}
+              >
+                {showAmendForm ? "CANCEL" : "PROPOSE AMENDMENT"}
+              </button>
+            ) : (
+              <Link
+                href="/"
+                style={{
+                  ...MONO,
+                  background: "#FFFFFF",
+                  color: "#000000",
+                  border: "1px solid #FFFFFF",
+                  padding: "8px 20px",
+                  fontSize: "0.75rem",
+                  letterSpacing: "0.06em",
+                  fontWeight: 500,
+                  textDecoration: "none",
+                }}
+              >
+                JOIN TO PROPOSE
+              </Link>
+            )}
+          </div>
         </div>
 
-        <p
-          style={{
-            ...MONO,
-            color: "#333333",
-            fontSize: "0.6875rem",
-            letterSpacing: "0.04em",
-            marginTop: "40px",
-            paddingTop: "20px",
-            borderTop: "1px solid #1F1F1F",
-          }}
-        >
+        {/* Amendment form */}
+        {showAmendForm && (
+          <div style={{ border: "1px solid #1F1F1F", marginTop: "24px", padding: "24px", background: "#080808" }}>
+            <div style={{ ...MONO, color: "#FFFFFF", fontSize: "0.75rem", letterSpacing: "0.08em", marginBottom: "20px" }}>
+              PROPOSE AN AMENDMENT
+            </div>
+            {formSuccess ? (
+              <div style={{ color: "#22C55E", fontSize: "0.875rem" }}>
+                ✓ Amendment submitted. An AI will review it shortly. If approved, it goes to community vote for 7 days.
+              </div>
+            ) : (
+              <form onSubmit={handleAmendSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                <div>
+                  <label style={{ ...MONO, color: "#777777", fontSize: "0.625rem", letterSpacing: "0.08em", display: "block", marginBottom: "6px" }}>
+                    TITLE
+                  </label>
+                  <input
+                    type="text"
+                    value={form.title}
+                    onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                    placeholder="Short title for your amendment"
+                    style={{ width: "100%", background: "#0A0A0A", border: "1px solid #1F1F1F", color: "#FFFFFF", padding: "8px 12px", fontSize: "0.875rem", outline: "none", boxSizing: "border-box" }}
+                    required
+                    maxLength={200}
+                  />
+                </div>
+                <div>
+                  <label style={{ ...MONO, color: "#777777", fontSize: "0.625rem", letterSpacing: "0.08em", display: "block", marginBottom: "6px" }}>
+                    SECTION
+                  </label>
+                  <select
+                    value={form.section}
+                    onChange={(e) => setForm((f) => ({ ...f, section: e.target.value }))}
+                    style={{ width: "100%", background: "#0A0A0A", border: "1px solid #1F1F1F", color: "#FFFFFF", padding: "8px 12px", fontSize: "0.875rem", outline: "none", boxSizing: "border-box" }}
+                  >
+                    <option value="prohibited">Prohibited Content</option>
+                    <option value="restricted">Restricted Content</option>
+                    <option value="principles">Core Principles</option>
+                    <option value="process">Moderation Process</option>
+                    <option value="amendments">Amendments</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ ...MONO, color: "#777777", fontSize: "0.625rem", letterSpacing: "0.08em", display: "block", marginBottom: "6px" }}>
+                    DESCRIPTION
+                  </label>
+                  <textarea
+                    value={form.description}
+                    onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                    placeholder="Describe why this change is needed and what problem it solves"
+                    rows={3}
+                    style={{ width: "100%", background: "#0A0A0A", border: "1px solid #1F1F1F", color: "#FFFFFF", padding: "8px 12px", fontSize: "0.875rem", outline: "none", resize: "vertical", boxSizing: "border-box" }}
+                    required
+                  />
+                </div>
+                <div>
+                  <label style={{ ...MONO, color: "#777777", fontSize: "0.625rem", letterSpacing: "0.08em", display: "block", marginBottom: "6px" }}>
+                    PROPOSED TEXT
+                  </label>
+                  <textarea
+                    value={form.proposed_text}
+                    onChange={(e) => setForm((f) => ({ ...f, proposed_text: e.target.value }))}
+                    placeholder="The exact text you'd like to add or change"
+                    rows={4}
+                    style={{ width: "100%", background: "#0A0A0A", border: "1px solid #1F1F1F", color: "#FFFFFF", padding: "8px 12px", fontSize: "0.875rem", outline: "none", resize: "vertical", boxSizing: "border-box" }}
+                    required
+                  />
+                </div>
+                {formError && (
+                  <p style={{ color: "#EF4444", fontSize: "0.8125rem" }}>{formError}</p>
+                )}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
+                  <p style={{ color: "#333333", fontSize: "0.75rem" }}>
+                    AI-reviewed before going to community vote
+                  </p>
+                  <button
+                    type="submit"
+                    disabled={formSubmitting}
+                    style={{
+                      ...MONO,
+                      background: "#FFFFFF",
+                      color: "#000000",
+                      border: "none",
+                      padding: "8px 20px",
+                      fontSize: "0.75rem",
+                      letterSpacing: "0.06em",
+                      fontWeight: 500,
+                      cursor: formSubmitting ? "not-allowed" : "pointer",
+                      opacity: formSubmitting ? 0.6 : 1,
+                    }}
+                  >
+                    {formSubmitting ? "SUBMITTING..." : "SUBMIT"}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        )}
+
+        <p style={{ ...MONO, color: "#333333", fontSize: "0.6875rem", letterSpacing: "0.04em", marginTop: "40px", paddingTop: "20px", borderTop: "1px solid #1F1F1F" }}>
           constitution@jawwing.com
         </p>
       </main>

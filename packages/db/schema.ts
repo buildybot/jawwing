@@ -75,6 +75,9 @@ export const posts = sqliteTable(
       .notNull()
       .default("active"),
     mod_action_id: text("mod_action_id"),
+  image_url: text("image_url"),
+  image_width: integer("image_width"),
+  image_height: integer("image_height"),
   },
   (t) => ({
     idxPostsUserId: index("idx_posts_user_id").on(t.user_id),
@@ -287,6 +290,32 @@ export const constitution_amendments = sqliteTable(
   })
 );
 
+// ─── uploads ──────────────────────────────────────────────────────────────────
+
+export const uploads = sqliteTable(
+  "uploads",
+  {
+    id: text("id").primaryKey(),
+    url: text("url").notNull(),
+    content_type: text("content_type").notNull(),
+    size: integer("size").notNull(),
+    width: integer("width"),
+    height: integer("height"),
+    ip_hash: text("ip_hash").notNull(),
+    created_at: integer("created_at").notNull(),
+    moderation_status: text("moderation_status", {
+      enum: ["pending", "approved", "rejected"],
+    })
+      .notNull()
+      .default("pending"),
+  },
+  (t) => ({
+    idxUploadsCreatedAt: index("idx_uploads_created_at").on(t.created_at),
+    idxUploadsIpHash: index("idx_uploads_ip_hash").on(t.ip_hash),
+    idxUploadsModerationStatus: index("idx_uploads_moderation_status").on(t.moderation_status),
+  })
+);
+
 // ─── Type exports ─────────────────────────────────────────────────────────────
 
 export type User = typeof users.$inferSelect;
@@ -311,3 +340,5 @@ export type ConstitutionVersion = typeof constitution_versions.$inferSelect;
 export type NewConstitutionVersion = typeof constitution_versions.$inferInsert;
 export type ConstitutionAmendment = typeof constitution_amendments.$inferSelect;
 export type NewConstitutionAmendment = typeof constitution_amendments.$inferInsert;
+export type Upload = typeof uploads.$inferSelect;
+export type NewUpload = typeof uploads.$inferInsert;

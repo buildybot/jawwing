@@ -42,6 +42,7 @@ export {
   waitlist,
   constitution_versions,
   constitution_amendments,
+  uploads,
 } from "./schema";
 
 // ─── Re-export types ──────────────────────────────────────────────────────────
@@ -69,6 +70,8 @@ export type {
   NewConstitutionVersion,
   ConstitutionAmendment,
   NewConstitutionAmendment,
+  Upload,
+  NewUpload,
 } from "./schema";
 
 // ─── Re-export schema (for drizzle-kit / migrations) ─────────────────────────
