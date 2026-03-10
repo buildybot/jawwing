@@ -254,7 +254,7 @@ export default function FeedPage() {
   };
 
   const handleCreatePost = async (content: string, imageUrl?: string) => {
-    if (!isAuthenticated()) {
+    if (false) {
       setShowLoginBanner(true);
       throw new Error("Login required");
     }
@@ -266,7 +266,7 @@ export default function FeedPage() {
   };
 
   const handleFabClick = () => {
-    if (!isAuthenticated()) {
+    if (false) {
       setShowLoginBanner(true);
       return;
     }
