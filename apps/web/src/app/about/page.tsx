@@ -321,6 +321,31 @@ export default function AboutPage() {
           </div>
         </section>
 
+        {/* Contact */}
+        <section style={{ borderBottom: "1px solid #1F1F1F" }} className="py-16">
+          <p style={{ ...MONO, fontSize: "0.6875rem", letterSpacing: "0.1em", color: "#777777", marginBottom: "24px" }}>
+            CONTACT
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            {[
+              { label: "Support, questions, or feedback", email: "support@jawwing.com" },
+              { label: "DMCA takedown requests", email: "dmca@jawwing.com" },
+              { label: "Privacy & data requests", email: "privacy@jawwing.com" },
+            ].map(({ label, email }) => (
+              <div key={email} style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                <span style={{ ...MONO, color: "#777777", fontSize: "0.75rem", letterSpacing: "0.04em" }}>{label}</span>
+                <a
+                  href={`mailto:${email}`}
+                  style={{ ...MONO, color: "#FFFFFF", fontSize: "0.875rem", letterSpacing: "0.04em", textDecoration: "none", borderBottom: "1px solid #333333", display: "inline-block", paddingBottom: "1px" }}
+                  className="hover:border-white transition-colors"
+                >
+                  {email}
+                </a>
+              </div>
+            ))}
+          </div>
+        </section>
+
       </main>
 
       {/* Footer */}

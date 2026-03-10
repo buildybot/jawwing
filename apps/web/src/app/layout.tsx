@@ -19,13 +19,14 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   viewportFit: "cover",
+  themeColor: "#000000",
 };
 
 export const metadata: Metadata = {
-  title: "JAWWING - Speak freely. Stay anonymous.",
+  title: "Jawwing — Anonymous. Local. Unfiltered.",
   description:
-    "Anonymous local posts from your neighborhood. No accounts. AI-moderated.",
-  metadataBase: new URL("https://jawwing.com"),
+    "Anonymous local posts from your neighborhood. No sign-up. No tracking. Just your voice.",
+  metadataBase: new URL("https://www.jawwing.com"),
   manifest: "/manifest.json",
   icons: {
     icon: [
@@ -35,17 +36,20 @@ export const metadata: Metadata = {
     apple: "/apple-touch-icon.png",
   },
   openGraph: {
-    title: "JAWWING",
-    description: "Anonymous local posts from your neighborhood. No accounts. AI-moderated.",
-    url: "https://jawwing.com",
-    siteName: "JAWWING",
+    title: "Jawwing — Anonymous. Local. Unfiltered.",
+    description: "Anonymous local posts from your neighborhood. No sign-up. No tracking. Just your voice.",
+    url: "https://www.jawwing.com",
+    siteName: "Jawwing",
     type: "website",
+    images: [{ url: "/logo.png", width: 512, height: 512, alt: "Jawwing" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "JAWWING",
-    description: "Anonymous local posts from your neighborhood. No accounts. AI-moderated.",
+    title: "Jawwing — Anonymous. Local. Unfiltered.",
+    description: "Anonymous local posts from your neighborhood. No sign-up. No tracking. Just your voice.",
+    images: ["/logo.png"],
   },
+  themeColor: "#000000",
   other: {
     "apple-mobile-web-app-capable": "yes",
     "apple-mobile-web-app-status-bar-style": "black-translucent",

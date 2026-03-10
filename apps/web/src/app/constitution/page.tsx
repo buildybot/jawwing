@@ -54,6 +54,7 @@ const FALLBACK_SECTIONS: Section[] = [
       { id: "I.2", section: "I", heading: "CORE PRINCIPLES", tag: "I.2", text: "Speech is presumed valid. Content is allowed unless it violates a specific rule. Ambiguity resolves in favor of the poster." },
       { id: "I.3", section: "I", heading: "CORE PRINCIPLES", tag: "I.3", text: "Transparency is mandatory. Every moderation action is logged publicly with the rule cited and the AI agent's reasoning." },
       { id: "I.4", section: "I", heading: "CORE PRINCIPLES", tag: "I.4", text: "No human override. Human employees may not override AI moderation decisions. They may only propose constitutional amendments." },
+      { id: "I.5", section: "I", heading: "CORE PRINCIPLES", tag: "I.5", text: "Open algorithm. The ranking algorithm is public. No shadow bans, no secret suppression, no hidden boosts. Every factor is documented in this constitution." },
     ],
   },
   {
@@ -82,19 +83,57 @@ const FALLBACK_SECTIONS: Section[] = [
     id: "IV",
     heading: "MODERATION PROCESS",
     items: [
-      { id: "IV.1", section: "IV", heading: "MODERATION PROCESS", tag: "IV.1", text: "Automated review. Every post is reviewed by AI agents within seconds of submission." },
-      { id: "IV.2", section: "IV", heading: "MODERATION PROCESS", tag: "IV.2", text: "Confidence threshold. Actions require 85%+ confidence. Below this, the post remains live and is flagged for community review." },
-      { id: "IV.3", section: "IV", heading: "MODERATION PROCESS", tag: "IV.3", text: "Appeals. Any user may appeal a moderation decision. Appeals are reviewed by a different AI agent instance." },
-      { id: "IV.4", section: "IV", heading: "MODERATION PROCESS", tag: "IV.4", text: "Community override. If 500+ unique users flag a post, it triggers a mandatory re-review." },
+      { id: "IV.1", section: "IV", heading: "MODERATION PROCESS", tag: "IV.1", text: "Automated review. Every post is reviewed by AI within seconds of submission. The AI evaluates content against all Prohibited and Restricted rules and returns a decision (approve, flag, warn, or remove) with a confidence score from 0% to 100%." },
+      { id: "IV.2", section: "IV", heading: "MODERATION PROCESS", tag: "IV.2", text: "Confidence threshold. Removals require 70%+ AI confidence. Below this threshold, the post remains live and is downgraded to a flag for secondary review. The AI confidence score is displayed on every post for full transparency." },
+      { id: "IV.3", section: "IV", heading: "MODERATION PROCESS", tag: "IV.3", text: "Appeals. Any user may appeal a moderation decision. Appeals are reviewed by a separate, independent AI agent instance that re-evaluates the content fresh against the same constitution." },
+      { id: "IV.4", section: "IV", heading: "MODERATION PROCESS", tag: "IV.4", text: "Community override. If 500+ unique users flag a post, it triggers a mandatory re-review regardless of the original AI decision." },
+      { id: "IV.5", section: "IV", heading: "MODERATION PROCESS", tag: "IV.5", text: "Image moderation. Posts with images are evaluated multimodally. The AI reviews both the text and the image together for NSFW content, violence, personally identifying information, CSAM, and other violations." },
+      { id: "IV.6", section: "IV", heading: "MODERATION PROCESS", tag: "IV.6", text: "Spam detection. Duplicate content is detected via content hashing. Identical posts within a 10-minute window are flagged as spam (R-2). Rate limits cap posting at 20 posts per hour per identity." },
     ],
   },
   {
     id: "V",
+    heading: "FEED ALGORITHM",
+    items: [
+      { id: "V.1", section: "V", heading: "FEED ALGORITHM", tag: "V.1", text: "Three sort modes. HOT (default) ranks posts by a combination of quality, engagement, and freshness. NEW shows posts in reverse chronological order. TOP ranks by total engagement volume." },
+      { id: "V.2", section: "V", heading: "FEED ALGORITHM", tag: "V.2", text: "HOT ranking formula. Each post's HOT score is calculated as: (Wilson Score + 0.3 * log(1 + total_votes) + 0.2 * controversy_ratio) / (age_hours + 2)^1.2. Wilson Score is a statistical lower-bound on the true upvote ratio, penalizing posts with few total votes. This means a post with 5 upvotes and 0 downvotes ranks lower than one with 100 upvotes and 10 downvotes." },
+      { id: "V.3", section: "V", heading: "FEED ALGORITHM", tag: "V.3", text: "Controversy bonus. Posts with high engagement on BOTH sides get a boost, not a penalty. A post with 1000 upvotes and 999 downvotes is treated as highly engaging content, not buried at score 1. The controversy ratio (min(ups, downs) / max(ups, downs)) rewards posts that spark genuine debate." },
+      { id: "V.4", section: "V", heading: "FEED ALGORITHM", tag: "V.4", text: "Time decay. All posts lose ranking over time via gravity factor (age_hours + 2)^1.2. A post that was hot 12 hours ago will naturally fall as newer content arrives. Posts expire entirely after 24 hours." },
+      { id: "V.5", section: "V", heading: "FEED ALGORITHM", tag: "V.5", text: "Distance weighting. In HOT mode, closer posts rank higher at equal engagement. The distance boost formula is: 1 / sqrt(1 + distance_km / scale). The scale varies by scope: LOCAL uses scale=2 (strongly favors nearby), METRO uses scale=10, COUNTRY uses scale=100. A post 1km away gets roughly 1.4x the boost of a post 5km away in LOCAL scope." },
+      { id: "V.6", section: "V", heading: "FEED ALGORITHM", tag: "V.6", text: "Three scope levels. LOCAL (5km radius from your location) shows your immediate neighborhood. METRO shows your entire metro area. COUNTRY shows posts from everywhere. The feed auto-expands from local to metro to country until at least 10 posts are found, so you never see an empty feed." },
+      { id: "V.7", section: "V", heading: "FEED ALGORITHM", tag: "V.7", text: "No suppression. The algorithm has no concept of shadow bans, reach reduction, or content suppression. If a post is not removed by moderation, it competes equally in the ranking. There is no boost for accounts, no penalty for new users, no advertiser influence. The only inputs are: votes, time, distance, and engagement." },
+      { id: "V.8", section: "V", heading: "FEED ALGORITHM", tag: "V.8", text: "TOP ranking. TOP sort ranks posts by total engagement: upvotes + downvotes. This surfaces the most-discussed content regardless of whether sentiment is positive or negative." },
+    ],
+  },
+  {
+    id: "VI",
+    heading: "LOCATION AND PRIVACY",
+    items: [
+      { id: "VI.1", section: "VI", heading: "LOCATION AND PRIVACY", tag: "VI.1", text: "GPS required to post. You can browse, vote, and comment from anywhere, but creating a post requires GPS to confirm you are physically in that area. This is the core identity of Jawwing: local voices, not remote trolls." },
+      { id: "VI.2", section: "VI", heading: "LOCATION AND PRIVACY", tag: "VI.2", text: "Coordinate fuzzing. Exact GPS coordinates are never stored. All locations are fuzzed to approximately a 1-mile radius before being saved to the database. The API returns rounded coordinates only. This prevents anyone from pinpointing where a post was made." },
+      { id: "VI.3", section: "VI", heading: "LOCATION AND PRIVACY", tag: "VI.3", text: "Distance ranges. Distances shown on posts use vague ranges (NEARBY, <5MI, <10MI) rather than exact values. This prevents triangulation of a poster's location from multiple reference points." },
+      { id: "VI.4", section: "VI", heading: "LOCATION AND PRIVACY", tag: "VI.4", text: "IP hashing. Your IP address is immediately passed through a one-way cryptographic hash (HMAC-SHA256). The raw IP is never stored. The hash cannot be reversed, even by us. It is used only for rate limiting and vote deduplication." },
+      { id: "VI.5", section: "VI", heading: "LOCATION AND PRIVACY", tag: "VI.5", text: "Anti-spoofing. Location spoofing is detected via null island checks (0,0 coordinates) and teleportation detection (impossible movement speed between consecutive posts from the same identity)." },
+    ],
+  },
+  {
+    id: "VII",
+    heading: "AI TECHNOLOGY",
+    items: [
+      { id: "VII.1", section: "VII", heading: "AI TECHNOLOGY", tag: "VII.1", text: "Current model: Gemini 2.5 Flash by Google. Selected for speed (~200ms per decision), cost (<$0.001 per review), strong instruction following, and published safety documentation." },
+      { id: "VII.2", section: "VII", heading: "AI TECHNOLOGY", tag: "VII.2", text: "Model requirements. Any moderation AI must: (1) process posts within 2 seconds, (2) maintain >95% agreement with human reviewers on test sets, (3) cost under $0.001 per decision at scale, (4) have published safety documentation from its provider, (5) not create single-provider lock-in." },
+      { id: "VII.3", section: "VII", heading: "AI TECHNOLOGY", tag: "VII.3", text: "Model changes. Any change to the moderation model requires 7 days public notice before deployment. Old and new model test results must be published side-by-side for community review." },
+      { id: "VII.4", section: "VII", heading: "AI TECHNOLOGY", tag: "VII.4", text: "Audit commitment. Monthly publication of moderation accuracy statistics: false positive rate, false negative rate, and appeal overturn rate. Available on the transparency page." },
+    ],
+  },
+  {
+    id: "VIII",
     heading: "AMENDMENTS",
     items: [
-      { id: "V.1", section: "V", heading: "AMENDMENTS", tag: "V.1", text: "Any user may propose an amendment by submitting it through the app." },
-      { id: "V.2", section: "V", heading: "AMENDMENTS", tag: "V.2", text: "Amendments require 60% approval from active users (min. 1,000 votes) over 7 days." },
-      { id: "V.3", section: "V", heading: "AMENDMENTS", tag: "V.3", text: "No amendment may reduce transparency requirements or grant humans moderation authority." },
+      { id: "VIII.1", section: "VIII", heading: "AMENDMENTS", tag: "VIII.1", text: "Any user may propose an amendment by submitting it through the app." },
+      { id: "VIII.2", section: "VIII", heading: "AMENDMENTS", tag: "VIII.2", text: "Amendments require 60% approval from active users (min. 1,000 votes) over 7 days." },
+      { id: "VIII.3", section: "VIII", heading: "AMENDMENTS", tag: "VIII.3", text: "No amendment may reduce transparency requirements or grant humans moderation authority." },
+      { id: "VIII.4", section: "VIII", heading: "AMENDMENTS", tag: "VIII.4", text: "The feed algorithm (Article V) is subject to amendment like any other article. If the community votes to change the ranking formula, it changes." },
     ],
   },
 ];
@@ -415,9 +454,10 @@ export default function ConstitutionPage() {
             Moderation Constitution
           </h1>
           <p style={{ color: "#C0C0C0", fontSize: "0.875rem", lineHeight: 1.6 }}>
-            This document governs all moderation on Jawwing. It is public, versioned, and
-            subject to community amendment. Every AI moderation action is logged against
-            these rules.
+            This document governs everything about how Jawwing works: what content is allowed,
+            how posts are ranked in your feed, how your location data is protected, and what
+            AI technology makes decisions. It is public, versioned, and subject to community
+            amendment. No hidden algorithms. No secret rules.
           </p>
         </div>
 
@@ -425,8 +465,9 @@ export default function ConstitutionPage() {
         <div style={{ borderLeft: "2px solid #1F1F1F", paddingLeft: "20px", marginBottom: "48px" }}>
           <p style={{ color: "#C0C0C0", fontSize: "0.9375rem", lineHeight: 1.7, fontStyle: "italic" }}>
             Jawwing exists to give people a voice in their communities, free from
-            identity-based suppression or human moderator bias. These rules are public,
-            versioned, and yours to change.
+            identity-based suppression, human moderator bias, or opaque algorithms.
+            The feed ranking, moderation rules, privacy protections, and AI technology
+            are all documented here. These rules are public, versioned, and yours to change.
           </p>
         </div>
 
