@@ -104,21 +104,21 @@ html {
   padding-right: 16px;
 }
 
-@media (min-width: 640px) {
+@media (min-width: 480px) {
   .feed-container {
-    max-width: 640px;
+    max-width: 480px;
     margin-left: auto;
     margin-right: auto;
-    padding-left: 24px;
-    padding-right: 24px;
+    padding-left: 0;
+    padding-right: 0;
+    border-left: 1px solid #1A1A1A;
+    border-right: 1px solid #1A1A1A;
   }
 }
 
 @media (min-width: 1024px) {
   .feed-container {
-    max-width: 800px;
-    padding-left: 32px;
-    padding-right: 32px;
+    max-width: 480px;
   }
 }
 

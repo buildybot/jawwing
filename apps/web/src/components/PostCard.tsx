@@ -100,7 +100,7 @@ function ContentWithLinks({ content, fontSize }: { content: string; fontSize?: s
 
 function ImageEmbed({ src, fullscreen }: { src: string; fullscreen?: boolean }) {
   const [expanded, setExpanded] = useState(false);
-  const maxH = fullscreen ? "50vh" : "300px";
+  const maxH = fullscreen ? "70vh" : "500px";
 
   return (
     <>
@@ -113,6 +113,8 @@ function ImageEmbed({ src, fullscreen }: { src: string; fullscreen?: boolean }) 
           marginTop: "10px",
           cursor: "zoom-in",
           border: "1px solid #1F1F1F",
+          display: "flex",
+          justifyContent: "center",
         }}
         onClick={() => setExpanded(true)}
       >
@@ -120,7 +122,13 @@ function ImageEmbed({ src, fullscreen }: { src: string; fullscreen?: boolean }) 
         <img
           src={src}
           alt=""
-          style={{ width: "100%", height: maxH, objectFit: "cover", display: "block" }}
+          style={{
+            width: "100%",
+            maxHeight: maxH,
+            objectFit: "contain",
+            objectPosition: "center",
+            display: "block",
+          }}
           loading="lazy"
         />
       </div>
