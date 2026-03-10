@@ -1,6 +1,19 @@
 import { Tabs } from 'expo-router';
+import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography, tracking } from '../../lib/theme';
+
+function PostTabIcon({ color }: { color: string }) {
+  return (
+    <View style={styles.postIconWrapper}>
+      <Ionicons name="add" size={22} color="#000000" />
+    </View>
+  );
+}
+
+function PostTabLabel() {
+  return <Text style={styles.postLabel}>POST</Text>;
+}
 
 export default function TabsLayout() {
   return (
@@ -8,16 +21,17 @@ export default function TabsLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: colors.bg,
-          borderTopColor: colors.border,
+          backgroundColor: '#000000',
+          borderTopColor: '#1F1F1F',
           borderTopWidth: 1,
           elevation: 0,
           shadowOpacity: 0,
+          height: 56,
         },
-        tabBarActiveTintColor: colors.textPrimary,
-        tabBarInactiveTintColor: colors.textMuted,
+        tabBarActiveTintColor: '#FFFFFF',
+        tabBarInactiveTintColor: '#555555',
         tabBarLabelStyle: {
-          fontSize: typography.sm,
+          fontSize: typography.sm - 2,
           fontWeight: '600',
           letterSpacing: tracking.widest,
           textTransform: 'uppercase',
@@ -27,7 +41,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Feed',
+          title: 'FEED',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="list-outline" size={size} color={color} />
           ),
@@ -36,16 +50,15 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="post"
         options={{
-          title: 'Post',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="add-outline" size={size} color={color} />
-          ),
+          title: '',
+          tabBarIcon: ({ color }) => <PostTabIcon color={color} />,
+          tabBarLabel: () => <PostTabLabel />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Settings',
+          title: 'SETTINGS',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="settings-outline" size={size} color={color} />
           ),
@@ -54,3 +67,23 @@ export default function TabsLayout() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  postIconWrapper: {
+    width: 38,
+    height: 38,
+    borderRadius: 0,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: -4,
+  },
+  postLabel: {
+    fontSize: 9,
+    fontWeight: '600',
+    letterSpacing: 1.5,
+    color: '#555555',
+    textTransform: 'uppercase',
+    marginTop: 2,
+  },
+});

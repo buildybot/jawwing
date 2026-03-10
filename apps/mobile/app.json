@@ -14,10 +14,25 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.jawwing.app"
+      "bundleIdentifier": "com.jawwing.app",
+      "associatedDomains": ["applinks:jawwing.com"]
     },
     "android": {
       "package": "com.jawwing.app",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "jawwing.com",
+              "pathPrefix": "/post"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#09090b",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -38,7 +53,8 @@
         {
           "locationAlwaysAndWhenInUsePermission": "Jawwing uses your location to show you nearby posts."
         }
-      ]
+      ],
+      "react-native-webview"
     ],
     "experiments": {
       "typedRoutes": true

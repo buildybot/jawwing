@@ -1,6 +1,8 @@
 import { getDeviceId } from './deviceId';
+import { getAccountToken } from './auth';
 
-const API_BASE_URL = 'https://www.jawwing.com/api/v1';
+const API_BASE = 'https://www.jawwing.com';
+const API_BASE_URL = `${API_BASE}/api/v1`;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -10,9 +12,14 @@ export interface Post {
   score: number;
   replyCount: number;
   createdAt: string;
-  distance?: number; // meters from current location
+  created_at?: number; // unix timestamp (seconds)
+  expires_at?: number; // unix timestamp (seconds)
+  distance?: number;   // meters from current location
+  lat?: number;
+  lng?: number;
   userVote?: 1 | -1 | null;
   authorId: string;
+  user_id?: string;
   locationName?: string;
   moderated?: boolean;
   moderationReason?: string;
@@ -35,6 +42,8 @@ export interface GetPostsParams {
   lng?: number;
   page?: number;
   limit?: number;
+  mode?: 'auto' | 'radius' | 'territory' | 'everywhere';
+  radiusMeters?: number;
 }
 
 export interface CreatePostParams {
@@ -49,6 +58,7 @@ export interface CreatePostParams {
 async function request<T>(
   path: string,
   options: RequestInit = {},
+  useAuth = false,
 ): Promise<T> {
   const deviceId = await getDeviceId();
   const headers: Record<string, string> = {
@@ -57,12 +67,47 @@ async function request<T>(
     ...(options.headers as Record<string, string>),
   };
 
+  if (useAuth) {
+    const token = await getAccountToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+  }
+
   const res = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`API ${res.status}: ${text}`);
   }
   return res.json() as Promise<T>;
+}
+
+// ─── Auth methods (non-v1 paths) ──────────────────────────────────────────────
+
+export async function sendCode(email: string): Promise<{ ok: boolean }> {
+  const res = await fetch(`${API_BASE}/api/auth/send-code`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Mobile': '1' },
+    body: JSON.stringify({ email }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({})) as { error?: string };
+    throw new Error(data.error ?? `Error ${res.status}`);
+  }
+  return res.json() as Promise<{ ok: boolean }>;
+}
+
+export async function verifyCode(email: string, code: string): Promise<{ ok: boolean; token: string; accountId: string }> {
+  const res = await fetch(`${API_BASE}/api/auth/verify`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Mobile': '1' },
+    body: JSON.stringify({ email, code }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({})) as { error?: string };
+    throw new Error(data.error ?? `Error ${res.status}`);
+  }
+  return res.json() as Promise<{ ok: boolean; token: string; accountId: string }>;
 }
 
 // ─── Upload ───────────────────────────────────────────────────────────────────
@@ -100,6 +145,8 @@ export async function getPosts(params: GetPostsParams = {}): Promise<Post[]> {
   if (params.lng != null) q.set('lng', String(params.lng));
   if (params.page != null) q.set('page', String(params.page));
   if (params.limit != null) q.set('limit', String(params.limit));
+  if (params.mode) q.set('mode', params.mode);
+  if (params.radiusMeters != null) q.set('radiusMeters', String(params.radiusMeters));
   return request<Post[]>(`/posts?${q.toString()}`);
 }
 
@@ -138,8 +185,24 @@ export async function reportPost(postId: string, reason: string): Promise<void> 
   });
 }
 
-export async function getMyPosts(): Promise<Post[]> {
-  return request<Post[]>('/posts/mine');
+export interface MyPostsResponse {
+  posts: Post[];
+  meta: {
+    count: number;
+    totalScore: number;
+    avgScore: number;
+  };
+}
+
+export async function getMyPosts(): Promise<MyPostsResponse> {
+  return request<MyPostsResponse>('/my/posts', {}, true);
+}
+
+export async function registerPushToken(token: string): Promise<void> {
+  await request<void>('/my/push-token', {
+    method: 'POST',
+    body: JSON.stringify({ token }),
+  }, true);
 }
 
 // ─── Territories ──────────────────────────────────────────────────────────────

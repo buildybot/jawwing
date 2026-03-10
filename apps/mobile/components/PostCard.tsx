@@ -6,8 +6,9 @@ import {
   StyleSheet,
   Pressable,
   Animated,
+  Share,
+  Alert,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { colors, spacing, typography, tracking, lineHeight } from '../lib/theme';
 import { Post, vote } from '../lib/api';
@@ -16,6 +17,7 @@ interface PostCardProps {
   post: Post;
   onPress?: (post: Post) => void;
   onVoteChange?: (postId: string, newScore: number, newVote: 1 | -1 | null) => void;
+  onBlock?: (userId: string) => void;
   territoryName?: string;
 }
 
@@ -35,12 +37,21 @@ function formatDistance(meters?: number): string | null {
   return `${(meters / 1000).toFixed(1)}KM`;
 }
 
-export function PostCard({ post, onPress, onVoteChange }: PostCardProps) {
+function formatExpiry(expiresAt?: number): string | null {
+  if (!expiresAt) return null;
+  const diff = expiresAt * 1000 - Date.now();
+  if (diff <= 0) return 'EXPIRED';
+  const totalMins = Math.floor(diff / 60000);
+  if (totalMins < 60) return `${totalMins}M LEFT`;
+  const hrs = Math.floor(totalMins / 60);
+  return `${hrs}H LEFT`;
+}
+
+export function PostCard({ post, onPress, onVoteChange, onBlock }: PostCardProps) {
   const [localScore, setLocalScore] = useState(post.score);
   const [localVote, setLocalVote] = useState<1 | -1 | null>(post.userVote ?? null);
   const [voting, setVoting] = useState(false);
 
-  // Subtle scale pulse on vote (1.0 → 1.15 → 1.0, 150ms)
   const upScale = useRef(new Animated.Value(1)).current;
   const downScale = useRef(new Animated.Value(1)).current;
 
@@ -57,7 +68,6 @@ export function PostCard({ post, onPress, onVoteChange }: PostCardProps) {
     const delta = (newVote ?? 0) - (localVote ?? 0);
     const newScore = localScore + delta;
 
-    // Optimistic + haptic + pulse
     setLocalVote(newVote);
     setLocalScore(newScore);
     pulse(value === 1 ? upScale : downScale);
@@ -76,8 +86,32 @@ export function PostCard({ post, onPress, onVoteChange }: PostCardProps) {
     }
   };
 
+  const handleShare = async () => {
+    try {
+      await Share.share({ url: `https://jawwing.com/post/${post.id}` });
+    } catch { /* user cancelled */ }
+  };
+
+  const handleBlock = () => {
+    const userId = post.user_id ?? post.authorId;
+    if (!userId) return;
+    Alert.alert(
+      'BLOCK USER',
+      'Posts from this user will be hidden from your feed.',
+      [
+        { text: 'CANCEL', style: 'cancel' },
+        {
+          text: 'BLOCK',
+          style: 'destructive',
+          onPress: () => onBlock?.(userId),
+        },
+      ]
+    );
+  };
+
   const distance = formatDistance(post.distance);
   const timeAgo = formatTimeAgo(post.createdAt);
+  const expiry = formatExpiry(post.expires_at);
 
   return (
     <Pressable
@@ -107,8 +141,6 @@ export function PostCard({ post, onPress, onVoteChange }: PostCardProps) {
         </View>
 
         <Text style={styles.dot}>·</Text>
-
-        {/* Reply count */}
         <Text style={styles.metaText}>↩ {post.replyCount}</Text>
 
         {distance ? (
@@ -121,11 +153,30 @@ export function PostCard({ post, onPress, onVoteChange }: PostCardProps) {
         <Text style={styles.dot}>·</Text>
         <Text style={styles.metaText}>{timeAgo}</Text>
 
+        {expiry ? (
+          <>
+            <Text style={styles.dot}>·</Text>
+            <Text style={[styles.metaText, styles.expiryText]}>{expiry}</Text>
+          </>
+        ) : null}
+
         {post.moderated ? (
           <>
             <Text style={styles.dot}>·</Text>
             <Text style={styles.modTag}>REMOVED</Text>
           </>
+        ) : null}
+      </View>
+
+      {/* Action row */}
+      <View style={styles.actions}>
+        <TouchableOpacity onPress={handleShare} activeOpacity={0.6} hitSlop={6}>
+          <Text style={styles.actionBtn}>SHARE</Text>
+        </TouchableOpacity>
+        {(post.user_id || post.authorId) ? (
+          <TouchableOpacity onPress={handleBlock} activeOpacity={0.6} hitSlop={6}>
+            <Text style={styles.blockBtn}>🚫 BLOCK</Text>
+          </TouchableOpacity>
         ) : null}
       </View>
     </Pressable>
@@ -154,6 +205,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.xs,
     flexWrap: 'nowrap',
+    marginBottom: spacing.xs,
   },
   voteRow: {
     flexDirection: 'row',
@@ -193,10 +245,28 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     letterSpacing: tracking.wide,
   },
+  expiryText: {
+    color: colors.textMuted,
+  },
   modTag: {
     fontSize: typography.xs,
     color: colors.destructive,
     letterSpacing: tracking.wider,
     fontWeight: '600',
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    marginTop: 2,
+  },
+  actionBtn: {
+    fontSize: typography.xs,
+    color: colors.textMuted,
+    letterSpacing: tracking.wider,
+  },
+  blockBtn: {
+    fontSize: typography.xs,
+    color: colors.textMuted,
+    letterSpacing: tracking.wider,
   },
 });
