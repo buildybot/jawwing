@@ -1,16 +1,19 @@
 import { NextResponse } from "next/server";
-import { db } from "@jawwing/db";
 import { sql } from "drizzle-orm";
+
+export const runtime = "nodejs";
 
 // ─── GET /api/health ──────────────────────────────────────────────────────────
 
 export async function GET(): Promise<NextResponse> {
   let dbOk = false;
+  let dbError = "";
   try {
+    const { db } = await import("@jawwing/db");
     await db.run(sql`SELECT 1`);
     dbOk = true;
-  } catch {
-    // db unreachable — still return 200 but surface in body
+  } catch (e: unknown) {
+    dbError = e instanceof Error ? e.message : String(e);
   }
 
   return NextResponse.json({
@@ -18,6 +21,7 @@ export async function GET(): Promise<NextResponse> {
     timestamp: new Date().toISOString(),
     version: "0.1.0",
     db: dbOk ? "ok" : "unreachable",
+    dbError: dbError || undefined,
     env: {
       hasTursoUrl: !!process.env.TURSO_DATABASE_URL,
       hasTursoToken: !!process.env.TURSO_AUTH_TOKEN,
