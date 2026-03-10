@@ -1,0 +1,24 @@
+{
+  "name": "jawwing",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Anonymous, location-based social platform with AI agent moderation",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=apps/web",
+    "build": "npm run build --workspace=apps/web",
+    "start": "npm run start --workspace=apps/web",
+    "dev:mobile": "npm run start --workspace=apps/mobile",
+    "db:generate": "npm run generate --workspace=packages/db",
+    "db:push": "npm run push --workspace=packages/db",
+    "db:studio": "npm run studio --workspace=packages/db",
+    "lint": "npm run lint --workspace=apps/web",
+    "typecheck": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

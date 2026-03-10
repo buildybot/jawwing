@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "paths": {
+      "@jawwing/db": ["./packages/db/index.ts"],
+      "@jawwing/db/*": ["./packages/db/*"],
+      "@jawwing/api": ["./packages/api/index.ts"],
+      "@jawwing/api/*": ["./packages/api/*"],
+      "@jawwing/mod": ["./packages/mod/index.ts"],
+      "@jawwing/mod/*": ["./packages/mod/*"]
+    }
+  },
+  "include": ["packages/**/*.ts"],
+  "exclude": ["node_modules", "apps"]
+}

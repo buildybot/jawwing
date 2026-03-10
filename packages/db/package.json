@@ -1,0 +1,41 @@
+{
+  "name": "@jawwing/db",
+  "version": "0.1.0",
+  "description": "Drizzle ORM schema and database client for Jawwing (Turso/libSQL)",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "migrate": "tsx migrate.ts",
+    "generate": "drizzle-kit generate",
+    "push": "drizzle-kit push",
+    "studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.14.0",
+    "drizzle-orm": "^0.44.0",
+    "nanoid": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "drizzle-kit": "^0.30.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0"
+  },
+  "drizzle": {
+    "schema": "./schema.ts",
+    "out": "./migrations",
+    "dialect": "turso",
+    "creds": {
+      "url": "${TURSO_DATABASE_URL}",
+      "authToken": "${TURSO_AUTH_TOKEN}"
+    }
+  }
+}
