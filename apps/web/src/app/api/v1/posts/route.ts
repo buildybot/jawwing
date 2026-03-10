@@ -16,7 +16,7 @@ import {
 } from "@jawwing/api/anonymous";
 import { getAccountFromToken } from "@jawwing/api/accounts";
 import { isBanned } from "@jawwing/api/bans";
-import { onPostCreated } from "@jawwing/mod/automod";
+import { moderatePost } from "@jawwing/mod/automod";
 import { CONSTITUTION_RULES } from "@jawwing/mod/engine";
 
 // ─── Video URL extraction ─────────────────────────────────────────────────────
@@ -484,7 +484,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // Run moderation inline — Gemini Flash is ~200ms, acceptable latency
     // Can't use after()/setImmediate() reliably on Vercel serverless
     try {
-      await Promise.resolve(onPostCreated(created));
+      await moderatePost(created);
     } catch (modErr) {
       console.error("[MOD] Moderation error (non-blocking):", modErr);
     }
