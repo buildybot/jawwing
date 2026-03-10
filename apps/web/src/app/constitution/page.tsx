@@ -121,7 +121,7 @@ const FALLBACK_SECTIONS: Section[] = [
     id: "VII",
     heading: "AI TECHNOLOGY",
     items: [
-      { id: "VII.1", section: "VII", heading: "AI TECHNOLOGY", tag: "VII.1", text: "Current model: Gemini 2.5 Flash by Google. Selected for speed (~200ms per decision), cost (<$0.001 per review), strong instruction following, and published safety documentation." },
+      { id: "VII.1", section: "VII", heading: "AI TECHNOLOGY", tag: "VII.1", text: "Current model: Claude Haiku 4.5 by Anthropic. Selected for speed, safety-first design, vision capability (image moderation), strong instruction following, and published safety documentation. Anthropic is an AI safety company — their models are designed to be helpful, harmless, and honest." },
       { id: "VII.2", section: "VII", heading: "AI TECHNOLOGY", tag: "VII.2", text: "Model requirements. Any moderation AI must: (1) process posts within 2 seconds, (2) maintain >95% agreement with human reviewers on test sets, (3) cost under $0.001 per decision at scale, (4) have published safety documentation from its provider, (5) not create single-provider lock-in." },
       { id: "VII.3", section: "VII", heading: "AI TECHNOLOGY", tag: "VII.3", text: "Model changes. Any change to the moderation model requires 7 days public notice before deployment. Old and new model test results must be published side-by-side for community review." },
       { id: "VII.4", section: "VII", heading: "AI TECHNOLOGY", tag: "VII.4", text: "Audit commitment. Monthly publication of moderation accuracy statistics: false positive rate, false negative rate, and appeal overturn rate. Available on the transparency page." },

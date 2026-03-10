@@ -123,7 +123,7 @@ export const CONSTITUTION_RULES = {
       "Links to video hosting platforms not on this list will be flagged for review. This list can be amended through the standard amendment process.",
   },
   technology: {
-    currentModel: "gemini-2.5-flash",
+    currentModel: "claude-haiku-4-5",
     modelProvider: "Google",
     rationale:
       "Fast inference (~200ms), cost-effective for high-volume content review, strong instruction following for rule-based decisions, sufficient capability for text content moderation.",
@@ -301,13 +301,75 @@ function getGeminiProvider(): AIProvider | null {
   };
 }
 
-/** Get the best available AI provider. Priority: Groq (free, fast) → Gemini (fallback) */
-function getProvider(): AIProvider | null {
-  return getGroqProvider() ?? getGeminiProvider();
+function getAnthropicProvider(): AIProvider | null {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return null;
+  return {
+    name: "anthropic/claude-haiku-4-5",
+    async reviewText(systemPrompt: string, userPrompt: string): Promise<string> {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "claude-haiku-4-5-20250514",
+          max_tokens: 500,
+          system: systemPrompt,
+          messages: [{ role: "user", content: userPrompt }],
+        }),
+        signal: AbortSignal.timeout(15000),
+      });
+      if (!res.ok) {
+        const body = await res.text();
+        throw new Error(`Anthropic API ${res.status}: ${body.slice(0, 200)}`);
+      }
+      const data = await res.json();
+      return data.content[0].text;
+    },
+    async reviewWithImage(systemPrompt: string, userPrompt: string, imageData: { data: string; mimeType: string }): Promise<string> {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "claude-haiku-4-5-20250514",
+          max_tokens: 500,
+          system: systemPrompt,
+          messages: [{
+            role: "user",
+            content: [
+              { type: "image", source: { type: "base64", media_type: imageData.mimeType, data: imageData.data } },
+              { type: "text", text: userPrompt },
+            ],
+          }],
+        }),
+        signal: AbortSignal.timeout(15000),
+      });
+      if (!res.ok) {
+        const body = await res.text();
+        throw new Error(`Anthropic API ${res.status}: ${body.slice(0, 200)}`);
+      }
+      const data = await res.json();
+      return data.content[0].text;
+    },
+  };
 }
 
-/** Get a provider that supports image review (only Gemini currently) */
+/** Get the best available AI provider. Priority: Anthropic Haiku (primary) → Groq (free) → Gemini (fallback) */
+function getProvider(): AIProvider | null {
+  return getAnthropicProvider() ?? getGroqProvider() ?? getGeminiProvider();
+}
+
+/** Get a provider that supports image review. Haiku 4.5 supports vision. */
 function getImageProvider(): AIProvider | null {
+  const anthropic = getAnthropicProvider();
+  if (anthropic?.reviewWithImage) return anthropic;
   const gemini = getGeminiProvider();
   if (gemini?.reviewWithImage) return gemini;
   return null;
