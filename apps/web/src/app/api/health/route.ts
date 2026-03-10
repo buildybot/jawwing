@@ -18,5 +18,10 @@ export async function GET(): Promise<NextResponse> {
     timestamp: new Date().toISOString(),
     version: "0.1.0",
     db: dbOk ? "ok" : "unreachable",
+    env: {
+      hasTursoUrl: !!process.env.TURSO_DATABASE_URL,
+      hasTursoToken: !!process.env.TURSO_AUTH_TOKEN,
+      tursoUrlPrefix: process.env.TURSO_DATABASE_URL?.substring(0, 20) || "missing",
+    },
   });
 }
