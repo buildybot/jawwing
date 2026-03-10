@@ -8,7 +8,7 @@ import {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 export const DEFAULT_H3_RESOLUTION = 7;
-export const DEFAULT_RING_SIZE = 2; // ~2 rings at res 7 ≈ 5km radius
+export const DEFAULT_RING_SIZE = 5; // ~5 rings at res 7 ≈ 10km radius
 
 // ─── Geo Utilities ────────────────────────────────────────────────────────────
 
@@ -53,7 +53,7 @@ export function radiusToRingSize(radiusMeters: number): number {
   // At H3 res 7, avg cell diameter ~2.1km
   const hexWidthMeters = 2100;
   const rings = Math.ceil(radiusMeters / hexWidthMeters);
-  return Math.max(1, Math.min(rings, 10)); // cap at 10 rings
+  return Math.max(1, Math.min(rings, 20)); // cap at 20 rings (~40km)
 }
 
 /**

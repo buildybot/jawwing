@@ -13,6 +13,8 @@ export interface FeedParams {
   sort?: SortMode;
   limit?: number;
   offset?: number;
+  /** If provided, use these hexes directly instead of computing from radius */
+  hexes?: string[];
 }
 
 // ─── Scoring ──────────────────────────────────────────────────────────────────
@@ -45,6 +47,8 @@ function hotScoreSql() {
 
 /**
  * Build and execute a geo-filtered feed query.
+ * If `hexes` is provided, uses those directly (territory-based feed).
+ * Otherwise computes hexes from lat/lng + radiusMeters.
  */
 export async function buildFeedQuery(params: FeedParams) {
   const {
@@ -54,9 +58,10 @@ export async function buildFeedQuery(params: FeedParams) {
     sort = "hot",
     limit = 20,
     offset = 0,
+    hexes: precomputedHexes,
   } = params;
 
-  const hexes = getHexesForRadius(lat, lng, radiusMeters);
+  const hexes = precomputedHexes ?? getHexesForRadius(lat, lng, radiusMeters);
   const nowTs = Math.floor(Date.now() / 1000);
 
   const conditions = and(

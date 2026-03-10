@@ -16,11 +16,63 @@ import AppBanner from "@/components/AppBanner";
 import { useBlockedUsers } from "@/hooks/useBlockedUsers";
 
 const FEED_CACHE_KEY = "jawwing_feed_cache";
+const FEED_SCOPE_KEY = "jawwing_feed_scope";
 
 const MONO = { fontFamily: "var(--font-mono), monospace" } as const;
-const LIMIT = 20;
+const LIMIT = 50; // fetch more so client-side sort has enough to work with
 const POLL_INTERVAL_MS = 30_000;
 const WELCOME_DISMISSED_KEY = "jawwing_welcome_dismissed";
+
+/** The three scope options for the feed */
+type FeedScope = "local" | "metro" | "country";
+
+const SCOPE_LABELS: Record<FeedScope, string> = {
+  local: "LOCAL",
+  metro: "METRO",
+  country: "COUNTRY",
+};
+
+/** Distance-decay scale (km) per scope — larger = weaker distance preference */
+const SCOPE_DISTANCE_SCALE: Record<FeedScope, number> = {
+  local: 2,
+  metro: 10,
+  country: 100,
+};
+
+const HOT_GRAVITY_CLIENT = 1.8;
+const SECONDS_PER_HOUR = 3600;
+
+function hotScore(score: number, createdAt: number): number {
+  const ageHours = (Date.now() / 1000 - createdAt) / SECONDS_PER_HOUR;
+  return (score + 1) / Math.pow(ageHours + 2, HOT_GRAVITY_CLIENT);
+}
+
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function distanceBoost(distanceKm: number, scale: number): number {
+  return 1 / Math.sqrt(1 + distanceKm / scale);
+}
+
+function sortPostsHot(rawPosts: Post[], userLat: number, userLng: number, scope: FeedScope): Post[] {
+  const scale = SCOPE_DISTANCE_SCALE[scope];
+  return [...rawPosts].sort((a, b) => {
+    const distA = haversineKm(userLat, userLng, a.lat, a.lng);
+    const distB = haversineKm(userLat, userLng, b.lat, b.lng);
+    const rankA = hotScore(a.score, a.created_at) * distanceBoost(distA, scale);
+    const rankB = hotScore(b.score, b.created_at) * distanceBoost(distB, scale);
+    return rankB - rankA;
+  });
+}
 
 // Default coords — DC Metro, shown immediately while GPS resolves
 const DC_LAT = 38.9072;
@@ -54,12 +106,19 @@ export default function FeedPage() {
   const [activeTab, setActiveTab] = useState<SortTab>("hot");
   const [showModal, setShowModal] = useState(false);
 
+  // Scope selector: LOCAL / METRO / COUNTRY
+  const [feedScope, setFeedScope] = useState<FeedScope>("metro");
+  // Track if scope was loaded from localStorage (to avoid flash)
+  const [scopeReady, setScopeReady] = useState(false);
+
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [offset, setOffset] = useState(0);
+  // Whether server returned 0 posts on the initial scope before fallback
+  const [expandedScope, setExpandedScope] = useState(false);
 
   // Pull-to-refresh state
   const [ptrState, setPtrState] = useState<"idle" | "pulling" | "ready" | "refreshing">("idle");
@@ -77,7 +136,12 @@ export default function FeedPage() {
           setPosts(parsed);
         }
       }
+      const savedScope = localStorage.getItem(FEED_SCOPE_KEY) as FeedScope | null;
+      if (savedScope && ["local", "metro", "country"].includes(savedScope)) {
+        setFeedScope(savedScope);
+      }
     } catch { /* noop */ }
+    setScopeReady(true);
   }, []);
 
   // Welcome card
@@ -154,6 +218,7 @@ export default function FeedPage() {
         setError(null);
         setNewPosts([]);
         setShowNewBanner(false);
+        setExpandedScope(false);
       } else {
         setLoadingMore(true);
       }
@@ -163,6 +228,7 @@ export default function FeedPage() {
         let fetchedPosts: Post[];
 
         if (selectedTerritory.type === "territory") {
+          // Remote territory selected via header selector — use territory feed
           const data = await getTerritoryFeed(
             selectedTerritory.territory.id,
             activeTab as "hot" | "new" | "top",
@@ -171,21 +237,49 @@ export default function FeedPage() {
           );
           fetchedPosts = data.posts;
         } else {
+          // Scope-based feed
+          let apiMode: "auto" | "radius" | "territory" | "everywhere" = "auto";
+          let radiusMeters: number | undefined;
+
+          if (feedScope === "local") {
+            apiMode = "radius";
+            radiusMeters = 5000;
+          } else if (feedScope === "metro") {
+            apiMode = "territory";
+          } else {
+            apiMode = "everywhere";
+          }
+
           const data = await fetchPosts(
             userLat,
             userLng,
             activeTab as "hot" | "new" | "top",
             LIMIT,
-            currentOffset
+            currentOffset,
+            apiMode,
+            radiusMeters
           );
           fetchedPosts = data.posts;
+
+          // Fallback: if LOCAL returned 0 posts on reset, try METRO
+          if (reset && feedScope === "local" && fetchedPosts.length === 0) {
+            setExpandedScope(true);
+            const fallback = await fetchPosts(
+              userLat, userLng, activeTab as "hot" | "new" | "top", LIMIT, 0, "territory"
+            );
+            fetchedPosts = fallback.posts;
+          }
+        }
+
+        // Client-side distance-boosted sort for HOT tab
+        if (activeTab === "hot" && selectedTerritory.type !== "territory") {
+          fetchedPosts = sortPostsHot(fetchedPosts, userLat, userLng, feedScope);
         }
 
         if (reset) {
           setPosts(fetchedPosts);
           if (fetchedPosts.length > 0) {
             latestTimestampRef.current = Math.max(...fetchedPosts.map((p) => p.created_at));
-            // Cache feed in localStorage for offline/returning users
             try { localStorage.setItem(FEED_CACHE_KEY, JSON.stringify(fetchedPosts)); } catch { /* noop */ }
           }
         } else {
@@ -202,14 +296,15 @@ export default function FeedPage() {
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [userLat, userLng, activeTab, offset, selectedTerritory]
+    [userLat, userLng, activeTab, offset, selectedTerritory, feedScope]
   );
 
-  // Load on mount + when tab/territory changes
+  // Load on mount + when tab/territory/scope changes (wait until scope is hydrated from localStorage)
   useEffect(() => {
+    if (!scopeReady) return;
     loadFeed(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, selectedTerritory]);
+  }, [activeTab, selectedTerritory, feedScope, scopeReady]);
 
   // Reload with refined coords when GPS comes in
   useEffect(() => {
@@ -435,6 +530,52 @@ export default function FeedPage() {
             </button>
           </div>
 
+          {/* Scope selector — only shown in near_me mode */}
+          {!isRemoteTerritory && (
+            <div
+              style={{
+                display: "flex",
+                gap: "6px",
+                padding: "8px 16px",
+                borderBottom: "1px solid #1A1A1A",
+              }}
+            >
+              {(["local", "metro", "country"] as FeedScope[]).map((scope) => {
+                const active = feedScope === scope;
+                return (
+                  <button
+                    key={scope}
+                    onClick={() => {
+                      setFeedScope(scope);
+                      try { localStorage.setItem(FEED_SCOPE_KEY, scope); } catch { /* noop */ }
+                    }}
+                    style={{
+                      ...MONO,
+                      background: active ? "#FFFFFF" : "transparent",
+                      color: active ? "#000000" : "#555555",
+                      border: `1px solid ${active ? "#FFFFFF" : "#2A2A2A"}`,
+                      padding: "4px 10px",
+                      fontSize: "0.625rem",
+                      fontWeight: active ? 700 : 400,
+                      letterSpacing: "0.08em",
+                      cursor: "pointer",
+                      borderRadius: "2px",
+                      transition: "all 150ms",
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    {SCOPE_LABELS[scope]}
+                  </button>
+                );
+              })}
+              {expandedScope && (
+                <span style={{ ...MONO, color: "#555555", fontSize: "0.5625rem", letterSpacing: "0.06em", alignSelf: "center", marginLeft: "4px" }}>
+                  NO POSTS NEARBY · SHOWING DC METRO
+                </span>
+              )}
+            </div>
+          )}
+
           {/* Territory header */}
           {territoryName && (
             <div
@@ -644,7 +785,13 @@ export default function FeedPage() {
 
           {!loading && !hasMore && posts.length > 0 && (
             <p style={{ ...MONO, color: "#333333", fontSize: "0.6875rem", letterSpacing: "0.06em", textAlign: "center", padding: "40px 0 80px" }}>
-              {territoryName ? `${territoryName.toUpperCase()} · TERRITORY` : "5 MILE RADIUS · ANONYMOUS"}
+              {territoryName
+                ? `${territoryName.toUpperCase()} · TERRITORY`
+                : feedScope === "local"
+                  ? "LOCAL · 5KM RADIUS"
+                  : feedScope === "metro"
+                    ? "DC METRO · TERRITORY"
+                    : "EVERYWHERE · ALL POSTS"}
             </p>
           )}
 

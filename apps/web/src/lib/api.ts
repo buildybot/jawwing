@@ -113,15 +113,19 @@ export async function fetchPosts(
   lng: number,
   sort: "hot" | "new" | "top" = "hot",
   limit = 20,
-  offset = 0
-): Promise<{ posts: Post[]; meta: { limit: number; offset: number; count: number } }> {
+  offset = 0,
+  mode: "auto" | "radius" | "territory" | "everywhere" = "auto",
+  radiusMeters?: number
+): Promise<{ posts: Post[]; meta: { limit: number; offset: number; count: number; mode?: string; territoryId?: string } }> {
   const params = new URLSearchParams({
     lat: String(lat),
     lng: String(lng),
     sort,
     limit: String(limit),
     offset: String(offset),
+    mode,
   });
+  if (radiusMeters != null) params.set("radius", String(radiusMeters));
   return request(`/v1/posts?${params}`);
 }
 

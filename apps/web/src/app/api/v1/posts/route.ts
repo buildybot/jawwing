@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, posts, nanoid, now } from "@jawwing/db";
+import { db, posts, territories, nanoid, now } from "@jawwing/db";
+import { eq } from "drizzle-orm";
 import { checkRateLimit } from "@jawwing/api/middleware";
 import { latLngToH3 } from "@jawwing/api/geo";
 import { buildFeedQuery, type SortMode } from "@jawwing/api/feed";
@@ -60,17 +61,82 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: "Invalid coordinates", code: "INVALID_PARAMS" }, { status: 400 });
     }
 
-    const radius = parseInt(searchParams.get("radius") ?? "5000", 10);
+    const radius = parseInt(searchParams.get("radius") ?? "20000", 10);
     const sort = (searchParams.get("sort") ?? "hot") as SortMode;
     const limit = Math.min(parseInt(searchParams.get("limit") ?? "20", 10), 100);
     const offset = parseInt(searchParams.get("offset") ?? "0", 10);
+    const mode = searchParams.get("mode") ?? "auto"; // "auto" | "radius" | "territory" | "everywhere"
+    const territoryParam = searchParams.get("territory"); // explicit territory ID
 
     if (!["hot", "new", "top"].includes(sort)) {
       return NextResponse.json({ error: "sort must be hot, new, or top", code: "INVALID_PARAMS" }, { status: 400 });
     }
 
-    const results = await buildFeedQuery({ lat, lng, radiusMeters: radius, sort, limit, offset });
-    return NextResponse.json({ posts: results, meta: { limit, offset, count: results.length } });
+    // EVERYWHERE mode: return all active posts, no geo filter
+    if (mode === "everywhere") {
+      const nowTs = Math.floor(Date.now() / 1000);
+      const { gt: dbGt, eq: dbEq, and: dbAnd, desc: dbDesc, sql: dbSql } = await import("drizzle-orm");
+      const conditions = dbAnd(dbGt(posts.expires_at, nowTs), dbEq(posts.status, "active"));
+      const HOT_GRAVITY = 1.8;
+      let results;
+      if (sort === "new") {
+        results = await db.select().from(posts).where(conditions).orderBy(dbDesc(posts.created_at)).limit(limit).offset(offset);
+      } else if (sort === "top") {
+        results = await db.select().from(posts).where(conditions).orderBy(dbDesc(posts.score)).limit(limit).offset(offset);
+      } else {
+        results = await db.select().from(posts).where(conditions)
+          .orderBy(dbDesc(dbSql<number>`CAST(${posts.score} + 1 AS REAL) / EXP(${HOT_GRAVITY} * LOG((CAST(unixepoch() - ${posts.created_at} AS REAL) / 3600.0) + 2.0))`))
+          .limit(limit).offset(offset);
+      }
+      return NextResponse.json({ posts: results, meta: { limit, offset, count: results.length, mode: "everywhere" } });
+    }
+
+    // Territory-based feed: explicit territory ID or auto-detect from lat/lng
+    let territoryHexes: string[] | undefined;
+    let resolvedTerritoryId: string | undefined;
+
+    if (mode !== "radius") {
+      if (territoryParam) {
+        // Explicit territory ID provided
+        const [territory] = await db.select().from(territories).where(eq(territories.id, territoryParam)).limit(1);
+        if (territory?.h3_indexes?.length) {
+          territoryHexes = territory.h3_indexes;
+          resolvedTerritoryId = territory.id;
+        }
+      } else if (mode === "auto" || mode === "territory") {
+        // Auto-detect: find which territory contains the user's H3 hex
+        const userH3 = latLngToH3(lat, lng);
+        const allTerritories = await db.select({ id: territories.id, h3_indexes: territories.h3_indexes }).from(territories);
+        for (const territory of allTerritories) {
+          if (territory.h3_indexes?.includes(userH3)) {
+            territoryHexes = territory.h3_indexes;
+            resolvedTerritoryId = territory.id;
+            break;
+          }
+        }
+      }
+    }
+
+    const results = await buildFeedQuery({
+      lat,
+      lng,
+      radiusMeters: radius,
+      sort,
+      limit,
+      offset,
+      hexes: territoryHexes,
+    });
+
+    return NextResponse.json({
+      posts: results,
+      meta: {
+        limit,
+        offset,
+        count: results.length,
+        mode: territoryHexes ? "territory" : "radius",
+        territoryId: resolvedTerritoryId,
+      },
+    });
   } catch (err) {
     console.error("[GET /api/v1/posts]", err);
     return NextResponse.json({ error: "Internal server error", code: "INTERNAL_ERROR" }, { status: 500 });
