@@ -69,7 +69,7 @@ export default function ProfileScreen() {
     <View>
       {/* Identity block */}
       <View style={styles.identityBlock}>
-        <Text style={styles.displayName}>{profile?.displayName ?? '—'}</Text>
+        <Text style={styles.displayName}>{profile?.displayName ?? '-'}</Text>
         <Text style={styles.identityMeta}>ANONYMOUS · JAWWING</Text>
       </View>
       <View style={styles.divider} />

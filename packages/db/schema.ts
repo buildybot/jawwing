@@ -233,6 +233,60 @@ export const waitlist = sqliteTable(
   })
 );
 
+// ─── constitution_versions ────────────────────────────────────────────────────
+
+export const constitution_versions = sqliteTable(
+  "constitution_versions",
+  {
+    id: text("id").primaryKey(),
+    version: text("version").notNull(), // e.g. "1.0", "1.1", "2.0"
+    content: text("content").notNull(), // full JSON of constitution rules
+    summary: text("summary").notNull(),
+    created_at: integer("created_at").notNull(),
+    created_by: text("created_by").notNull().default("system"),
+    status: text("status", { enum: ["active", "archived", "proposed", "rejected"] })
+      .notNull()
+      .default("proposed"),
+  },
+  (t) => ({
+    idxConstitutionVersionsStatus: index("idx_cv_status").on(t.status),
+    idxConstitutionVersionsCreatedAt: index("idx_cv_created_at").on(t.created_at),
+  })
+);
+
+// ─── constitution_amendments ──────────────────────────────────────────────────
+
+export const constitution_amendments = sqliteTable(
+  "constitution_amendments",
+  {
+    id: text("id").primaryKey(),
+    proposer_id: text("proposer_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    description: text("description").notNull(),
+    section: text("section").notNull(), // "prohibited" | "restricted" | "principles" | etc.
+    proposed_text: text("proposed_text").notNull(),
+    status: text("status", {
+      enum: ["pending_review", "under_vote", "accepted", "rejected"],
+    })
+      .notNull()
+      .default("pending_review"),
+    mod_review_id: text("mod_review_id"), // nullable
+    mod_reasoning: text("mod_reasoning"), // nullable — AI reasoning
+    votes_for: integer("votes_for").notNull().default(0),
+    votes_against: integer("votes_against").notNull().default(0),
+    vote_deadline: integer("vote_deadline"), // nullable unix timestamp
+    created_at: integer("created_at").notNull(),
+    resolved_at: integer("resolved_at"), // nullable
+  },
+  (t) => ({
+    idxAmendmentsProposer: index("idx_ca_proposer").on(t.proposer_id),
+    idxAmendmentsStatus: index("idx_ca_status").on(t.status),
+    idxAmendmentsCreatedAt: index("idx_ca_created_at").on(t.created_at),
+  })
+);
+
 // ─── Type exports ─────────────────────────────────────────────────────────────
 
 export type User = typeof users.$inferSelect;
@@ -253,3 +307,7 @@ export type Report = typeof reports.$inferSelect;
 export type NewReport = typeof reports.$inferInsert;
 export type Waitlist = typeof waitlist.$inferSelect;
 export type NewWaitlist = typeof waitlist.$inferInsert;
+export type ConstitutionVersion = typeof constitution_versions.$inferSelect;
+export type NewConstitutionVersion = typeof constitution_versions.$inferInsert;
+export type ConstitutionAmendment = typeof constitution_amendments.$inferSelect;
+export type NewConstitutionAmendment = typeof constitution_amendments.$inferInsert;

@@ -237,6 +237,32 @@ No agent can grant exceptions to Prohibited Content rules. Restricted Content ru
 
 ---
 
+## Article X — Moderation Technology
+
+Jawwing is committed to full transparency about the AI models used to enforce this Constitution.
+
+### T-6: Current Model
+Moderation decisions are made by **`gemini-2.0-flash`** (Google). This model was selected for its fast inference (~200ms), cost-effectiveness at scale, strong instruction-following for rule-based decisions, and sufficient capability for text content moderation.
+
+### T-7: Model Selection Criteria
+Any model used for moderation must meet all of the following constitutional standards:
+
+| ID | Criterion | Requirement |
+|----|-----------|-------------|
+| TC-1 | **Speed** | Must process posts within 2 seconds of submission |
+| TC-2 | **Accuracy** | Must maintain >95% agreement with human reviewers on test set |
+| TC-3 | **Cost** | Must not exceed $0.001 per moderation decision at scale |
+| TC-4 | **Transparency** | Model provider must publish safety documentation |
+| TC-5 | **Independence** | No single provider lock-in; model can be swapped with community notice |
+
+### T-8: Model Change Policy
+Any model change requires **7-day public notice** before deployment. The old and new model's test results must be published side-by-side prior to cutover. The community may file objections during this window.
+
+### T-9: Audit Commitment
+Jawwing will publish monthly moderation accuracy statistics: false positive rate, false negative rate, and appeal overturn rate. If agents are getting things wrong, the data will show it.
+
+---
+
 ## Closing Statement
 
 Jawwing is an experiment in anonymous community built on trust. Trust that the rules are fair. Trust that they're applied consistently. Trust that you know exactly what you're agreeing to when you post.

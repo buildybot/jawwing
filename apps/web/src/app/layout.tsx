@@ -16,7 +16,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "JAWWING — Speak freely. Stay anonymous.",
+  title: "JAWWING - Speak freely. Stay anonymous.",
   description:
     "Location-based anonymous social platform. No human mods. AI-moderated by a public constitution.",
   metadataBase: new URL("https://jawwing.com"),

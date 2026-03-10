@@ -207,6 +207,118 @@ export default function ConstitutionPage() {
           ))}
         </div>
 
+        {/* Moderation Technology Section */}
+        <div style={{ borderTop: "1px solid #1F1F1F", paddingTop: "32px", paddingBottom: "32px" }}>
+          {/* Section header */}
+          <div className="flex items-baseline gap-4 mb-6">
+            <span style={{ ...MONO, color: "#333333", fontSize: "0.75rem", letterSpacing: "0.08em", minWidth: "28px" }}>
+              VI
+            </span>
+            <span style={{ ...MONO, color: "#FFFFFF", fontSize: "0.8125rem", letterSpacing: "0.08em", fontWeight: 600 }}>
+              MODERATION TECHNOLOGY
+            </span>
+          </div>
+
+          {/* Current model */}
+          <div
+            style={{
+              border: "1px solid #1F1F1F",
+              padding: "20px 24px",
+              marginBottom: "24px",
+            }}
+          >
+            <div style={{ ...MONO, color: "#777777", fontSize: "0.625rem", letterSpacing: "0.10em", marginBottom: "10px" }}>
+              CURRENT MODEL
+            </div>
+            <div style={{ ...MONO, color: "#FFFFFF", fontSize: "1.125rem", letterSpacing: "0.04em", fontWeight: 700, marginBottom: "6px" }}>
+              gemini-2.0-flash
+            </div>
+            <div style={{ ...MONO, color: "#555555", fontSize: "0.6875rem", letterSpacing: "0.04em", marginBottom: "14px" }}>
+              GOOGLE · ACTIVE
+            </div>
+            <p style={{ color: "#C0C0C0", fontSize: "0.875rem", lineHeight: 1.65 }}>
+              Fast inference (~200ms), cost-effective for high-volume content review,
+              strong instruction following for rule-based decisions, sufficient capability
+              for text content moderation.
+            </p>
+          </div>
+
+          {/* Selection criteria */}
+          <div style={{ marginBottom: "24px" }}>
+            <div style={{ ...MONO, color: "#777777", fontSize: "0.625rem", letterSpacing: "0.10em", marginBottom: "14px" }}>
+              MODEL SELECTION CRITERIA
+            </div>
+            <div className="flex flex-col" style={{ gap: "0px" }}>
+              {[
+                { id: "TC-1", label: "SPEED", req: "Must process posts within 2 seconds of submission." },
+                { id: "TC-2", label: "ACCURACY", req: "Must maintain >95% agreement with human reviewers on test set." },
+                { id: "TC-3", label: "COST", req: "Must not exceed $0.001 per moderation decision at scale." },
+                { id: "TC-4", label: "TRANSPARENCY", req: "Model provider must publish safety documentation." },
+                { id: "TC-5", label: "INDEPENDENCE", req: "No single provider lock-in. Model can be swapped with community notice." },
+              ].map((criterion, i, arr) => (
+                <div
+                  key={criterion.id}
+                  className="flex gap-6"
+                  style={{
+                    padding: "14px 0",
+                    borderBottom: i < arr.length - 1 ? "1px solid #1F1F1F" : "none",
+                  }}
+                >
+                  <span style={{ ...MONO, color: "#555555", fontSize: "0.6875rem", letterSpacing: "0.04em", minWidth: "44px", paddingTop: "2px" }}>
+                    {criterion.id}
+                  </span>
+                  <div>
+                    <div style={{ ...MONO, color: "#FFFFFF", fontSize: "0.6875rem", letterSpacing: "0.08em", fontWeight: 600, marginBottom: "4px" }}>
+                      {criterion.label}
+                    </div>
+                    <p style={{ color: "#C0C0C0", fontSize: "0.875rem", lineHeight: 1.6 }}>
+                      {criterion.req}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Change policy */}
+          <div
+            style={{
+              border: "1px solid #1F1F1F",
+              borderLeft: "2px solid #FFFFFF",
+              padding: "16px 20px",
+              marginBottom: "16px",
+            }}
+          >
+            <div style={{ ...MONO, color: "#777777", fontSize: "0.625rem", letterSpacing: "0.10em", marginBottom: "8px" }}>
+              MODEL CHANGE POLICY
+            </div>
+            <p style={{ color: "#C0C0C0", fontSize: "0.875rem", lineHeight: 1.65 }}>
+              Any model change requires <span style={{ color: "#FFFFFF", fontWeight: 600 }}>7-day public notice</span> before
+              deployment. The old and new model&rsquo;s test results must be published
+              side-by-side prior to cutover.
+            </p>
+          </div>
+
+          {/* Audit commitment */}
+          <div
+            style={{
+              border: "1px solid #1F1F1F",
+              borderLeft: "2px solid #FFFFFF",
+              padding: "16px 20px",
+            }}
+          >
+            <div style={{ ...MONO, color: "#777777", fontSize: "0.625rem", letterSpacing: "0.10em", marginBottom: "8px" }}>
+              AUDIT COMMITMENT
+            </div>
+            <p style={{ color: "#C0C0C0", fontSize: "0.875rem", lineHeight: 1.65 }}>
+              Monthly publication of moderation accuracy statistics:{" "}
+              <span style={{ ...MONO, color: "#FFFFFF", fontSize: "0.8125rem" }}>false positive rate</span>,{" "}
+              <span style={{ ...MONO, color: "#FFFFFF", fontSize: "0.8125rem" }}>false negative rate</span>, and{" "}
+              <span style={{ ...MONO, color: "#FFFFFF", fontSize: "0.8125rem" }}>appeal overturn rate</span>.
+            </p>
+          </div>
+        </div>
+
         {/* CTA */}
         <div
           style={{

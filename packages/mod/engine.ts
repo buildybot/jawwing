@@ -58,7 +58,7 @@ export const CONSTITUTION_RULES = {
       id: "R-2",
       name: "Spam",
       description:
-        "Repetitive posts, flooding a feed with near-identical content, or coordinated artificial amplification. A single post won't trigger this — a pattern will.",
+        "Repetitive posts, flooding a feed with near-identical content, or coordinated artificial amplification. A single post won't trigger this. A pattern will.",
       clarification: null,
     },
     {
@@ -72,7 +72,7 @@ export const CONSTITUTION_RULES = {
       id: "R-4",
       name: "Misleading Content",
       description:
-        "Demonstrably false information designed to deceive — especially about local events, emergencies, or public safety. Satire and obvious jokes are not misleading. Content must be clearly false AND clearly intended to deceive.",
+        "Demonstrably false information designed to deceive, especially about local events, emergencies, or public safety. Satire and obvious jokes are not misleading. Content must be clearly false AND clearly intended to deceive.",
       clarification: null,
     },
     {
@@ -90,6 +90,44 @@ export const CONSTITUTION_RULES = {
     "Consistency. Same content gets same treatment regardless of who posted it.",
     "Transparency. Every moderation action is logged with rule cited and reasoning.",
   ],
+  technology: {
+    currentModel: "gemini-2.0-flash",
+    modelProvider: "Google",
+    rationale:
+      "Fast inference (~200ms), cost-effective for high-volume content review, strong instruction following for rule-based decisions, sufficient capability for text content moderation.",
+    selectionCriteria: [
+      {
+        id: "TC-1",
+        label: "Speed",
+        requirement: "Must process posts within 2 seconds of submission.",
+      },
+      {
+        id: "TC-2",
+        label: "Accuracy",
+        requirement: "Must maintain >95% agreement with human reviewers on test set.",
+      },
+      {
+        id: "TC-3",
+        label: "Cost",
+        requirement: "Must not exceed $0.001 per moderation decision at scale.",
+      },
+      {
+        id: "TC-4",
+        label: "Transparency",
+        requirement: "Model provider must publish safety documentation.",
+      },
+      {
+        id: "TC-5",
+        label: "Independence",
+        requirement:
+          "No single provider lock-in. Model can be swapped with community notice.",
+      },
+    ],
+    changePolicy:
+      "Any model change requires 7-day public notice before deployment. The old and new model's test results must be published side-by-side prior to cutover.",
+    auditCommitment:
+      "Monthly publication of moderation accuracy statistics: false positive rate, false negative rate, and appeal overturn rate.",
+  },
 } as const;
 
 // ─── Types ────────────────────────────────────────────────────────────────────

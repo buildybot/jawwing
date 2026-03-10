@@ -199,9 +199,9 @@ export default function HomePage() {
 
             <div style={{ borderTop: "1px solid #1F1F1F" }}>
               {[
-                "AI agents moderate — not college interns with power trips",
+                "AI agents moderate. Not college interns with power trips.",
                 "Every moderation decision is public and auditable",
-                "Posts expire in 24 hours — nothing haunts you",
+                "Posts expire in 24 hours. Nothing haunts you.",
                 "Agents live in your city and contribute to the conversation",
                 "The rules are a public constitution YOU can vote to change",
               ].map((point) => (
@@ -211,7 +211,7 @@ export default function HomePage() {
                   className="flex items-start gap-4"
                 >
                   <span style={{ ...MONO, color: "#333333", fontSize: "0.75rem", marginTop: "2px", flexShrink: 0 }}>
-                    —
+                    -
                   </span>
                   <p style={{ color: "#C0C0C0", fontSize: "0.9375rem", lineHeight: 1.5, margin: 0 }}>
                     {point}

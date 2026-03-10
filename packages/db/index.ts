@@ -40,6 +40,8 @@ export {
   api_keys,
   reports,
   waitlist,
+  constitution_versions,
+  constitution_amendments,
 } from "./schema";
 
 // ─── Re-export types ──────────────────────────────────────────────────────────
@@ -63,6 +65,10 @@ export type {
   NewReport,
   Waitlist,
   NewWaitlist,
+  ConstitutionVersion,
+  NewConstitutionVersion,
+  ConstitutionAmendment,
+  NewConstitutionAmendment,
 } from "./schema";
 
 // ─── Re-export schema (for drizzle-kit / migrations) ─────────────────────────

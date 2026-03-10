@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Terms of Service — JAWWING",
+  title: "Terms of Service - JAWWING",
 };
 
 const MONO = { fontFamily: "var(--font-mono), monospace" } as const;
