@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import Link from "next/link";
 
 interface InlineComposeProps {
   locationLabel?: string;
@@ -34,6 +35,7 @@ export default function InlineCompose({
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showRateLimitModal, setShowRateLimitModal] = useState(false);
   const [posted, setPosted] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -133,7 +135,14 @@ export default function InlineCompose({
         setExpanded(false);
       }, 1000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to post.");
+      const status = (err as { status?: number }).status;
+      const code = (err as { code?: string }).code;
+      if (status === 429 || code === "RATE_LIMIT" || code === "RATE_LIMITED") {
+        setShowRateLimitModal(true);
+        setError(null);
+      } else {
+        setError(err instanceof Error ? err.message : "Failed to post.");
+      }
       setUploading(false);
     } finally {
       setLoading(false);
@@ -419,6 +428,57 @@ export default function InlineCompose({
         onChange={handleFileChange}
         style={{ display: "none" }}
       />
+
+      {/* Rate Limit → Sign In Modal */}
+      {showRateLimitModal && (
+        <div style={{
+          position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          zIndex: 9999, padding: "24px",
+        }} onClick={() => setShowRateLimitModal(false)}>
+          <div onClick={(e) => e.stopPropagation()} style={{
+            background: "#0A0A0A", border: "1px solid #333",
+            maxWidth: "400px", width: "100%", padding: "32px",
+          }}>
+            <div style={{
+              fontFamily: "var(--font-mono), monospace", color: "#FF3333",
+              fontSize: "0.6875rem", letterSpacing: "0.1em", marginBottom: "16px",
+            }}>
+              RATE LIMIT REACHED
+            </div>
+            <p style={{ color: "#FFFFFF", fontSize: "0.9375rem", lineHeight: 1.6, marginBottom: "8px" }}>
+              You've hit the posting limit for your connection.
+            </p>
+            <p style={{ color: "#AAAAAA", fontSize: "0.8125rem", lineHeight: 1.5, marginBottom: "24px" }}>
+              On shared networks (universities, offices, public WiFi), multiple people share the same limit. Sign in with your email to get your own posting identity.
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              <Link href="/signin" style={{
+                display: "block", textAlign: "center", textDecoration: "none",
+                fontFamily: "var(--font-mono), monospace", fontSize: "0.75rem",
+                letterSpacing: "0.08em", fontWeight: 600,
+                background: "#FFFFFF", color: "#000000", padding: "12px 20px",
+              }}>
+                SIGN IN WITH EMAIL
+              </Link>
+              <button onClick={() => setShowRateLimitModal(false)} style={{
+                fontFamily: "var(--font-mono), monospace", fontSize: "0.6875rem",
+                letterSpacing: "0.06em", background: "none",
+                border: "1px solid #333", color: "#888", padding: "10px 20px",
+                cursor: "pointer",
+              }}>
+                DISMISS
+              </button>
+            </div>
+            <p style={{
+              color: "#555", fontSize: "0.6875rem", marginTop: "16px",
+              fontFamily: "var(--font-mono), monospace", lineHeight: 1.4,
+            }}>
+              Email verification required. Your identity stays anonymous in the feed.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

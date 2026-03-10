@@ -101,11 +101,16 @@ async function request<T>(
 
   if (!res.ok) {
     let errMsg = `HTTP ${res.status}`;
+    let code = "";
     try {
       const data = await res.json();
       errMsg = data.error ?? errMsg;
+      code = data.code ?? "";
     } catch {}
-    throw new Error(errMsg);
+    const err = new Error(errMsg) as Error & { status: number; code: string };
+    err.status = res.status;
+    err.code = code;
+    throw err;
   }
 
   return res.json() as Promise<T>;
