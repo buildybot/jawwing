@@ -255,7 +255,7 @@ function LinkPreview({ url }: { url: string }) {
           {og.description && (
             <p
               style={{
-                color: "#777777",
+                color: "#AAAAAA",
                 fontSize: "0.75rem",
                 overflow: "hidden",
                 display: "-webkit-box",
@@ -400,7 +400,7 @@ function AnimatedScore({ value, voted }: { value: number; voted: "up" | "down" |
   return (
     <span
       style={{
-        color: flash ? "#C0C0C0" : voted === "up" ? "#FFFFFF" : voted === "down" ? "#777777" : "#C0C0C0",
+        color: flash ? "#C0C0C0" : voted === "up" ? "#FFFFFF" : voted === "down" ? "#AAAAAA" : "#C0C0C0",
         ...MONO,
         fontSize: "0.875rem",
         fontWeight: 500,
@@ -428,7 +428,7 @@ function ExpiryIndicator({ expiresAt }: { expiresAt: number }) {
   const label = hoursLeft > 0 ? `${hoursLeft}H LEFT` : `${minsLeft}M LEFT`;
 
   return (
-    <span style={{ ...MONO, fontSize: "0.5625rem", letterSpacing: "0.08em", color: "#777777", border: "1px solid #1F1F1F", padding: "2px 5px" }}>
+    <span style={{ ...MONO, fontSize: "0.5625rem", letterSpacing: "0.08em", color: "#AAAAAA", border: "1px solid #1F1F1F", padding: "2px 5px" }}>
       {label}
     </span>
   );
@@ -596,14 +596,14 @@ function PostCard({ post, variant = "card", feedScope }: PostCardProps) {
           {/* Bottom meta */}
           <div style={{ display: "flex", gap: "12px", marginTop: "12px", alignItems: "center" }}>
             {post.timeAgo && (
-              <span style={{ ...MONO, color: "#555555", fontSize: "0.625rem", letterSpacing: "0.06em" }}>
+              <span style={{ ...MONO, color: "#888888", fontSize: "0.625rem", letterSpacing: "0.06em" }}>
                 {post.timeAgo}
               </span>
             )}
             {feedScope === "country" && post.metro && (
               <>
                 <span style={{ color: "#1F1F1F" }}>·</span>
-                <span style={{ ...MONO, fontSize: "0.625rem", letterSpacing: "0.08em", color: "#555555", textTransform: "uppercase" }}>{post.metro}</span>
+                <span style={{ ...MONO, fontSize: "0.625rem", letterSpacing: "0.08em", color: "#888888", textTransform: "uppercase" }}>{post.metro}</span>
               </>
             )}
           </div>
@@ -627,7 +627,7 @@ function PostCard({ post, variant = "card", feedScope }: PostCardProps) {
               onClick={() => vote("up")}
               disabled={voting}
               style={{
-                color: voted === "up" ? "#FFFFFF" : "#777777",
+                color: voted === "up" ? "#FFFFFF" : "#AAAAAA",
                 background: "none",
                 border: "none",
                 cursor: voting ? "wait" : "pointer",
@@ -650,7 +650,7 @@ function PostCard({ post, variant = "card", feedScope }: PostCardProps) {
               onClick={() => vote("down")}
               disabled={voting}
               style={{
-                color: voted === "down" ? "#C0C0C0" : "#555555",
+                color: voted === "down" ? "#C0C0C0" : "#888888",
                 background: "none",
                 border: "none",
                 cursor: voting ? "wait" : "pointer",
@@ -674,24 +674,24 @@ function PostCard({ post, variant = "card", feedScope }: PostCardProps) {
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
             <Link
               href={`/post/${post.id}`}
-              style={{ color: "#777777", textDecoration: "none", fontSize: "1.125rem", lineHeight: 1, display: "block", padding: "4px" }}
+              style={{ color: "#AAAAAA", textDecoration: "none", fontSize: "1.125rem", lineHeight: 1, display: "block", padding: "4px" }}
               aria-label={`${replyCount} replies`}
             >
               ↩
             </Link>
-            <span style={{ ...MONO, color: "#555555", fontSize: "0.625rem" }}>{replyCount}</span>
+            <span style={{ ...MONO, color: "#888888", fontSize: "0.625rem" }}>{replyCount}</span>
           </div>
 
           {/* Share */}
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
             <button
               onClick={handleShare}
-              style={{ color: "#777777", background: "none", border: "none", cursor: "pointer", fontSize: "1.125rem", lineHeight: 1, padding: "4px", transition: "color 150ms" }}
+              style={{ color: "#AAAAAA", background: "none", border: "none", cursor: "pointer", fontSize: "1.125rem", lineHeight: 1, padding: "4px", transition: "color 150ms" }}
               aria-label="Share"
             >
               ↗
             </button>
-            <span style={{ ...MONO, color: "#555555", fontSize: "0.625rem" }}>SHARE</span>
+            <span style={{ ...MONO, color: "#888888", fontSize: "0.625rem" }}>SHARE</span>
           </div>
 
           {/* Report */}
@@ -706,11 +706,11 @@ function PostCard({ post, variant = "card", feedScope }: PostCardProps) {
                 onClick={handleBlock}
                 title="Block this user"
                 aria-label="Block user"
-                style={{ color: "#555555", background: "none", border: "none", cursor: "pointer", fontSize: "1.125rem", lineHeight: 1, padding: "4px", transition: "color 150ms" }}
+                style={{ color: "#888888", background: "none", border: "none", cursor: "pointer", fontSize: "1.125rem", lineHeight: 1, padding: "4px", transition: "color 150ms" }}
               >
                 🚫
               </button>
-              <span style={{ ...MONO, color: "#555555", fontSize: "0.625rem" }}>BLOCK</span>
+              <span style={{ ...MONO, color: "#888888", fontSize: "0.625rem" }}>BLOCK</span>
             </div>
           )}
         </div>
@@ -769,7 +769,7 @@ function PostCard({ post, variant = "card", feedScope }: PostCardProps) {
             onClick={() => vote("up")}
             disabled={voting}
             style={{
-              color: voted === "up" ? "#FFFFFF" : "#777777",
+              color: voted === "up" ? "#FFFFFF" : "#AAAAAA",
               background: "none",
               border: "none",
               cursor: voting ? "wait" : "pointer",
@@ -791,7 +791,7 @@ function PostCard({ post, variant = "card", feedScope }: PostCardProps) {
             onClick={() => vote("down")}
             disabled={voting}
             style={{
-              color: voted === "down" ? "#C0C0C0" : "#777777",
+              color: voted === "down" ? "#C0C0C0" : "#AAAAAA",
               opacity: voted === "down" ? 1 : 0.6,
               background: "none",
               border: "none",
@@ -814,7 +814,7 @@ function PostCard({ post, variant = "card", feedScope }: PostCardProps) {
         {/* Right meta — clicking anywhere navigates to post detail */}
         <Link
           href={`/post/${post.id}`}
-          style={{ color: "#777777", textDecoration: "none", display: "flex", alignItems: "center", gap: "10px", ...MONO, letterSpacing: "0.02em" }}
+          style={{ color: "#AAAAAA", textDecoration: "none", display: "flex", alignItems: "center", gap: "10px", ...MONO, letterSpacing: "0.02em" }}
           className="text-xs hover:text-[#A0A0A0] transition-colors"
           onClick={(e) => {
             // Don't intercept the share button click (it's a sibling, not nested here)
@@ -841,7 +841,7 @@ function PostCard({ post, variant = "card", feedScope }: PostCardProps) {
           {feedScope === "country" && post.metro && (
             <>
               <span style={{ color: "#1F1F1F" }}>·</span>
-              <span style={{ ...MONO, fontSize: "0.625rem", letterSpacing: "0.08em", color: "#555555", textTransform: "uppercase" }}>{post.metro}</span>
+              <span style={{ ...MONO, fontSize: "0.625rem", letterSpacing: "0.08em", color: "#888888", textTransform: "uppercase" }}>{post.metro}</span>
             </>
           )}
         </Link>
@@ -859,7 +859,7 @@ function PostCard({ post, variant = "card", feedScope }: PostCardProps) {
                 background: "none",
                 border: "none",
                 cursor: "pointer",
-                color: "#555555",
+                color: "#888888",
                 fontSize: "0.7rem",
                 lineHeight: 1,
                 padding: "2px 4px",
@@ -880,7 +880,7 @@ function PostCard({ post, variant = "card", feedScope }: PostCardProps) {
         <button
           onClick={handleShare}
           style={{
-            color: copyLabel === "COPIED ✓" ? "#FFFFFF" : "#555555",
+            color: copyLabel === "COPIED ✓" ? "#FFFFFF" : "#888888",
             background: "none",
             border: "none",
             cursor: "pointer",

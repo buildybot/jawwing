@@ -93,6 +93,8 @@ export const posts = sqliteTable(
     lng: real("lng").notNull(),
     h3_index: text("h3_index").notNull(),
     score: integer("score").notNull().default(0),
+    upvotes: integer("upvotes").notNull().default(0),
+    downvotes: integer("downvotes").notNull().default(0),
     reply_count: integer("reply_count").notNull().default(0),
     created_at: integer("created_at").notNull(),
     expires_at: integer("expires_at").notNull(),

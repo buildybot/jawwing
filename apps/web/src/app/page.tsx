@@ -515,13 +515,13 @@ export default function FeedPage() {
             }}
             className="feed-container"
           >
-            <span style={{ ...MONO, color: "#555555", fontSize: "0.625rem", letterSpacing: "0.06em" }}>
+            <span style={{ ...MONO, color: "#888888", fontSize: "0.625rem", letterSpacing: "0.06em" }}>
               DC METRO
             </span>
             <span style={{ color: "#333333", fontSize: "0.625rem" }}>·</span>
             <button
               onClick={() => window.location.reload()}
-              style={{ ...MONO, color: "#555555", fontSize: "0.625rem", letterSpacing: "0.06em", background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}
+              style={{ ...MONO, color: "#888888", fontSize: "0.625rem", letterSpacing: "0.06em", background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}
             >
               ENABLE LOCATION FOR YOUR AREA
             </button>
@@ -540,7 +540,7 @@ export default function FeedPage() {
             }}
             className="feed-container"
           >
-            <span style={{ ...MONO, color: "#777777", fontSize: "0.6875rem", letterSpacing: "0.06em" }}>
+            <span style={{ ...MONO, color: "#AAAAAA", fontSize: "0.6875rem", letterSpacing: "0.06em" }}>
               YOU CAN ONLY POST WHERE YOU ARE
             </span>
           </div>
@@ -558,7 +558,7 @@ export default function FeedPage() {
               style={{
                 ...MONO,
                 background: "none",
-                color: loading ? "#333333" : "#777777",
+                color: loading ? "#333333" : "#AAAAAA",
                 border: "none",
                 fontSize: "1rem",
                 cursor: loading ? "not-allowed" : "pointer",
@@ -599,7 +599,7 @@ export default function FeedPage() {
                   style={{
                     ...MONO,
                     background: active ? "#FFFFFF" : "transparent",
-                    color: disabled ? "#2A2A2A" : active ? "#000000" : "#555555",
+                    color: disabled ? "#2A2A2A" : active ? "#000000" : "#888888",
                     border: `1px solid ${active ? "#FFFFFF" : disabled ? "#1A1A1A" : "#2A2A2A"}`,
                     padding: "4px 10px",
                     fontSize: "0.625rem",
@@ -617,7 +617,7 @@ export default function FeedPage() {
               );
             })}
             {!isRemoteTerritory && expandedScope && (
-              <span style={{ ...MONO, color: "#555555", fontSize: "0.5625rem", letterSpacing: "0.06em", alignSelf: "center", marginLeft: "4px" }}>
+              <span style={{ ...MONO, color: "#888888", fontSize: "0.5625rem", letterSpacing: "0.06em", alignSelf: "center", marginLeft: "4px" }}>
                 NO POSTS NEARBY · SHOWING {expandedLabel || "DC METRO"}
               </span>
             )}
@@ -674,12 +674,12 @@ export default function FeedPage() {
                 <p style={{ color: "#C0C0C0", fontSize: "0.875rem", lineHeight: 1.6, marginBottom: "6px" }}>
                   Anonymous posts from people near you. No accounts. No names. Just 300 characters and an opinion.
                 </p>
-                <p style={{ color: "#777777", fontSize: "0.8125rem", lineHeight: 1.5, marginBottom: "14px" }}>
+                <p style={{ color: "#AAAAAA", fontSize: "0.8125rem", lineHeight: 1.5, marginBottom: "14px" }}>
                   Posts expire in 24 hours. What happens here, stays here.
                 </p>
                 <Link
                   href="/about"
-                  style={{ ...MONO, color: "#777777", fontSize: "0.6875rem", letterSpacing: "0.06em", textDecoration: "none" }}
+                  style={{ ...MONO, color: "#AAAAAA", fontSize: "0.6875rem", letterSpacing: "0.06em", textDecoration: "none" }}
                   className="hover:text-white transition-colors"
                 >
                   LEARN MORE →
@@ -690,7 +690,7 @@ export default function FeedPage() {
                 style={{
                   background: "none",
                   border: "none",
-                  color: "#555555",
+                  color: "#888888",
                   fontSize: "1rem",
                   cursor: "pointer",
                   flexShrink: 0,
@@ -781,7 +781,7 @@ export default function FeedPage() {
               <p style={{ ...MONO, color: "#FFFFFF", fontSize: "0.875rem", fontWeight: 700, letterSpacing: "0.1em", marginBottom: "10px" }}>
                 NOTHING HERE YET
               </p>
-              <p style={{ color: "#777777", fontSize: "0.875rem", marginBottom: "28px" }}>
+              <p style={{ color: "#AAAAAA", fontSize: "0.875rem", marginBottom: "28px" }}>
                 {territoryName ? `Be the first to post in ${territoryName}.` : "Be the first to post in your area."}
               </p>
               {!isRemoteTerritory && (
@@ -866,7 +866,7 @@ export default function FeedPage() {
               width: "40px",
               height: "40px",
               background: "#000000",
-              color: "#555555",
+              color: "#888888",
               border: "1px solid #333333",
               fontSize: "1.25rem",
               lineHeight: 1,
@@ -879,7 +879,7 @@ export default function FeedPage() {
               transition: "border-color 150ms, color 150ms",
               borderRadius: "2px",
             } as React.CSSProperties}
-            className="hover:border-[#777] hover:text-[#C0C0C0]"
+            className="hover:border-[#AAA] hover:text-[#C0C0C0]"
             aria-label="Create post"
           >
             +

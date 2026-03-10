@@ -163,7 +163,7 @@ export default function InlineCompose({
             width: "100%",
             background: "#000000",
             border: "1px solid #333333",
-            color: disabled ? "#333333" : "#555555",
+            color: disabled ? "#333333" : "#888888",
             cursor: disabled ? "not-allowed" : "text",
             padding: "14px 16px",
             textAlign: "left",
@@ -172,7 +172,7 @@ export default function InlineCompose({
             letterSpacing: "0.1em",
             transition: "border-color 150ms, color 150ms",
           }}
-          className={disabled ? "" : "hover:border-[#555] hover:text-[#888]"}
+          className={disabled ? "" : "hover:border-[#888] hover:text-[#AAA]"}
           aria-label="Write a post"
         >
           <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -276,7 +276,7 @@ export default function InlineCompose({
                     right: "6px",
                     background: "#000000",
                     border: "1px solid #333333",
-                    color: "#777777",
+                    color: "#AAAAAA",
                     cursor: "pointer",
                     ...MONO,
                     fontSize: "0.5625rem",
@@ -291,7 +291,7 @@ export default function InlineCompose({
 
             {/* Uploading indicator */}
             {uploading && (
-              <p style={{ ...MONO, color: "#555555", fontSize: "0.6875rem", letterSpacing: "0.06em", padding: "6px 16px 0" }}>
+              <p style={{ ...MONO, color: "#888888", fontSize: "0.6875rem", letterSpacing: "0.06em", padding: "6px 16px 0" }}>
                 UPLOADING IMAGE...
               </p>
             )}
@@ -325,7 +325,7 @@ export default function InlineCompose({
                       background: "none",
                       border: "none",
                       cursor: isSubmitting ? "not-allowed" : "pointer",
-                      color: "#555555",
+                      color: "#888888",
                       fontSize: "1rem",
                       padding: 0,
                       lineHeight: 1,
@@ -361,7 +361,7 @@ export default function InlineCompose({
                   style={{
                     background: "none",
                     border: "none",
-                    color: "#555555",
+                    color: "#888888",
                     cursor: isSubmitting ? "not-allowed" : "pointer",
                     ...MONO,
                     fontSize: "0.6875rem",
@@ -401,7 +401,7 @@ export default function InlineCompose({
                 ...MONO,
                 fontSize: "0.5625rem",
                 letterSpacing: "0.08em",
-                color: "#555555",
+                color: "#888888",
               }}
             >
               {hasLocation && locationLabel
