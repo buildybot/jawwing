@@ -6,7 +6,7 @@ import { nanoid } from "@jawwing/db";
 
 function requireAdminKey(req: NextRequest): NextResponse | null {
   const key = req.headers.get("x-admin-key");
-  if (!process.env.ADMIN_API_KEY || key !== process.env.ADMIN_API_KEY) {
+  if (!process.env.ADMIN_API_KEY || key !== process.env.ADMIN_API_KEY?.trim()) {
     return NextResponse.json({ error: "Unauthorized", code: "UNAUTHORIZED" }, { status: 401 });
   }
   return null;

@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 
 interface InlineComposeProps {
   locationLabel?: string;
+  hasLocation?: boolean;
   disabled?: boolean;
   disabledReason?: string;
   onSubmit: (content: string, imageUrl?: string) => Promise<void>;
@@ -23,6 +24,7 @@ const PROMPTS = [
 
 export default function InlineCompose({
   locationLabel,
+  hasLocation = true,
   disabled,
   disabledReason,
   onSubmit,
@@ -96,6 +98,10 @@ export default function InlineCompose({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!content.trim() || loading || uploading) return;
+    if (!hasLocation) {
+      setError("ENABLE LOCATION TO POST · JAWWING IS LOCATION-BASED");
+      return;
+    }
     setError(null);
     setLoading(true);
 
@@ -135,7 +141,7 @@ export default function InlineCompose({
   };
 
   const isSubmitting = loading || uploading;
-  const canSubmit = !!content.trim() && !isSubmitting && !posted;
+  const canSubmit = !!content.trim() && !isSubmitting && !posted && hasLocation;
   const charPct = Math.min((content.length / MAX) * 100, 100);
   const nearLimit = content.length > MAX * 0.9;
 
@@ -333,11 +339,6 @@ export default function InlineCompose({
                     📷
                   </button>
                 )}
-                {locationLabel && (
-                  <span style={{ ...MONO, color: "#333333", fontSize: "0.5625rem", letterSpacing: "0.08em" }}>
-                    POSTING FROM: {locationLabel.toUpperCase()}
-                  </span>
-                )}
               </div>
 
               {/* Right: char count + cancel + post */}
@@ -373,11 +374,11 @@ export default function InlineCompose({
                 </button>
                 <button
                   type="submit"
-                  disabled={!canSubmit}
+                  disabled={!canSubmit && hasLocation}
                   style={{
                     background: canSubmit ? "#FFFFFF" : "transparent",
-                    color: canSubmit ? "#000000" : "#555555",
-                    border: `1px solid ${canSubmit ? "#FFFFFF" : "#333333"}`,
+                    color: canSubmit ? "#000000" : "#333333",
+                    border: `1px solid ${canSubmit ? "#FFFFFF" : "#222222"}`,
                     cursor: canSubmit ? "pointer" : "not-allowed",
                     ...MONO,
                     fontSize: "0.75rem",
@@ -391,6 +392,21 @@ export default function InlineCompose({
                   {uploading ? "UPLOADING..." : loading ? "POSTING..." : "POST"}
                 </button>
               </div>
+            </div>
+
+            {/* Location indicator */}
+            <div
+              style={{
+                padding: "4px 16px 10px",
+                ...MONO,
+                fontSize: "0.5625rem",
+                letterSpacing: "0.08em",
+                color: "#555555",
+              }}
+            >
+              {hasLocation && locationLabel
+                ? `📍 POSTING FROM: ${locationLabel.toUpperCase()}`
+                : "📍 LOCATION REQUIRED TO POST"}
             </div>
           </>
         )}

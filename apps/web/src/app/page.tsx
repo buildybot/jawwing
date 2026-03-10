@@ -646,6 +646,7 @@ export default function FeedPage() {
           {!isRemoteTerritory && (
             <InlineCompose
               locationLabel={locationLabel}
+              hasLocation={locationRefined}
               onSubmit={handleCreatePost}
             />
           )}
