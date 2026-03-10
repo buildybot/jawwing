@@ -1,7 +1,15 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { createClient } from "@libsql/client";
 import { db, mod_actions, posts, nanoid, now } from "@jawwing/db";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import type { Post } from "@jawwing/db";
+
+// Raw libSQL client for operations that bypass Drizzle ORM (e.g. new columns)
+function getRawClient() {
+  const url = process.env.TURSO_DATABASE_URL;
+  if (!url) throw new Error("TURSO_DATABASE_URL is required");
+  return createClient({ url, authToken: process.env.TURSO_AUTH_TOKEN });
+}
 
 // ─── Constitution Rules (parseable constant) ──────────────────────────────────
 
@@ -379,22 +387,23 @@ export async function reviewPost(post: Post): Promise<ModerationDecision> {
     actionId = null;
   }
 
-  // ── Update post status and confidence (always, even if mod_action insert failed) ──
+  // ── Update post status and confidence via raw libSQL (reliable, bypasses Drizzle schema cache) ──
   try {
+    const rawClient = getRawClient();
     if (decision.action === "remove") {
       if (actionId) {
-        await db.execute(sql`UPDATE posts SET status = 'removed', mod_action_id = ${actionId}, mod_confidence = ${decision.confidence} WHERE id = ${post.id}`);
+        await rawClient.execute({ sql: "UPDATE posts SET status = 'removed', mod_action_id = ?, mod_confidence = ? WHERE id = ?", args: [actionId, decision.confidence, post.id] });
       } else {
-        await db.execute(sql`UPDATE posts SET status = 'removed', mod_confidence = ${decision.confidence} WHERE id = ${post.id}`);
+        await rawClient.execute({ sql: "UPDATE posts SET status = 'removed', mod_confidence = ? WHERE id = ?", args: [decision.confidence, post.id] });
       }
     } else if (decision.action === "flag" || decision.action === "warn") {
       if (actionId) {
-        await db.execute(sql`UPDATE posts SET status = 'moderated', mod_action_id = ${actionId}, mod_confidence = ${decision.confidence} WHERE id = ${post.id}`);
+        await rawClient.execute({ sql: "UPDATE posts SET status = 'moderated', mod_action_id = ?, mod_confidence = ? WHERE id = ?", args: [actionId, decision.confidence, post.id] });
       } else {
-        await db.execute(sql`UPDATE posts SET status = 'moderated', mod_confidence = ${decision.confidence} WHERE id = ${post.id}`);
+        await rawClient.execute({ sql: "UPDATE posts SET status = 'moderated', mod_confidence = ? WHERE id = ?", args: [decision.confidence, post.id] });
       }
     } else {
-      await db.execute(sql`UPDATE posts SET mod_confidence = ${decision.confidence} WHERE id = ${post.id}`);
+      await rawClient.execute({ sql: "UPDATE posts SET mod_confidence = ? WHERE id = ?", args: [decision.confidence, post.id] });
     }
   } catch (updateErr) {
     console.error("[mod/engine] Failed to update post status/confidence:", updateErr);
