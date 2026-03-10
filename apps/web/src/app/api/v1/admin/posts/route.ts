@@ -70,6 +70,36 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const created_at = body.created_at ?? Math.floor(Date.now() / 1000);
     const expires_at = body.expires_at ?? created_at + 86400;
 
+    // Extract video metadata from content
+    interface VideoMeta { video_url: string; video_id: string | null; video_thumbnail: string | null; }
+    function extractVideoMeta(content: string): VideoMeta | null {
+      const urlMatches = content.match(/https?:\/\/[^\s)>\]"]+/gi);
+      if (!urlMatches) return null;
+      for (const raw of urlMatches) {
+        try {
+          const u = new URL(raw);
+          const hostname = u.hostname.replace(/^www\./, "").toLowerCase();
+          if (hostname === "youtube.com") {
+            let videoId: string | null = null;
+            if (u.pathname.startsWith("/watch")) videoId = u.searchParams.get("v");
+            else if (u.pathname.startsWith("/shorts/")) videoId = u.pathname.split("/shorts/")[1]?.split(/[?#]/)[0] ?? null;
+            if (videoId) return { video_url: raw, video_id: videoId, video_thumbnail: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` };
+          }
+          if (hostname === "youtu.be") {
+            const videoId = u.pathname.slice(1).split(/[?#]/)[0];
+            if (videoId) return { video_url: raw, video_id: videoId, video_thumbnail: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` };
+          }
+          if (hostname === "vimeo.com") {
+            const videoId = u.pathname.slice(1).split(/[?#/]/)[0];
+            if (videoId && /^\d+$/.test(videoId)) return { video_url: raw, video_id: videoId, video_thumbnail: null };
+          }
+          if (hostname === "tiktok.com") return { video_url: raw, video_id: null, video_thumbnail: null };
+        } catch { /* invalid URL */ }
+      }
+      return null;
+    }
+    const videoMeta = extractVideoMeta(sanitized);
+
     const [created] = await db.insert(posts).values({
       id,
       user_id: `admin_seed_${nanoid()}`,
@@ -85,6 +115,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       expires_at,
       status: "active",
       ...(image_url ? { image_url, image_width: image_width ?? null, image_height: image_height ?? null } : {}),
+      video_url: videoMeta?.video_url ?? null,
+      video_thumbnail: videoMeta?.video_thumbnail ?? null,
     }).returning();
 
     return NextResponse.json({ post: created }, { status: 201 });

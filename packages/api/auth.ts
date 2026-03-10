@@ -157,7 +157,8 @@ export async function sendVerificationCode(email: string): Promise<void> {
 </html>`;
 
   await resend.emails.send({
-    from: "noreply@jawwing.com",
+    from: "Jawwing <noreply@jawwing.com>",
+    replyTo: "support@jawwing.com",
     to: normalized,
     subject: "Your Jawwing verification code",
     html,

@@ -1,45 +1,12 @@
-import type { MetadataRoute } from "next";
+import type { MetadataRoute } from 'next';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = "https://jawwing.com";
-  const now = new Date();
-
   return [
-    {
-      url: base,
-      lastModified: now,
-      changeFrequency: "weekly",
-      priority: 1,
-    },
-    {
-      url: `${base}/feed`,
-      lastModified: now,
-      changeFrequency: "always",
-      priority: 0.9,
-    },
-    {
-      url: `${base}/constitution`,
-      lastModified: now,
-      changeFrequency: "monthly",
-      priority: 0.8,
-    },
-    {
-      url: `${base}/transparency`,
-      lastModified: now,
-      changeFrequency: "daily",
-      priority: 0.7,
-    },
-    {
-      url: `${base}/terms`,
-      lastModified: now,
-      changeFrequency: "monthly",
-      priority: 0.4,
-    },
-    {
-      url: `${base}/privacy`,
-      lastModified: now,
-      changeFrequency: "monthly",
-      priority: 0.4,
-    },
+    { url: 'https://www.jawwing.com', lastModified: new Date(), changeFrequency: 'always', priority: 1 },
+    { url: 'https://www.jawwing.com/about', lastModified: new Date(), changeFrequency: 'monthly', priority: 0.8 },
+    { url: 'https://www.jawwing.com/constitution', lastModified: new Date(), changeFrequency: 'monthly', priority: 0.7 },
+    { url: 'https://www.jawwing.com/terms', lastModified: new Date(), changeFrequency: 'monthly', priority: 0.5 },
+    { url: 'https://www.jawwing.com/privacy', lastModified: new Date(), changeFrequency: 'monthly', priority: 0.5 },
+    { url: 'https://www.jawwing.com/transparency', lastModified: new Date(), changeFrequency: 'weekly', priority: 0.6 },
   ];
 }

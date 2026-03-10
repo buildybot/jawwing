@@ -10,7 +10,16 @@ import { lt, eq, and, inArray } from "drizzle-orm";
  *
  * Configured in vercel.json to run every hour: "0 * * * *"
  */
+// Vercel crons send GET requests
+export async function GET(req: NextRequest): Promise<NextResponse> {
+  return handleCleanup(req);
+}
+
 export async function POST(req: NextRequest): Promise<NextResponse> {
+  return handleCleanup(req);
+}
+
+async function handleCleanup(req: NextRequest): Promise<NextResponse> {
   // ─── Auth ─────────────────────────────────────────────────────────────────
   const cronSecret = process.env.CRON_SECRET;
   const authHeader = req.headers.get("Authorization");

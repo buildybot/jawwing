@@ -373,16 +373,22 @@ export async function reviewPost(post: Post): Promise<ModerationDecision> {
       appeal_result: null,
     });
 
-    // Update post status if action warrants it
+    // Update post status if action warrants it, and store confidence score
     if (decision.action === "remove") {
       await db
         .update(posts)
-        .set({ status: "removed", mod_action_id: actionId })
+        .set({ status: "removed", mod_action_id: actionId, mod_confidence: decision.confidence })
         .where(eq(posts.id, post.id));
     } else if (decision.action === "flag" || decision.action === "warn") {
       await db
         .update(posts)
-        .set({ status: "moderated", mod_action_id: actionId })
+        .set({ status: "moderated", mod_action_id: actionId, mod_confidence: decision.confidence })
+        .where(eq(posts.id, post.id));
+    } else {
+      // approve or other — still store confidence
+      await db
+        .update(posts)
+        .set({ mod_confidence: decision.confidence })
         .where(eq(posts.id, post.id));
     }
   } catch (dbErr) {

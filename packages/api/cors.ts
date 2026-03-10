@@ -3,16 +3,20 @@ import { NextRequest, NextResponse } from "next/server";
 // ─── Allowed Origins ──────────────────────────────────────────────────────────
 
 const ALLOWED_ORIGINS = [
+  "https://www.jawwing.com",
+  "https://jawwing.com",
   process.env.NEXT_PUBLIC_APP_URL,
   "http://localhost:3000",
   "http://localhost:8081", // Expo
+  "exp://192.168.68.86:8081",
 ].filter(Boolean) as string[];
 
 // ─── CORS Headers ─────────────────────────────────────────────────────────────
 
 export function corsHeaders(origin: string | null): Record<string, string> {
-  const allowedOrigin =
-    origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0] ?? "http://localhost:3000";
+  // Allow requests with no origin (mobile apps, curl, etc.)
+  const isAllowed = !origin || ALLOWED_ORIGINS.some(o => origin === o || origin.endsWith('.jawwing.com'));
+  const allowedOrigin = isAllowed ? (origin || "*") : ALLOWED_ORIGINS[0] ?? "https://www.jawwing.com";
 
   return {
     "Access-Control-Allow-Origin": allowedOrigin,

@@ -1,4 +1,8 @@
 User-agent: *
 Allow: /
+Disallow: /api/
+Disallow: /my-posts
+Disallow: /profile
+Disallow: /signin
 
-Sitemap: https://jawwing.com/sitemap.xml
+Sitemap: https://www.jawwing.com/sitemap.xml

@@ -25,6 +25,7 @@ export interface Post {
   image_url?: string | null;
   video_url?: string | null;
   video_thumbnail?: string | null;
+  mod_confidence?: number | null;
 }
 
 export interface PostCardProps {
@@ -873,6 +874,23 @@ function PostCard({ post, variant = "card", feedScope }: PostCardProps) {
             <>
               <span style={{ color: "#1F1F1F" }}>·</span>
               <span style={{ ...MONO, fontSize: "0.625rem", letterSpacing: "0.08em", color: "#888888", textTransform: "uppercase" }}>{post.metro}</span>
+            </>
+          )}
+          {post.mod_confidence != null && (
+            <>
+              <span style={{ color: "#1F1F1F" }}>·</span>
+              <span
+                title={`AI MODERATION CONFIDENCE — THIS POST WAS REVIEWED BY AI AND SCORED ${Math.round(post.mod_confidence * 100)}%`}
+                style={{
+                  ...MONO,
+                  fontSize: "0.625rem",
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  color: post.mod_confidence >= 0.9 ? "#22C55E" : post.mod_confidence >= 0.7 ? "#EAB308" : "#EF4444",
+                }}
+              >
+                AI {Math.round(post.mod_confidence * 100)}%
+              </span>
             </>
           )}
         </Link>
