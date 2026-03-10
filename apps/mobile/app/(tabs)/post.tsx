@@ -9,13 +9,14 @@ import {
   Platform,
   Animated,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { Header } from '../../components/Header';
+import * as ImagePicker from 'expo-image-picker';
 import { colors, spacing, typography, tracking, lineHeight } from '../../lib/theme';
-import { createPost } from '../../lib/api';
+import { createPost, uploadImage } from '../../lib/api';
 import { getLocationInfo, LocationInfo } from '../../lib/location';
 
 const MAX_CHARS = 300;
@@ -26,19 +27,52 @@ export default function PostScreen() {
   const [location, setLocation] = useState<LocationInfo | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [imageUri, setImageUri] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const successOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     getLocationInfo().then(setLocation);
   }, []);
 
+  const handlePickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets.length > 0) {
+      setImageUri(result.assets[0].uri);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setImageUri(null);
+  };
+
   const handleSubmit = async () => {
     if (!content.trim() || !location || submitting) return;
     setSubmitting(true);
     try {
-      await createPost({ content: content.trim(), lat: location.lat, lng: location.lng });
+      let image_url: string | undefined;
+      if (imageUri) {
+        setUploadingImage(true);
+        try {
+          const uploaded = await uploadImage(imageUri);
+          image_url = uploaded.url;
+        } finally {
+          setUploadingImage(false);
+        }
+      }
+      await createPost({
+        content: content.trim(),
+        lat: location.lat,
+        lng: location.lng,
+        ...(image_url ? { image_url } : {}),
+      });
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setContent('');
+      setImageUri(null);
       showSuccess();
     } catch {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -49,7 +83,6 @@ export default function PostScreen() {
 
   const showSuccess = () => {
     setSuccess(true);
-    // Fade in, hold, fade out — no springs, no bounces
     Animated.sequence([
       Animated.timing(successOpacity, { toValue: 1, duration: 200, useNativeDriver: true }),
       Animated.delay(1400),
@@ -70,7 +103,7 @@ export default function PostScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={[styles.container, { paddingTop: insets.top }]}>
-        {/* Header row with POST button on the right */}
+        {/* Header */}
         <View style={styles.topBar}>
           <Text style={styles.topTitle}>JAWWING</Text>
           <TouchableOpacity
@@ -88,18 +121,16 @@ export default function PostScreen() {
         </View>
         <View style={styles.divider} />
 
-        {/* Location bar */}
+        {/* Identity + location bar */}
         <View style={styles.locationBar}>
           <Ionicons name="location-outline" size={12} color={colors.textMuted} />
-          {location ? (
-            <Text style={styles.locationText}>{location.displayName.toUpperCase()}</Text>
-          ) : (
-            <Text style={styles.locationText}>LOCATING…</Text>
-          )}
+          <Text style={styles.locationText}>
+            ANONYMOUS · {location ? location.displayName.toUpperCase() : 'LOCATING…'}
+          </Text>
         </View>
         <View style={styles.divider} />
 
-        {/* Input — full bleed, no borders, just cursor */}
+        {/* Text input */}
         <TextInput
           style={styles.input}
           placeholder="What's happening nearby?"
@@ -113,14 +144,35 @@ export default function PostScreen() {
           selectionColor={colors.textPrimary}
         />
 
-        {/* Character counter — bottom right, mono */}
-        <View style={styles.counterRow}>
+        {/* Image preview */}
+        {imageUri ? (
+          <View style={styles.imagePreviewWrapper}>
+            <Image source={{ uri: imageUri }} style={styles.imagePreview} resizeMode="cover" />
+            <TouchableOpacity style={styles.removeImage} onPress={handleRemoveImage}>
+              <Text style={styles.removeImageText}>✕</Text>
+            </TouchableOpacity>
+            {uploadingImage && (
+              <View style={styles.uploadingOverlay}>
+                <ActivityIndicator color={colors.textPrimary} />
+              </View>
+            )}
+          </View>
+        ) : null}
+
+        {/* Bottom toolbar */}
+        <View style={styles.toolbar}>
+          <TouchableOpacity onPress={handlePickImage} activeOpacity={0.7} style={styles.toolbarBtn}>
+            <Ionicons name="image-outline" size={20} color={colors.textMuted} />
+          </TouchableOpacity>
           <Text style={[styles.counter, { color: counterColor }]}>{remaining}</Text>
         </View>
 
-        {/* Success overlay — fade only, no animation gimmicks */}
+        {/* Success overlay */}
         {success && (
-          <Animated.View style={[styles.successOverlay, { opacity: successOpacity }]} pointerEvents="none">
+          <Animated.View
+            style={[styles.successOverlay, { opacity: successOpacity }]}
+            pointerEvents="none"
+          >
             <Text style={styles.successText}>POSTED</Text>
           </Animated.View>
         )}
@@ -171,10 +223,49 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     lineHeight: lineHeight.body,
   },
-  counterRow: {
+  imagePreviewWrapper: {
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.sm,
+    position: 'relative',
+  },
+  imagePreview: {
+    width: '100%',
+    height: 180,
+  },
+  removeImage: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    borderWidth: 1,
+    borderColor: colors.border,
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  removeImageText: {
+    color: colors.textPrimary,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  uploadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  toolbar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
-    paddingBottom: spacing.md,
-    alignItems: 'flex-end',
+    paddingVertical: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  toolbarBtn: {
+    padding: 4,
   },
   counter: {
     fontSize: typography.xs,
@@ -185,7 +276,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.textPrimary,
     paddingVertical: spacing.xs + 2,
     paddingHorizontal: spacing.lg,
-    // NO border radius
   },
   postBtnDisabled: {
     opacity: 0.3,

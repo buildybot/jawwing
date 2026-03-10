@@ -11,6 +11,9 @@ import { requestLocation, reverseGeocode } from "@/lib/location";
 import { formatTimeAgo, formatDistance } from "@/lib/api";
 import { type TerritorySelection } from "@/components/TerritorySelector";
 import Link from "next/link";
+import AgeGate from "@/components/AgeGate";
+import AppBanner from "@/components/AppBanner";
+import { useBlockedUsers } from "@/hooks/useBlockedUsers";
 
 const FEED_CACHE_KEY = "jawwing_feed_cache";
 
@@ -42,10 +45,12 @@ function toCardPost(
     created_at: post.created_at,
     expires_at: post.expires_at,
     territoryName,
+    user_id: post.user_id,
   };
 }
 
 export default function FeedPage() {
+  const { isBlocked } = useBlockedUsers();
   const [activeTab, setActiveTab] = useState<SortTab>("hot");
   const [showModal, setShowModal] = useState(false);
 
@@ -331,6 +336,7 @@ export default function FeedPage() {
       : undefined;
 
   return (
+    <AgeGate>
     <ToastProvider>
       <div
         style={{ background: "#000000", minHeight: "100vh" }}
@@ -338,6 +344,7 @@ export default function FeedPage() {
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
+        <AppBanner />
         {/* Pull-to-refresh indicator */}
         {ptrState !== "idle" && (
           <div
@@ -610,18 +617,20 @@ export default function FeedPage() {
           {/* Posts */}
           {!loading && !error && posts.length > 0 && (
             <div className="flex flex-col" style={{ gap: "2px", paddingTop: "2px" }}>
-              {posts.map((post) => (
-                <div
-                  key={post.id}
-                  style={animatedIds.has(post.id) ? {
-                    animation: "fadeInDown 200ms ease forwards",
-                  } : undefined}
-                >
-                  <PostCard
-                    post={toCardPost(post, userLat, userLng, territoryName)}
-                  />
-                </div>
-              ))}
+              {posts
+                .filter((post) => !post.user_id || !isBlocked(post.user_id))
+                .map((post) => (
+                  <div
+                    key={post.id}
+                    style={animatedIds.has(post.id) ? {
+                      animation: "fadeInDown 200ms ease forwards",
+                    } : undefined}
+                  >
+                    <PostCard
+                      post={toCardPost(post, userLat, userLng, territoryName)}
+                    />
+                  </div>
+                ))}
             </div>
           )}
 

@@ -38,6 +38,15 @@ function getIpHash(req: NextRequest): string {
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
+    // Check blob storage is configured before doing anything else
+    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+      console.error('[upload] BLOB_READ_WRITE_TOKEN is not set');
+      return NextResponse.json(
+        { error: 'Image upload requires BLOB_READ_WRITE_TOKEN', code: 'SERVICE_UNAVAILABLE' },
+        { status: 503 }
+      );
+    }
+
     const ipHash = getIpHash(req);
 
     if (!checkUploadRateLimit(ipHash)) {

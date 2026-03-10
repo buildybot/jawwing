@@ -35,6 +35,7 @@ export interface Post {
   lng: number;
   h3_index: string;
   status: string;
+  user_id?: string;
   image_url?: string | null;
   image_width?: number | null;
   image_height?: number | null;
@@ -50,6 +51,7 @@ export interface Reply {
   content: string;
   created_at: number;
   status: string;
+  user_id?: string;
 }
 
 export interface ModAction {

@@ -1,30 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
-  FlatList,
   TouchableOpacity,
   StyleSheet,
-  ActivityIndicator,
+  ScrollView,
   Linking,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Header } from '../../components/Header';
-import { PostCard } from '../../components/PostCard';
 import { colors, spacing, typography, tracking } from '../../lib/theme';
-import { getProfile, getMyPosts, clearToken, Post } from '../../lib/api';
-import { useRouter } from 'expo-router';
-
-interface Profile {
-  displayName: string;
-  userId: string;
-}
+import { clearDeviceId } from '../../lib/deviceId';
 
 const LINKS = [
-  { label: 'COMMUNITY CONSTITUTION', url: 'https://jawwing.com/constitution' },
-  { label: 'TERMS OF SERVICE', url: 'https://jawwing.com/terms' },
-  { label: 'PRIVACY POLICY', url: 'https://jawwing.com/privacy' },
+  { label: 'COMMUNITY CONSTITUTION', url: 'https://www.jawwing.com/constitution' },
+  { label: 'TERMS OF SERVICE', url: 'https://www.jawwing.com/terms' },
+  { label: 'PRIVACY POLICY', url: 'https://www.jawwing.com/privacy' },
 ];
 
 function SectionHeader({ label }: { label: string }) {
@@ -36,131 +29,120 @@ function SectionHeader({ label }: { label: string }) {
   );
 }
 
-export default function ProfileScreen() {
+export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [clearing, setClearing] = useState(false);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const [p, myPosts] = await Promise.all([getProfile(), getMyPosts()]);
-        setProfile(p);
-        setPosts(myPosts);
-      } catch {
-        // Not authed
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
-
-  const handleSignOut = async () => {
-    await clearToken();
-    router.replace('/auth');
+  const handleClearData = () => {
+    Alert.alert(
+      'CLEAR DATA',
+      'This will reset your anonymous device identity. Your posts will remain but you will no longer be associated with them.',
+      [
+        { text: 'CANCEL', style: 'cancel' },
+        {
+          text: 'CLEAR',
+          style: 'destructive',
+          onPress: async () => {
+            setClearing(true);
+            try {
+              await clearDeviceId();
+            } finally {
+              setClearing(false);
+            }
+          },
+        },
+      ]
+    );
   };
-
-  const activePosts = posts.filter(p => !p.moderated);
-  const moderatedPosts = posts.filter(p => p.moderated);
-
-  const ListHeader = () => (
-    <View>
-      {/* Identity block */}
-      <View style={styles.identityBlock}>
-        <Text style={styles.displayName}>{profile?.displayName ?? '-'}</Text>
-        <Text style={styles.identityMeta}>ANONYMOUS · JAWWING</Text>
-      </View>
-      <View style={styles.divider} />
-
-      {/* Mod transparency */}
-      {moderatedPosts.length > 0 && (
-        <View>
-          <SectionHeader label="MODERATION ACTIONS" />
-          {moderatedPosts.map(p => (
-            <View key={p.id} style={styles.modRow}>
-              <View style={styles.modIndicator} />
-              <View style={styles.modContent}>
-                <Text style={styles.modText} numberOfLines={2}>{p.content}</Text>
-                <Text style={styles.modReason}>{p.moderationReason ?? 'REMOVED BY MODERATOR'}</Text>
-              </View>
-            </View>
-          ))}
-          <View style={styles.divider} />
-        </View>
-      )}
-
-      <SectionHeader label="YOUR POSTS" />
-    </View>
-  );
-
-  const ListFooter = () => (
-    <View style={styles.footerBlock}>
-      <View style={styles.divider} />
-      <SectionHeader label="LINKS" />
-      {LINKS.map(link => (
-        <TouchableOpacity
-          key={link.url}
-          style={styles.linkRow}
-          onPress={() => Linking.openURL(link.url)}
-          activeOpacity={0.6}
-        >
-          <Text style={styles.linkText}>{link.label}</Text>
-          <Ionicons name="arrow-forward-outline" size={14} color={colors.textMuted} />
-        </TouchableOpacity>
-      ))}
-      <View style={styles.divider} />
-      <TouchableOpacity style={styles.signOutRow} onPress={handleSignOut} activeOpacity={0.7}>
-        <Text style={styles.signOutText}>SIGN OUT</Text>
-      </TouchableOpacity>
-    </View>
-  );
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <Header />
-      {loading ? (
-        <View style={styles.centered}>
-          <ActivityIndicator color={colors.textSecondary} />
+      {/* Header */}
+      <View style={styles.headerRow}>
+        <Text style={styles.logo}>JAWWING</Text>
+        <Text style={styles.headerLabel}>SETTINGS</Text>
+      </View>
+      <View style={styles.divider} />
+
+      <ScrollView>
+        {/* About */}
+        <View style={styles.aboutBlock}>
+          <Text style={styles.aboutTitle}>ABOUT JAWWING</Text>
+          <Text style={styles.aboutBody}>
+            Anonymous, location-based public discourse. Post what you see, vote on what matters, keep it local.
+          </Text>
         </View>
-      ) : (
-        <FlatList
-          data={activePosts}
-          keyExtractor={item => item.id}
-          renderItem={({ item }) => <PostCard post={item} />}
-          ListHeaderComponent={<ListHeader />}
-          ListFooterComponent={<ListFooter />}
-          ListEmptyComponent={
-            <View style={styles.emptyPosts}>
-              <Text style={styles.emptyText}>NO POSTS YET</Text>
-            </View>
-          }
-        />
-      )}
+        <View style={styles.divider} />
+
+        {/* Links */}
+        <SectionHeader label="LINKS" />
+        {LINKS.map(link => (
+          <TouchableOpacity
+            key={link.url}
+            style={styles.row}
+            onPress={() => Linking.openURL(link.url)}
+            activeOpacity={0.6}
+          >
+            <Text style={styles.rowLabel}>{link.label}</Text>
+            <Ionicons name="arrow-forward-outline" size={14} color={colors.textMuted} />
+          </TouchableOpacity>
+        ))}
+        <View style={styles.divider} />
+
+        {/* Identity */}
+        <SectionHeader label="IDENTITY" />
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>MODE</Text>
+          <Text style={styles.infoValue}>ANONYMOUS · NO ACCOUNT</Text>
+        </View>
+        <View style={styles.divider} />
+
+        {/* Danger zone */}
+        <SectionHeader label="DATA" />
+        <TouchableOpacity
+          style={styles.row}
+          onPress={handleClearData}
+          activeOpacity={0.7}
+          disabled={clearing}
+        >
+          {clearing ? (
+            <ActivityIndicator size="small" color={colors.destructive} />
+          ) : (
+            <Text style={styles.clearLabel}>CLEAR DATA</Text>
+          )}
+        </TouchableOpacity>
+        <View style={styles.divider} />
+      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg },
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  divider: { height: 1, backgroundColor: colors.border },
-  identityBlock: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.lg,
+  container: {
+    flex: 1,
+    backgroundColor: colors.bg,
   },
-  displayName: {
-    fontSize: typography.xl,
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+  },
+  logo: {
+    fontSize: typography.lg,
     fontWeight: '700',
     color: colors.textPrimary,
-    letterSpacing: tracking.tight,
-    marginBottom: 4,
+    letterSpacing: tracking.widest,
   },
-  identityMeta: {
+  headerLabel: {
     fontSize: typography.xs,
     color: colors.textMuted,
     letterSpacing: tracking.wider,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: colors.border,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -180,63 +162,57 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: colors.border,
   },
-  modRow: {
-    flexDirection: 'row',
+  aboutBlock: {
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    paddingVertical: spacing.lg,
   },
-  modIndicator: {
-    width: 2,
-    backgroundColor: colors.destructive,
-    marginRight: spacing.sm,
+  aboutTitle: {
+    fontSize: typography.md,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    letterSpacing: tracking.wide,
+    marginBottom: spacing.sm,
   },
-  modContent: { flex: 1 },
-  modText: {
+  aboutBody: {
     fontSize: typography.sm,
     color: colors.textSecondary,
-    lineHeight: 20,
+    lineHeight: 22,
   },
-  modReason: {
-    fontSize: typography.xs,
-    color: colors.destructive,
-    marginTop: 4,
-    letterSpacing: tracking.wide,
-  },
-  emptyPosts: {
-    paddingVertical: spacing.xl,
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: typography.xs,
-    color: colors.textMuted,
-    letterSpacing: tracking.wider,
-  },
-  footerBlock: {
-    marginTop: spacing.lg,
-  },
-  linkRow: {
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 2,
+    paddingVertical: spacing.sm + 4,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  linkText: {
+  rowLabel: {
     fontSize: typography.xs,
     color: colors.textSecondary,
     letterSpacing: tracking.wide,
   },
-  signOutRow: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
+  infoRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 4,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
-  signOutText: {
-    fontSize: typography.sm,
+  infoLabel: {
+    fontSize: typography.xs,
+    color: colors.textMuted,
+    letterSpacing: tracking.wider,
+  },
+  infoValue: {
+    fontSize: typography.xs,
+    color: colors.textSecondary,
+    letterSpacing: tracking.wide,
+  },
+  clearLabel: {
+    fontSize: typography.xs,
     fontWeight: '600',
     color: colors.destructive,
     letterSpacing: tracking.wider,

@@ -1,7 +1,6 @@
-import * as SecureStore from 'expo-secure-store';
+import { getDeviceId } from './deviceId';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://api.jawwing.com';
-const TOKEN_KEY = 'jawwing_auth_token';
+const API_BASE_URL = 'https://www.jawwing.com/api/v1';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -17,6 +16,7 @@ export interface Post {
   locationName?: string;
   moderated?: boolean;
   moderationReason?: string;
+  imageUrl?: string;
 }
 
 export interface Reply {
@@ -41,26 +41,7 @@ export interface CreatePostParams {
   content: string;
   lat: number;
   lng: number;
-}
-
-export interface AuthResponse {
-  token: string;
-  userId: string;
-  displayName: string;
-}
-
-// ─── Token helpers ────────────────────────────────────────────────────────────
-
-export async function getToken(): Promise<string | null> {
-  return SecureStore.getItemAsync(TOKEN_KEY);
-}
-
-export async function setToken(token: string): Promise<void> {
-  await SecureStore.setItemAsync(TOKEN_KEY, token);
-}
-
-export async function clearToken(): Promise<void> {
-  await SecureStore.deleteItemAsync(TOKEN_KEY);
+  image_url?: string;
 }
 
 // ─── HTTP helpers ─────────────────────────────────────────────────────────────
@@ -69,12 +50,12 @@ async function request<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
-  const token = await getToken();
+  const deviceId = await getDeviceId();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
+    'X-Device-Id': deviceId,
     ...(options.headers as Record<string, string>),
   };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
 
   const res = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
   if (!res.ok) {
@@ -82,6 +63,32 @@ async function request<T>(
     throw new Error(`API ${res.status}: ${text}`);
   }
   return res.json() as Promise<T>;
+}
+
+// ─── Upload ───────────────────────────────────────────────────────────────────
+
+export async function uploadImage(uri: string): Promise<{ url: string }> {
+  const deviceId = await getDeviceId();
+  const formData = new FormData();
+  // React Native FormData accepts this shape
+  formData.append('file', {
+    uri,
+    name: 'photo.jpg',
+    type: 'image/jpeg',
+  } as unknown as Blob);
+
+  const res = await fetch(`${API_BASE_URL}/upload`, {
+    method: 'POST',
+    headers: {
+      'X-Device-Id': deviceId,
+    },
+    body: formData,
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Upload ${res.status}: ${text}`);
+  }
+  return res.json() as Promise<{ url: string }>;
 }
 
 // ─── API methods ──────────────────────────────────────────────────────────────
@@ -114,31 +121,25 @@ export async function getReplies(postId: string): Promise<Reply[]> {
   return request<Reply[]>(`/posts/${postId}/replies`);
 }
 
-export async function sendCode(phone: string): Promise<{ success: boolean }> {
-  return request<{ success: boolean }>('/auth/send-code', {
+export async function createReply(
+  postId: string,
+  content: string,
+): Promise<Reply> {
+  return request<Reply>(`/posts/${postId}/replies`, {
     method: 'POST',
-    body: JSON.stringify({ phone }),
+    body: JSON.stringify({ content }),
   });
 }
 
-export async function verifyCode(
-  phone: string,
-  code: string,
-): Promise<AuthResponse> {
-  const data = await request<AuthResponse>('/auth/verify', {
+export async function reportPost(postId: string, reason: string): Promise<void> {
+  await request<void>(`/posts/${postId}/report`, {
     method: 'POST',
-    body: JSON.stringify({ phone, code }),
+    body: JSON.stringify({ reason }),
   });
-  await setToken(data.token);
-  return data;
 }
 
 export async function getMyPosts(): Promise<Post[]> {
-  return request<Post[]>('/users/me/posts');
-}
-
-export async function getProfile(): Promise<{ displayName: string; userId: string }> {
-  return request<{ displayName: string; userId: string }>('/users/me');
+  return request<Post[]>('/posts/mine');
 }
 
 // ─── Territories ──────────────────────────────────────────────────────────────
@@ -154,7 +155,7 @@ export interface Territory {
 }
 
 export async function getTerritories(): Promise<Territory[]> {
-  const data = await request<{ territories: Territory[] }>('/v1/territories');
+  const data = await request<{ territories: Territory[] }>('/territories');
   return data.territories;
 }
 
@@ -173,6 +174,6 @@ export async function getTerritoryFeed(
   if (params.limit != null) q.set('limit', String(params.limit));
   if (params.offset != null) q.set('offset', String(params.offset));
   return request<{ territory: { id: string; name: string }; posts: Post[] }>(
-    `/v1/feed/territory/${id}?${q.toString()}`
+    `/feed/territory/${id}?${q.toString()}`
   );
 }

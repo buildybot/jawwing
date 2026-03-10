@@ -243,10 +243,13 @@ async function fetchImageAsBase64(url: string): Promise<{ data: string; mimeType
 }
 
 export async function reviewPost(post: Post): Promise<ModerationDecision> {
+  console.log('[MOD] Reviewing post:', post.id, 'content:', post.content.slice(0, 50));
+
   const genAI = getGenAI();
 
   // Graceful fallback: if GEMINI_API_KEY is not configured, auto-approve (or flag if image present)
   if (!genAI) {
+    console.warn('[MOD] WARNING: No GEMINI_API_KEY - auto-approving');
     const fallbackAction = post.image_url ? "flag" : "approve";
     const fallbackDecision: ModerationDecision = {
       action: fallbackAction,
@@ -386,5 +389,6 @@ export async function reviewPost(post: Post): Promise<ModerationDecision> {
     console.error("[mod/engine] Failed to log mod action:", dbErr);
   }
 
+  console.log('[MOD] Decision for', post.id, ':', decision.action, 'confidence:', decision.confidence);
   return decision;
 }

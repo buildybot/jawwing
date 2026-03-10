@@ -5,6 +5,7 @@ import Link from "next/link";
 import { votePost } from "@/lib/api";
 import { useToast } from "./Toast";
 import ReportButton from "./ReportButton";
+import { useBlockedUsers } from "@/hooks/useBlockedUsers";
 
 export interface Post {
   id: string;
@@ -17,6 +18,7 @@ export interface Post {
   created_at?: number;
   expires_at?: number;
   territoryName?: string;
+  user_id?: string;
 }
 
 export interface PostCardProps {
@@ -336,6 +338,14 @@ function PostCard({ post, variant = "card" }: PostCardProps) {
   const [voteAnim, setVoteAnim] = useState<"up" | "down" | null>(null);
   const [copyLabel, setCopyLabel] = useState<"SHARE" | "COPIED ✓">("SHARE");
   const toast = useToast();
+  const { blockUser } = useBlockedUsers();
+
+  const handleBlock = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!post.user_id) return;
+    blockUser(post.user_id);
+    toast.show("BLOCKED", 2000);
+  };
 
   const imageUrls = matchImageUrls(post.content);
   const linkPreviewUrl = matchLinkPreviewUrl(post.content);
@@ -570,6 +580,21 @@ function PostCard({ post, variant = "card" }: PostCardProps) {
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
             <ReportButton postId={post.id} size="md" />
           </div>
+
+          {/* Block */}
+          {post.user_id && (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
+              <button
+                onClick={handleBlock}
+                title="Block this user"
+                aria-label="Block user"
+                style={{ color: "#555555", background: "none", border: "none", cursor: "pointer", fontSize: "1.125rem", lineHeight: 1, padding: "4px", transition: "color 150ms" }}
+              >
+                🚫
+              </button>
+              <span style={{ ...MONO, color: "#555555", fontSize: "0.625rem" }}>BLOCK</span>
+            </div>
+          )}
         </div>
 
         {/* Bottom rule */}
@@ -694,9 +719,37 @@ function PostCard({ post, variant = "card" }: PostCardProps) {
           )}
         </Link>
       </div>
-      {/* Share + Report row — separate so they don't trigger post navigation */}
+      {/* Share + Report + Block row */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "6px" }}>
-        <ReportButton postId={post.id} size="sm" />
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <ReportButton postId={post.id} size="sm" />
+          {post.user_id && (
+            <button
+              onClick={handleBlock}
+              title="Block this user"
+              aria-label="Block user"
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                color: "#555555",
+                fontSize: "0.7rem",
+                lineHeight: 1,
+                padding: "2px 4px",
+                display: "flex",
+                alignItems: "center",
+                gap: "3px",
+                ...MONO,
+                letterSpacing: "0.04em",
+                transition: "color 150ms",
+              }}
+              className="hover:text-[#A0A0A0]"
+            >
+              <span>🚫</span>
+              <span style={{ fontSize: "0.5625rem" }}>BLOCK</span>
+            </button>
+          )}
+        </div>
         <button
           onClick={handleShare}
           style={{
