@@ -60,6 +60,8 @@ export type {
   NewVote,
   Reply,
   NewReply,
+} from "./schema";
+export type {
   ModAction,
   NewModAction,
   Territory,
@@ -82,6 +84,8 @@ export type {
   NewSavedPost,
   Notification,
   NewNotification,
+  Block,
+  NewBlock,
 } from "./schema";
 
 // ─── Re-export schema (for drizzle-kit / migrations) ─────────────────────────

@@ -115,6 +115,9 @@ export default function InlineCompose({
     setExpanded(false);
     setContent("");
     setError(null);
+    setOgPreview(null);
+    setOgDismissed(false);
+    lastOgUrl.current = null;
     removeImage();
   };
 
@@ -280,7 +283,7 @@ export default function InlineCompose({
               <textarea
                 ref={textareaRef}
                 value={content}
-                onChange={(e) => setContent(e.target.value.slice(0, MAX))}
+                onChange={(e) => handleContentChange(e.target.value)}
                 placeholder="WHAT'S ON YOUR MIND?"
                 rows={4}
                 disabled={isSubmitting}
@@ -310,6 +313,39 @@ export default function InlineCompose({
                 }}
               />
             </div>
+
+            {/* Link OG preview in compose */}
+            {ogLoading && (
+              <div style={{ margin: "8px 16px 0", background: "#0A0A0A", border: "1px solid #1F1F1F", padding: "10px 12px", display: "flex", alignItems: "center" }}>
+                <span style={{ ...MONO, color: "#333333", fontSize: "0.625rem", letterSpacing: "0.08em" }}>LOADING PREVIEW...</span>
+              </div>
+            )}
+            {!ogLoading && ogPreview && !ogPreview.error && !ogDismissed && (ogPreview.title || ogPreview.image) && (
+              <div style={{ margin: "8px 16px 0", background: "#0A0A0A", border: "1px solid #1F1F1F", display: "flex", overflow: "hidden", position: "relative" }}>
+                {ogPreview.image && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={ogPreview.image} alt="" style={{ width: "64px", height: "64px", objectFit: "cover", flexShrink: 0 }} />
+                )}
+                <div style={{ padding: "8px 10px", flex: 1, overflow: "hidden" }}>
+                  {ogPreview.title && (
+                    <p style={{ color: "#FFFFFF", fontSize: "0.75rem", fontWeight: 600, marginBottom: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {ogPreview.title}
+                    </p>
+                  )}
+                  <p style={{ ...MONO, color: "#888888", fontSize: "0.5625rem", letterSpacing: "0.06em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {(() => { try { return new URL(ogPreview.url).hostname; } catch { return ogPreview.url; } })()}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setOgPreview(null); setOgDismissed(true); }}
+                  style={{ position: "absolute", top: "4px", right: "6px", background: "none", border: "none", color: "#888888", cursor: "pointer", fontSize: "0.75rem", lineHeight: 1, padding: "2px 4px" }}
+                  aria-label="Dismiss preview"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
 
             {/* Image preview */}
             {imagePreview && (

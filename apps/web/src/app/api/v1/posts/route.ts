@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 // after() from next/server doesn't reliably execute on Vercel — run moderation inline
 
 export const runtime = "nodejs"; // Required for moderation (crypto + Gemini SDK)
-import { db, posts, territories, nanoid, now } from "@jawwing/db";
-import { eq, gt, and, desc, sql, inArray } from "drizzle-orm";
+import { db, posts, territories, blocks, nanoid, now } from "@jawwing/db";
+import { eq, gt, and, desc, sql, inArray, or } from "drizzle-orm";
 import { checkRateLimit } from "@jawwing/api/middleware";
 import { latLngToH3 } from "@jawwing/api/geo";
 import { buildFeedQuery, type SortMode } from "@jawwing/api/feed";
@@ -230,6 +230,21 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     if (!["hot", "new", "top"].includes(sort)) {
       return NextResponse.json({ error: "sort must be hot, new, or top", code: "INVALID_PARAMS" }, { status: 400 });
     }
+
+    // Fetch blocked user_ids for this requester (server-side block filtering)
+    const reqIpHash = getIpHash(req);
+    let blockedUserIds: string[] = [];
+    try {
+      const { getOptionalAccountId: getOptAccId } = await import("@jawwing/api/optionalAuth");
+      const reqAccountId = await getOptAccId(req);
+      const blockRows = await db.select({ blocked_user_id: blocks.blocked_user_id })
+        .from(blocks)
+        .where(reqAccountId
+          ? or(eq(blocks.blocker_hash, reqIpHash), eq(blocks.blocker_account_id, reqAccountId))
+          : eq(blocks.blocker_hash, reqIpHash)
+        );
+      blockedUserIds = blockRows.map((r) => r.blocked_user_id);
+    } catch { /* best-effort */ }
 
     // EVERYWHERE mode: return all active posts, no geo filter
     if (mode === "everywhere") {

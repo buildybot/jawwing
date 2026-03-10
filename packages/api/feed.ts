@@ -1,5 +1,5 @@
 import { db, posts } from "@jawwing/db";
-import { inArray, gt, eq, desc, sql, and } from "drizzle-orm";
+import { inArray, notInArray, gt, eq, desc, sql, and } from "drizzle-orm";
 import { getHexesForRadius } from "./geo";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -15,6 +15,8 @@ export interface FeedParams {
   offset?: number;
   /** If provided, use these hexes directly instead of computing from radius */
   hexes?: string[];
+  /** If provided, filter out posts from these user_ids (blocks) */
+  blockedUserIds?: string[];
 }
 
 // ─── Scoring ──────────────────────────────────────────────────────────────────
@@ -141,6 +143,7 @@ export async function buildFeedQuery(params: FeedParams) {
     limit = 20,
     offset = 0,
     hexes: precomputedHexes,
+    blockedUserIds,
   } = params;
 
   const hexes = precomputedHexes ?? getHexesForRadius(lat, lng, radiusMeters);
@@ -149,7 +152,10 @@ export async function buildFeedQuery(params: FeedParams) {
   const conditions = and(
     inArray(posts.h3_index, hexes),
     gt(posts.expires_at, nowTs),
-    eq(posts.status, "active")
+    eq(posts.status, "active"),
+    blockedUserIds && blockedUserIds.length > 0
+      ? notInArray(posts.user_id, blockedUserIds)
+      : undefined
   );
 
   if (sort === "new") {

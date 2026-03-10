@@ -467,3 +467,5 @@ export type SavedPost = typeof saved_posts.$inferSelect;
 export type NewSavedPost = typeof saved_posts.$inferInsert;
 export type Notification = typeof notifications.$inferSelect;
 export type NewNotification = typeof notifications.$inferInsert;
+export type Block = typeof blocks.$inferSelect;
+export type NewBlock = typeof blocks.$inferInsert;
