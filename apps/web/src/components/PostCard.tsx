@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { memo, useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { votePost } from "@/lib/api";
 import { useToast } from "./Toast";
@@ -276,15 +276,15 @@ function LinkPreview({ url }: { url: string }) {
 
 function AnimatedScore({ value, voted }: { value: number; voted: "up" | "down" | null }) {
   const [display, setDisplay] = useState(value);
-  const [animDir, setAnimDir] = useState<"up" | "down" | null>(null);
+  const [flash, setFlash] = useState(false);
   const prevRef = useRef(value);
 
   useEffect(() => {
     if (value !== prevRef.current) {
-      setAnimDir(value > prevRef.current ? "up" : "down");
       setDisplay(value);
       prevRef.current = value;
-      const t = setTimeout(() => setAnimDir(null), 300);
+      setFlash(true);
+      const t = setTimeout(() => setFlash(false), 300);
       return () => clearTimeout(t);
     }
   }, [value]);
@@ -292,16 +292,14 @@ function AnimatedScore({ value, voted }: { value: number; voted: "up" | "down" |
   return (
     <span
       style={{
-        color: voted === "up" ? "#FFFFFF" : voted === "down" ? "#777777" : "#C0C0C0",
+        color: flash ? "#C0C0C0" : voted === "up" ? "#FFFFFF" : voted === "down" ? "#777777" : "#C0C0C0",
         ...MONO,
         fontSize: "0.875rem",
         fontWeight: 500,
         minWidth: "24px",
         textAlign: "center",
         display: "inline-block",
-        transition: "transform 150ms ease, opacity 150ms ease",
-        transform: animDir === "up" ? "translateY(-3px)" : animDir === "down" ? "translateY(3px)" : "translateY(0)",
-        opacity: animDir ? 0.7 : 1,
+        transition: "color 150ms ease",
       }}
       className="tabular-nums"
     >
@@ -330,11 +328,13 @@ function ExpiryIndicator({ expiresAt }: { expiresAt: number }) {
 
 // ─── PostCard ─────────────────────────────────────────────────────────────────
 
-export default function PostCard({ post, variant = "card" }: PostCardProps) {
+function PostCard({ post, variant = "card" }: PostCardProps) {
   const replyCount = post.reply_count ?? post.replyCount ?? 0;
   const [score, setScore] = useState(post.score);
   const [voted, setVoted] = useState<"up" | "down" | null>(null);
   const [voting, setVoting] = useState(false);
+  const [voteAnim, setVoteAnim] = useState<"up" | "down" | null>(null);
+  const [copyLabel, setCopyLabel] = useState<"SHARE" | "COPIED ✓">("SHARE");
   const toast = useToast();
 
   const imageUrls = matchImageUrls(post.content);
@@ -342,6 +342,10 @@ export default function PostCard({ post, variant = "card" }: PostCardProps) {
 
   const vote = async (dir: "up" | "down") => {
     if (voting) return;
+
+    // Scale animation
+    setVoteAnim(dir);
+    setTimeout(() => setVoteAnim(null), 150);
 
     let newScore = score;
     let newVoted: "up" | "down" | null;
@@ -375,7 +379,8 @@ export default function PostCard({ post, variant = "card" }: PostCardProps) {
   const handleShare = () => {
     const url = `https://jawwing.com/post/${post.id}`;
     navigator.clipboard.writeText(url).then(() => {
-      toast.show("COPIED!", 2000);
+      setCopyLabel("COPIED ✓");
+      setTimeout(() => setCopyLabel("SHARE"), 2000);
     }).catch(() => {
       toast.show("SHARE FAILED", 2000);
     });
@@ -500,7 +505,12 @@ export default function PostCard({ post, variant = "card" }: PostCardProps) {
                 cursor: voting ? "wait" : "pointer",
                 fontSize: "1.25rem",
                 lineHeight: 1,
-                padding: "4px",
+                padding: "10px",
+                minWidth: "44px",
+                minHeight: "44px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
                 transition: "color 150ms",
               }}
               aria-label="Upvote"
@@ -518,7 +528,12 @@ export default function PostCard({ post, variant = "card" }: PostCardProps) {
                 cursor: voting ? "wait" : "pointer",
                 fontSize: "1.25rem",
                 lineHeight: 1,
-                padding: "4px",
+                padding: "10px",
+                minWidth: "44px",
+                minHeight: "44px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
                 transition: "color 150ms",
               }}
               aria-label="Downvote"
@@ -609,12 +624,18 @@ export default function PostCard({ post, variant = "card" }: PostCardProps) {
             disabled={voting}
             style={{
               color: voted === "up" ? "#FFFFFF" : "#777777",
-              transition: "color 150ms, transform 150ms",
               background: "none",
               border: "none",
               cursor: voting ? "wait" : "pointer",
+              transform: voteAnim === "up" ? "scale(1.2)" : "scale(1)",
+              transition: "color 150ms, transform 150ms",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              minWidth: "44px",
+              minHeight: "44px",
+              fontSize: "1rem",
             }}
-            className={`text-xs hover:text-white ${voted === "up" ? "scale-[1.15]" : ""}`}
             aria-label="Upvote"
           >
             ▲
@@ -626,17 +647,22 @@ export default function PostCard({ post, variant = "card" }: PostCardProps) {
             style={{
               color: voted === "down" ? "#C0C0C0" : "#777777",
               opacity: voted === "down" ? 1 : 0.6,
-              transition: "color 150ms, transform 150ms",
               background: "none",
               border: "none",
               cursor: voting ? "wait" : "pointer",
+              transform: voteAnim === "down" ? "scale(1.2)" : "scale(1)",
+              transition: "color 150ms, transform 150ms, opacity 150ms",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              minWidth: "44px",
+              minHeight: "44px",
+              fontSize: "1rem",
             }}
-            className={`text-xs hover:opacity-100 hover:text-[#C0C0C0] ${voted === "down" ? "scale-[1.15]" : ""}`}
             aria-label="Downvote"
           >
             ▼
           </button>
-
         </div>
 
         {/* Right meta — clicking anywhere navigates to post detail */}
@@ -673,14 +699,27 @@ export default function PostCard({ post, variant = "card" }: PostCardProps) {
         <ReportButton postId={post.id} size="sm" />
         <button
           onClick={handleShare}
-          style={{ color: "#555555", background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: "0.75rem", lineHeight: 1, ...MONO, letterSpacing: "0.04em" }}
-          className="hover:text-[#A0A0A0] transition-colors"
+          style={{
+            color: copyLabel === "COPIED ✓" ? "#FFFFFF" : "#555555",
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            padding: 0,
+            fontSize: "0.75rem",
+            lineHeight: 1,
+            ...MONO,
+            letterSpacing: "0.04em",
+            transition: "color 150ms",
+          }}
+          className="hover:text-[#A0A0A0]"
           aria-label="Share post"
           title="Copy link"
         >
-          ↗ SHARE
+          ↗ {copyLabel}
         </button>
       </div>
     </article>
   );
 }
+
+export default memo(PostCard);

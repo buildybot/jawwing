@@ -266,7 +266,7 @@ export default function TransparencyPage() {
           </>
         )}
 
-        <div style={{ borderTop: "1px solid #1F1F1F", marginTop: "40px", paddingTop: "24px" }}>
+        <div style={{ borderTop: "1px solid #1F1F1F", marginTop: "40px", paddingTop: "24px", display: "flex", flexWrap: "wrap", gap: "24px" }}>
           <Link
             href="/constitution"
             style={{
@@ -283,6 +283,23 @@ export default function TransparencyPage() {
           </Link>
         </div>
       </main>
+
+      <footer style={{ borderTop: "1px solid #1F1F1F", padding: "24px" }}>
+        <div style={{ maxWidth: "760px", margin: "0 auto", display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "24px" }}>
+          {[
+            { href: "/about", label: "ABOUT" },
+            { href: "/terms", label: "TERMS" },
+            { href: "/privacy", label: "PRIVACY" },
+            { href: "/constitution", label: "CONSTITUTION" },
+            { href: "/transparency", label: "TRANSPARENCY" },
+          ].map(({ href, label }) => (
+            <Link key={href} href={href} style={{ ...MONO, color: "#777777", fontSize: "0.6875rem", letterSpacing: "0.06em", textDecoration: "none" }}
+              className="hover:text-white transition-colors">
+              {label}
+            </Link>
+          ))}
+        </div>
+      </footer>
     </div>
   );
 }

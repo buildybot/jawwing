@@ -20,6 +20,57 @@ body {
   background: var(--bg-primary);
   color: var(--text-primary);
   font-family: 'Inter', sans-serif;
+  /* Safe area support for iOS notch/home indicator */
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Sticky header safe area */
+.header-safe {
+  padding-top: env(safe-area-inset-top);
+}
+
+/* FAB safe area — applied via CSS variable for JS override */
+.fab-safe-bottom {
+  bottom: calc(24px + env(safe-area-inset-bottom));
+}
+
+/* Pull-to-refresh indicator */
+.ptr-indicator {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #000000;
+  border-bottom: 1px solid #1F1F1F;
+  z-index: 100;
+  overflow: hidden;
+  transition: height 120ms ease, opacity 120ms ease;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  color: #777777;
+}
+
+.ptr-arrow {
+  display: inline-block;
+  transition: transform 200ms ease;
+}
+
+.ptr-arrow.ready {
+  transform: rotate(180deg);
+}
+
+@keyframes ptr-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.ptr-arrow.spinning {
+  animation: ptr-spin 0.6s linear infinite;
 }
 
 html {
@@ -68,6 +119,30 @@ html {
     max-width: 800px;
     padding-left: 32px;
     padding-right: 32px;
+  }
+}
+
+/* ── Feed animations ────────────────────────────────────────────────────────── */
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 

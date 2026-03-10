@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -14,11 +14,19 @@ const jetbrainsMono = JetBrains_Mono({
   weight: ["400", "500"],
 });
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: "cover",
+};
+
 export const metadata: Metadata = {
   title: "JAWWING - Speak freely. Stay anonymous.",
   description:
-    "Location-based anonymous social platform. No human mods. AI-moderated by a public constitution.",
+    "Anonymous local posts from your neighborhood. No accounts. AI-moderated.",
   metadataBase: new URL("https://jawwing.com"),
+  manifest: "/manifest.json",
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },
@@ -28,7 +36,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "JAWWING",
-    description: "Speak freely. Stay anonymous.",
+    description: "Anonymous local posts from your neighborhood. No accounts. AI-moderated.",
     url: "https://jawwing.com",
     siteName: "JAWWING",
     type: "website",
@@ -36,7 +44,13 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "JAWWING",
-    description: "Speak freely. Stay anonymous.",
+    description: "Anonymous local posts from your neighborhood. No accounts. AI-moderated.",
+  },
+  other: {
+    "apple-mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-status-bar-style": "black-translucent",
+    "apple-mobile-web-app-title": "Jawwing",
+    "mobile-web-app-capable": "yes",
   },
 };
 

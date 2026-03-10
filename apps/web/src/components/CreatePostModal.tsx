@@ -1,12 +1,20 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 
 interface CreatePostModalProps {
   open: boolean;
   onClose: () => void;
   onSubmit?: (content: string, imageUrl?: string) => Promise<void>;
 }
+
+const PLACEHOLDERS = [
+  "What's the vibe right now?",
+  "Hot take incoming...",
+  "Overheard nearby...",
+  "PSA for the neighborhood...",
+  "Unpopular opinion:",
+];
 
 export default function CreatePostModal({ open, onClose, onSubmit }: CreatePostModalProps) {
   const [content, setContent] = useState("");
@@ -15,8 +23,21 @@ export default function CreatePostModal({ open, onClose, onSubmit }: CreatePostM
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [posted, setPosted] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const MAX = 300;
+
+  // Pick a random placeholder each time the modal opens
+  const placeholder = useMemo(
+    () => PLACEHOLDERS[Math.floor(Math.random() * PLACEHOLDERS.length)],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [open]
+  );
+
+  // Reset posted state when modal opens
+  useEffect(() => {
+    if (open) setPosted(false);
+  }, [open]);
 
   if (!open) return null;
 
@@ -64,7 +85,6 @@ export default function CreatePostModal({ open, onClose, onSubmit }: CreatePostM
     try {
       let imageUrl: string | undefined;
 
-      // Upload image first if present
       if (imageFile) {
         setUploading(true);
         const formData = new FormData();
@@ -83,9 +103,14 @@ export default function CreatePostModal({ open, onClose, onSubmit }: CreatePostM
         await onSubmit(content.trim(), imageUrl);
       }
 
+      // Show success state briefly, then close
+      setPosted(true);
       setContent("");
       removeImage();
-      onClose();
+      setTimeout(() => {
+        onClose();
+        setPosted(false);
+      }, 900);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to post.");
       setUploading(false);
@@ -95,7 +120,8 @@ export default function CreatePostModal({ open, onClose, onSubmit }: CreatePostM
   };
 
   const isSubmitting = loading || uploading;
-  const canSubmit = !!content.trim() && !isSubmitting;
+  const canSubmit = !!content.trim() && !isSubmitting && !posted;
+  const charPct = Math.min((content.length / MAX) * 100, 100);
 
   return (
     <div
@@ -135,185 +161,217 @@ export default function CreatePostModal({ open, onClose, onSubmit }: CreatePostM
           </button>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value.slice(0, MAX))}
-            placeholder="What's happening around you?"
-            rows={6}
-            autoFocus
-            disabled={isSubmitting}
+        {/* Posted toast state */}
+        {posted ? (
+          <div
             style={{
-              background: "transparent",
-              border: "none",
-              borderBottom: "1px solid #1F1F1F",
-              color: "#FFFFFF",
-              width: "100%",
-              resize: "none",
-              outline: "none",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "40px 0",
+              fontFamily: "var(--font-mono), monospace",
               fontSize: "1rem",
-              lineHeight: "1.6",
-              paddingBottom: "12px",
-              marginBottom: "12px",
+              fontWeight: 700,
+              letterSpacing: "0.1em",
+              color: "#FFFFFF",
+              animation: "fadeInUp 200ms ease",
             }}
-            className="placeholder:text-[#777777]"
-          />
-
-          {/* Image preview */}
-          {imagePreview && (
-            <div style={{ position: "relative", marginBottom: "12px", border: "1px solid #1F1F1F" }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={imagePreview}
-                alt="Preview"
-                style={{
-                  width: "100%",
-                  maxHeight: "180px",
-                  objectFit: "cover",
-                  display: "block",
-                  borderRadius: 0,
-                }}
-              />
-              <button
-                type="button"
-                onClick={removeImage}
+          >
+            POSTED ✓
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit}>
+            {/* Textarea with progress bar */}
+            <div style={{ position: "relative", marginBottom: "12px" }}>
+              <textarea
+                value={content}
+                onChange={(e) => setContent(e.target.value.slice(0, MAX))}
+                placeholder={placeholder}
+                rows={6}
+                autoFocus
                 disabled={isSubmitting}
                 style={{
-                  position: "absolute",
-                  top: "6px",
-                  right: "6px",
-                  background: "#000000",
-                  border: "1px solid #333333",
-                  color: "#777777",
-                  cursor: "pointer",
-                  fontFamily: "var(--font-mono), monospace",
-                  fontSize: "0.625rem",
-                  letterSpacing: "0.06em",
-                  padding: "3px 8px",
+                  background: "transparent",
+                  border: "none",
+                  borderBottom: "1px solid #1F1F1F",
+                  color: "#FFFFFF",
+                  width: "100%",
+                  resize: "none",
+                  outline: "none",
+                  fontSize: "1rem",
+                  lineHeight: "1.6",
+                  paddingBottom: "12px",
                 }}
-                className="hover:text-white hover:border-white transition-colors"
-              >
-                REMOVE
-              </button>
-            </div>
-          )}
-
-          {/* Upload progress */}
-          {uploading && (
-            <p
-              style={{
-                fontFamily: "var(--font-mono), monospace",
-                color: "#777777",
-                fontSize: "0.75rem",
-                marginBottom: "8px",
-                letterSpacing: "0.04em",
-              }}
-            >
-              UPLOADING IMAGE...
-            </p>
-          )}
-
-          {error && (
-            <p
-              style={{
-                fontFamily: "var(--font-mono), monospace",
-                color: "#FF3333",
-                fontSize: "0.75rem",
-                marginBottom: "8px",
-                letterSpacing: "0.02em",
-              }}
-            >
-              {error}
-            </p>
-          )}
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span
+                className="placeholder:text-[#777777]"
+              />
+              {/* Character progress bar */}
+              <div
                 style={{
-                  fontFamily: "var(--font-mono), monospace",
-                  color: content.length > MAX * 0.9 ? "#FF3333" : "#777777",
-                  fontSize: "0.75rem",
+                  position: "absolute",
+                  bottom: 0,
+                  left: 0,
+                  height: "2px",
+                  width: `${charPct}%`,
+                  background: content.length > MAX * 0.9 ? "#FF3333" : "#FFFFFF",
+                  transition: "width 100ms linear, background 150ms",
+                  pointerEvents: "none",
                 }}
-              >
-                {content.length}/{MAX}
-              </span>
+              />
+            </div>
 
-              {/* Image attach button */}
-              {!imagePreview && (
+            {/* Image preview */}
+            {imagePreview && (
+              <div style={{ position: "relative", marginBottom: "12px", border: "1px solid #1F1F1F" }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={imagePreview}
+                  alt="Preview"
+                  style={{
+                    width: "100%",
+                    maxHeight: "180px",
+                    objectFit: "cover",
+                    display: "block",
+                    borderRadius: 0,
+                  }}
+                />
                 <button
                   type="button"
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={removeImage}
+                  disabled={isSubmitting}
+                  style={{
+                    position: "absolute",
+                    top: "6px",
+                    right: "6px",
+                    background: "#000000",
+                    border: "1px solid #333333",
+                    color: "#777777",
+                    cursor: "pointer",
+                    fontFamily: "var(--font-mono), monospace",
+                    fontSize: "0.625rem",
+                    letterSpacing: "0.06em",
+                    padding: "3px 8px",
+                  }}
+                  className="hover:text-white hover:border-white transition-colors"
+                >
+                  REMOVE
+                </button>
+              </div>
+            )}
+
+            {uploading && (
+              <p
+                style={{
+                  fontFamily: "var(--font-mono), monospace",
+                  color: "#777777",
+                  fontSize: "0.75rem",
+                  marginBottom: "8px",
+                  letterSpacing: "0.04em",
+                }}
+              >
+                UPLOADING IMAGE...
+              </p>
+            )}
+
+            {error && (
+              <p
+                style={{
+                  fontFamily: "var(--font-mono), monospace",
+                  color: "#FF3333",
+                  fontSize: "0.75rem",
+                  marginBottom: "8px",
+                  letterSpacing: "0.02em",
+                }}
+              >
+                {error}
+              </p>
+            )}
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span
+                  style={{
+                    fontFamily: "var(--font-mono), monospace",
+                    color: content.length > MAX * 0.9 ? "#FF3333" : "#777777",
+                    fontSize: "0.75rem",
+                  }}
+                >
+                  {content.length}/{MAX}
+                </span>
+
+                {!imagePreview && (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isSubmitting}
+                    style={{
+                      color: "#777777",
+                      background: "none",
+                      border: "none",
+                      cursor: isSubmitting ? "not-allowed" : "pointer",
+                      fontFamily: "var(--font-mono), monospace",
+                      letterSpacing: "0.04em",
+                      fontSize: "0.75rem",
+                      padding: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "4px",
+                    }}
+                    className="hover:text-white transition-colors"
+                    title="Attach image"
+                  >
+                    📷
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleClose}
                   disabled={isSubmitting}
                   style={{
                     color: "#777777",
                     background: "none",
                     border: "none",
-                    cursor: isSubmitting ? "not-allowed" : "pointer",
+                    cursor: "pointer",
                     fontFamily: "var(--font-mono), monospace",
                     letterSpacing: "0.04em",
-                    fontSize: "0.75rem",
-                    padding: 0,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "4px",
+                    fontSize: "0.8125rem",
                   }}
                   className="hover:text-white transition-colors"
-                  title="Attach image"
                 >
-                  📷
+                  CANCEL
                 </button>
-              )}
+                <button
+                  type="submit"
+                  disabled={!canSubmit}
+                  style={{
+                    background: canSubmit ? "#FFFFFF" : "transparent",
+                    color: canSubmit ? "#000000" : "#777777",
+                    border: `1px solid ${canSubmit ? "#FFFFFF" : "#333333"}`,
+                    cursor: canSubmit ? "pointer" : "not-allowed",
+                    fontFamily: "var(--font-mono), monospace",
+                    letterSpacing: "0.06em",
+                    fontSize: "0.8125rem",
+                    fontWeight: 500,
+                    padding: "6px 16px",
+                    transition: "all 150ms",
+                  }}
+                >
+                  {uploading ? "UPLOADING..." : loading ? "POSTING..." : "POST"}
+                </button>
+              </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={handleClose}
-                disabled={isSubmitting}
-                style={{
-                  color: "#777777",
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  fontFamily: "var(--font-mono), monospace",
-                  letterSpacing: "0.04em",
-                  fontSize: "0.8125rem",
-                }}
-                className="hover:text-white transition-colors"
-              >
-                CANCEL
-              </button>
-              <button
-                type="submit"
-                disabled={!canSubmit}
-                style={{
-                  background: canSubmit ? "#FFFFFF" : "transparent",
-                  color: canSubmit ? "#000000" : "#777777",
-                  border: `1px solid ${canSubmit ? "#FFFFFF" : "#333333"}`,
-                  cursor: canSubmit ? "pointer" : "not-allowed",
-                  fontFamily: "var(--font-mono), monospace",
-                  letterSpacing: "0.06em",
-                  fontSize: "0.8125rem",
-                  fontWeight: 500,
-                  padding: "6px 16px",
-                  transition: "all 150ms",
-                }}
-              >
-                {uploading ? "UPLOADING..." : loading ? "POSTING..." : "POST"}
-              </button>
-            </div>
-          </div>
-
-          {/* Hidden file input */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleFileChange}
-            style={{ display: "none" }}
-          />
-        </form>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              style={{ display: "none" }}
+            />
+          </form>
+        )}
 
         <p
           style={{

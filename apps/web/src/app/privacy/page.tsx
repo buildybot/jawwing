@@ -33,31 +33,31 @@ export default function PrivacyPage() {
         {[
           {
             title: "1. What We Collect",
-            body: "Jawwing collects minimal data. When you post, we record: approximate GPS coordinates, post content, and a timestamp. We do not collect your name, email, phone number, or any identifying information unless you voluntarily join our waitlist.",
+            body: "Jawwing is designed to minimize data collection. When you post, we record: your approximate GPS coordinates (at the time of the post), the post content itself, a timestamp, and any images you upload. We do not collect your name, email address, phone number, or any account information. There are no accounts.",
           },
           {
-            title: "2. Location Data",
-            body: "Location data is used only to associate posts with a geographic area and to surface nearby posts to other users. We store coordinates, not addresses. We do not track your movement over time.",
+            title: "2. IP Address",
+            body: "We record a one-way hashed version of your IP address for rate limiting and abuse prevention. The hash cannot be reversed to identify you. We do not log or store raw IP addresses.",
           },
           {
-            title: "3. Waitlist",
-            body: "If you submit your email for waitlist access, we store your email address solely to notify you when access opens. We will not sell, rent, or share your email with third parties.",
+            title: "3. Location Data",
+            body: "Location is captured at the time of posting to associate your post with a geographic area and to surface nearby posts to other users. We store coordinates, not street addresses. We do not track your location over time or across sessions.",
           },
           {
-            title: "4. Cookies & Tracking",
-            body: "We use minimal, essential session data to authenticate users. We do not use third-party advertising trackers or analytics platforms that sell your data.",
+            title: "4. Session Cookies",
+            body: "We use a single essential session cookie to support basic site functionality (e.g., rate limiting). We do not use advertising cookies, tracking pixels, or third-party analytics that sell your data.",
           },
           {
-            title: "5. AI Moderation",
-            body: "Post content is processed by our AI moderation system to enforce the public Constitution. Moderation decisions and logs are publicly available via the Transparency page.",
+            title: "5. Uploaded Images",
+            body: "Images you upload are stored and associated with your post. They are publicly visible as part of the post. Do not upload images containing personally identifying information you wish to keep private.",
           },
           {
-            title: "6. Data Retention",
-            body: "Posts may be removed after a period of inactivity or upon constitutional violation. Waitlist emails are deleted after you receive access or upon request.",
+            title: "6. AI Moderation",
+            body: "Post content is processed by our AI moderation system to enforce the public Constitution. Moderation decisions and reasoning logs are publicly available via the Transparency page.",
           },
           {
-            title: "7. Your Rights",
-            body: "You may request deletion of any data we hold about you. Since most usage is anonymous, data deletion requests should reference the specific post ID or email address submitted.",
+            title: "7. Data Retention",
+            body: "Posts and associated data may be removed after a period of inactivity or upon constitutional violation. Since there are no accounts, there is no account data to delete. You may request removal of a specific post by referencing its post ID.",
           },
           {
             title: "8. Contact",
@@ -70,17 +70,27 @@ export default function PrivacyPage() {
           </div>
         ))}
 
-        <div style={{ borderTop: "1px solid #1F1F1F", paddingTop: "32px", display: "flex", gap: "24px" }}>
-          <Link href="/terms" style={{ ...MONO, color: "#777777", fontSize: "0.6875rem", letterSpacing: "0.06em", textDecoration: "none" }}
-            className="hover:text-white transition-colors">
-            TERMS OF SERVICE →
-          </Link>
-          <Link href="/constitution" style={{ ...MONO, color: "#777777", fontSize: "0.6875rem", letterSpacing: "0.06em", textDecoration: "none" }}
-            className="hover:text-white transition-colors">
-            CONSTITUTION →
-          </Link>
+        <div style={{ borderTop: "1px solid #1F1F1F", paddingTop: "32px", display: "flex", flexWrap: "wrap", gap: "24px" }}>
+          {[
+            { href: "/about", label: "ABOUT" },
+            { href: "/terms", label: "TERMS" },
+            { href: "/privacy", label: "PRIVACY" },
+            { href: "/constitution", label: "CONSTITUTION" },
+            { href: "/transparency", label: "TRANSPARENCY" },
+          ].map(({ href, label }) => (
+            <Link key={href} href={href} style={{ ...MONO, color: "#777777", fontSize: "0.6875rem", letterSpacing: "0.06em", textDecoration: "none" }}
+              className="hover:text-white transition-colors">
+              {label}
+            </Link>
+          ))}
         </div>
       </main>
+
+      <footer style={{ borderTop: "1px solid #1F1F1F", padding: "24px" }}>
+        <p style={{ ...MONO, color: "#333333", fontSize: "0.625rem", letterSpacing: "0.06em", textAlign: "center" }}>
+          © {new Date().getFullYear()} JAWWING · ANONYMOUS LOCAL POSTS
+        </p>
+      </footer>
     </div>
   );
 }

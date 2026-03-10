@@ -44,23 +44,6 @@ export default function AboutPage() {
               {label}
             </Link>
           ))}
-          <Link
-            href="/login"
-            style={{
-              ...MONO,
-              letterSpacing: "0.08em",
-              fontSize: "0.6875rem",
-              fontWeight: 600,
-              color: "#FFFFFF",
-              background: "transparent",
-              border: "1px solid #FFFFFF",
-              padding: "6px 16px",
-              textDecoration: "none",
-            }}
-            className="hover:bg-white hover:text-black transition-colors"
-          >
-            SIGN UP
-          </Link>
         </div>
       </nav>
 
@@ -110,7 +93,7 @@ export default function AboutPage() {
           </p>
 
           <Link
-            href="/login"
+            href="/"
             style={{
               ...MONO,
               display: "inline-block",
@@ -129,7 +112,7 @@ export default function AboutPage() {
           </Link>
 
           <p style={{ ...MONO, color: "#777777", fontSize: "0.6875rem", letterSpacing: "0.06em", marginTop: "16px" }}>
-            EMAIL VERIFICATION ONLY · NO PASSWORDS · FREE
+            NO ACCOUNTS · NO TRACKING · FREE
           </p>
         </section>
 
@@ -147,7 +130,7 @@ export default function AboutPage() {
                 {
                   num: "01",
                   title: "DROP IN",
-                  desc: "Open Jawwing. See what people near you are posting. Browse the feed without an account.",
+                  desc: "Open Jawwing. See what people near you are posting. No setup needed — just browse.",
                 },
                 {
                   num: "02",

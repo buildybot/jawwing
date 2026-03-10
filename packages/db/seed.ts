@@ -100,8 +100,8 @@ function hoursAgo(h: number): number {
   return now() - h * 3600;
 }
 
-function in24h(from?: number): number {
-  return (from ?? now()) + 86400;
+function in30d(from?: number): number {
+  return (from ?? now()) + 30 * 24 * 60 * 60;
 }
 
 // ─── H3 territory coverage ────────────────────────────────────────────────────
@@ -161,45 +161,75 @@ const POST_DEFS: Array<{
   reply_count: number;
   hoursOld: number;
 }> = [
-  { id: SEED_PREFIX+"post0000000001", content: "The Red Line has been 'experiencing delays' since 2007. At what point do we just call it a feature?", location: "Capitol Hill", score: 142, reply_count: 18, hoursOld: 2 },
-  { id: SEED_PREFIX+"post0000000002", content: "Overheard at Georgetown Cupcake: 'Is this gluten-free?' Ma'am it's a cupcake.", location: "Georgetown", score: 87, reply_count: 12, hoursOld: 5 },
-  { id: SEED_PREFIX+"post0000000003", content: "There are two types of people in DC: those who talk about their job at the bar, and liars.", location: "Dupont Circle", score: 134, reply_count: 9, hoursOld: 1 },
-  { id: SEED_PREFIX+"post0000000004", content: "It's 85°F and every tourist on the Mall is wearing jeans and a hoodie. Respect, I guess.", location: "Foggy Bottom", score: 56, reply_count: 4, hoursOld: 14 },
-  { id: SEED_PREFIX+"post0000000005", content: "The guy in front of me at Chick-fil-A ordered a 'well-done filet' and I've been thinking about it ever since.", location: "Adams Morgan", score: 78, reply_count: 7, hoursOld: 8 },
-  { id: SEED_PREFIX+"post0000000006", content: "Navy Yard on a game night is just a $15 beer tax.", location: "Navy Yard", score: 109, reply_count: 11, hoursOld: 3 },
-  { id: SEED_PREFIX+"post0000000007", content: "Spotted: someone reading a physical newspaper on the Metro. Is this 1994?", location: "Arlington", score: 23, reply_count: 2, hoursOld: 20 },
-  { id: SEED_PREFIX+"post0000000008", content: "The new GW freshmen think Founding Farmers is fine dining. Protect them.", location: "Foggy Bottom", score: 95, reply_count: 15, hoursOld: 6 },
-  { id: SEED_PREFIX+"post0000000009", content: "Unpopular opinion: Ben's Chili Bowl is overrated and the only thing keeping it alive is guilt.", location: "U Street", score: 31, reply_count: 20, hoursOld: 12 },
-  { id: SEED_PREFIX+"post0000000010", content: "A lobbyist just sat next to me at Le Diplomate and I can tell because he introduced himself with his job title.", location: "Dupont Circle", score: 67, reply_count: 6, hoursOld: 4 },
-  { id: SEED_PREFIX+"post0000000011", content: "Fun game: count how many people at Bethesda Row are 'in between roles'", location: "Bethesda", score: 88, reply_count: 8, hoursOld: 9 },
-  { id: SEED_PREFIX+"post0000000012", content: "Shoutout to whoever left half a bag of Utz at the Rosslyn station. You're a hero.", location: "Rosslyn", score: 44, reply_count: 3, hoursOld: 16 },
-  { id: SEED_PREFIX+"post0000000013", content: "Columbia Heights is 60% dog walkers, 30% brunch, and 10% whatever the rest of DC thinks it is.", location: "Columbia Heights", score: 101, reply_count: 10, hoursOld: 7 },
-  { id: SEED_PREFIX+"post0000000014", content: "Congress actually passed something today. JK, but imagine.", location: "Capitol Hill", score: 150, reply_count: 17, hoursOld: 1 },
-  { id: SEED_PREFIX+"post0000000015", content: "The intern who asked me 'what do you DO all day' is going to be someone's boss in 5 years, I can feel it.", location: "Foggy Bottom", score: 112, reply_count: 14, hoursOld: 3 },
-  { id: SEED_PREFIX+"post0000000016", content: "Reminder that the humidity index today is 'standing directly inside a mouth'.", location: "Georgetown", score: 75, reply_count: 9, hoursOld: 2 },
-  { id: SEED_PREFIX+"post0000000017", content: "Someone on the Orange Line is eating tuna. I have accepted my fate.", location: "Arlington", score: 63, reply_count: 5, hoursOld: 11 },
-  { id: SEED_PREFIX+"post0000000018", content: "Third Adams Morgan bar this week charging $18 for a cocktail. At some point this is just a cover charge with extras.", location: "Adams Morgan", score: 89, reply_count: 13, hoursOld: 4 },
-  { id: SEED_PREFIX+"post0000000019", content: "Hot take: Georgetown on a Saturday is its own special punishment.", location: "Georgetown", score: 128, reply_count: 16, hoursOld: 6 },
-  { id: SEED_PREFIX+"post0000000020", content: "Just saw a raccoon boldly walk into a CVS on U Street. He lives here too.", location: "U Street", score: 141, reply_count: 19, hoursOld: 1 },
-  { id: SEED_PREFIX+"post0000000021", content: "The Tenleytown Whole Foods is where people go to pay $9 for yogurt and feel nothing.", location: "Tenleytown", score: 54, reply_count: 4, hoursOld: 18 },
-  { id: SEED_PREFIX+"post0000000022", content: "Navy Yard dog park at 7am is the only place in DC where nobody talks about politics.", location: "Navy Yard", score: 97, reply_count: 7, hoursOld: 10 },
-  { id: SEED_PREFIX+"post0000000023", content: "Bethesda real estate listing: 'cozy' (450 sqft), 'vibrant neighborhood' (ambulance sirens), $3,200/mo", location: "Bethesda", score: 116, reply_count: 12, hoursOld: 5 },
-  { id: SEED_PREFIX+"post0000000024", content: "If I have to hear one more person say they 'work at a think tank' I am going to start asking follow-up questions.", location: "Dupont Circle", score: 103, reply_count: 11, hoursOld: 3 },
-  { id: SEED_PREFIX+"post0000000025", content: "Cherry blossoms are gone but the tourists who came for them are still here. We have been abandoned.", location: "Foggy Bottom", score: 138, reply_count: 16, hoursOld: 2 },
+  { id: SEED_PREFIX+"post0000000001", content: "WMATA just announced 'enhanced service' on the Red Line which I can confirm means the same broken escalator now has a cone next to it", location: "Capitol Hill", score: 312, reply_count: 34, hoursOld: 2.2 },
+  { id: SEED_PREFIX+"post0000000002", content: "Overrated: 14th Street corridor. I said what I said. $22 cocktails and a 45-minute wait for a table at a place with no reservations is not a vibe, it's a war crime.", location: "U Street", score: 247, reply_count: 41, hoursOld: 5.7 },
+  { id: SEED_PREFIX+"post0000000003", content: "There are exactly two kinds of people in DC: those who tell you their job title within 90 seconds of meeting them, and people who work at nonprofits and also tell you their job title within 90 seconds.", location: "Dupont Circle", score: 389, reply_count: 28, hoursOld: 1.1 },
+  { id: SEED_PREFIX+"post0000000004", content: "It is 91 degrees with 80% humidity and I just watched a tourist on the Mall ask a park ranger if the Washington Monument is 'original.' It's a obelisk Susan, not a quilt.", location: "Foggy Bottom", score: 58, reply_count: 6, hoursOld: 14.3 },
+  { id: SEED_PREFIX+"post0000000005", content: "Best late-night food in DC — go. I'll start: Z-Burger in Tenleytown at 1am after a bad night is genuinely healing.", location: "Tenleytown", score: 76, reply_count: 52, hoursOld: 8.1 },
+  { id: SEED_PREFIX+"post0000000006", content: "Navy Yard on a Nats game night is just a $14 beer tax with stadium seating. The team is optional.", location: "Navy Yard", score: 183, reply_count: 19, hoursOld: 3.4 },
+  { id: SEED_PREFIX+"post0000000007", content: "A man on the Blue Line today was eating a full Chipotle burrito with a fork and knife out of a bag. The audacity. The commitment. The napkin tucked into his collar. King behavior.", location: "Arlington", score: 9, reply_count: 3, hoursOld: 19.5 },
+  { id: SEED_PREFIX+"post0000000008", content: "GW freshmen have discovered Founding Farmers and think it's fine dining and I will not be the one to tell them otherwise. Let them have this.", location: "Foggy Bottom", score: 134, reply_count: 17, hoursOld: 6.3 },
+  { id: SEED_PREFIX+"post0000000009", content: "Hot take and I will die on this hill: Ben's Chili Bowl is carried entirely by nostalgia and the half smoke. The chili itself is a 6/10. Fight me in the comments.", location: "U Street", score: 44, reply_count: 38, hoursOld: 12.8 },
+  { id: SEED_PREFIX+"post0000000010", content: "A man at Le Diplomate introduced himself as a 'strategic communications consultant for an international affairs advisory firm' and I said 'so... PR?' and he has not spoken to me since.", location: "Dupont Circle", score: 271, reply_count: 22, hoursOld: 4.2 },
+  { id: SEED_PREFIX+"post0000000011", content: "The Bethesda Row Saturday morning scene is just LinkedIn in person. Everyone is 'in between opportunities' or 'exploring' something. The lattes cost $9 and taste like ambition.", location: "Bethesda", score: 97, reply_count: 11, hoursOld: 9.6 },
+  { id: SEED_PREFIX+"post0000000012", content: "Rosslyn is not a neighborhood. It is a collection of office buildings that got depressed and decided to add a farmers market.", location: "Rosslyn", score: 12, reply_count: 4, hoursOld: 17.2 },
+  { id: SEED_PREFIX+"post0000000013", content: "Columbia Heights is the only place in DC where you can get a $4 pupusa and a $19 negroni within 30 feet of each other and both are correct.", location: "Columbia Heights", score: 218, reply_count: 24, hoursOld: 7.4 },
+  { id: SEED_PREFIX+"post0000000014", content: "Congress passed a bipartisan bill today. JK. A staffer left a kombucha in the Senate break room fridge and everyone is blaming each other. Business as usual.", location: "Capitol Hill", score: 354, reply_count: 29, hoursOld: 1.8 },
+  { id: SEED_PREFIX+"post0000000015", content: "My intern asked me 'what do you actually DO all day' with genuine curiosity and I realized I could not answer. Sent him to a meeting in my place. He's been in there two hours. Neither of us has left.", location: "Foggy Bottom", score: 301, reply_count: 31, hoursOld: 3.1 },
+  { id: SEED_PREFIX+"post0000000016", content: "The DC humidity today is 'standing inside someone's mouth.' My glasses fogged when I walked outside. A bird looked damp. We are all suffering equally.", location: "Georgetown", score: 162, reply_count: 15, hoursOld: 2.8 },
+  { id: SEED_PREFIX+"post0000000017", content: "Someone is eating tuna on the Orange Line. Not a sandwich. A can. With a spoon. From their bag. We have entered a new era of Metro dining and I respect the chaos.", location: "Arlington", score: 88, reply_count: 14, hoursOld: 11.1 },
+  { id: SEED_PREFIX+"post0000000018", content: "Adams Morgan bar just charged me $21 for a cocktail called 'the diplomat.' It was vodka, lime, and some smoke they waved at it. I paid. I tipped. I am part of the problem.", location: "Adams Morgan", score: 139, reply_count: 18, hoursOld: 4.9 },
+  { id: SEED_PREFIX+"post0000000019", content: "Georgetown on a Saturday should be classified as a natural disaster. Tourists 4 wide on M Street. Strollers in every direction. A man yelling into AirPods about 'brand synergies.' Get out while you can.", location: "Georgetown", score: 276, reply_count: 33, hoursOld: 6.6 },
+  { id: SEED_PREFIX+"post0000000020", content: "A raccoon walked into the CVS on U Street, grabbed a bag of Flamin' Hot Cheetos off the bottom shelf, and walked out. The cashier watched. Nobody moved. This is his neighborhood too.", location: "U Street", score: 418, reply_count: 47, hoursOld: 1.4 },
+  { id: SEED_PREFIX+"post0000000021", content: "The Whole Foods in Tenleytown is where DC professionals go to pay $11 for coconut water and feel like they're making good decisions about their life. I am there right now. I am not okay.", location: "Tenleytown", score: 67, reply_count: 8, hoursOld: 18.4 },
+  { id: SEED_PREFIX+"post0000000022", content: "Navy Yard dog park at 7am is genuinely the only place in DC where nobody asks what you do for work. Just dogs. Pure chaos. One golden retriever stole a tennis ball and nobody pressed charges.", location: "Navy Yard", score: 193, reply_count: 21, hoursOld: 10.2 },
+  { id: SEED_PREFIX+"post0000000023", content: "Bethesda apartment listing I just saw: 'intimate' (380sqft), 'steps from Metro' (6 blocks), 'modern finishes' (the landlord painted over the outlets), $3,400/mo. Contact for a tour.", location: "Bethesda", score: 229, reply_count: 26, hoursOld: 5.3 },
+  { id: SEED_PREFIX+"post0000000024", content: "If you say you 'work at a think tank' one more time I am going to ask you to think of something in front of me, right now, as a demonstration.", location: "Dupont Circle", score: 334, reply_count: 37, hoursOld: 3.7 },
+  { id: SEED_PREFIX+"post0000000025", content: "The cherry blossoms lasted 4 days. The tourists who came for them have been here for 3 weeks. The blossoms abandoned us but the visitors did not. We live here. We cannot leave.", location: "Foggy Bottom", score: 287, reply_count: 32, hoursOld: 2.5 },
 ];
 
-// 10 replies — attached to posts 1, 2, 9, 14, 20
+// Replies — attached to multiple posts, ~3 per hot post
 const REPLY_DEFS = [
-  { id: SEED_PREFIX+"reply000000001", post_id: POST_DEFS[0].id, content: "The Red Line has been in a committed long-term relationship with 'single tracking'", hoursOld: 1.5 },
-  { id: SEED_PREFIX+"reply000000002", post_id: POST_DEFS[0].id, content: "At this point WMATA is just performance art", hoursOld: 1.8 },
-  { id: SEED_PREFIX+"reply000000003", post_id: POST_DEFS[1].id, content: "I heard someone ask if the cupcakes were locally sourced. We are beyond parody.", hoursOld: 4.5 },
-  { id: SEED_PREFIX+"reply000000004", post_id: POST_DEFS[1].id, content: "Georgetown Cupcake is just a tax on tourists at this point", hoursOld: 4.9 },
-  { id: SEED_PREFIX+"reply000000005", post_id: POST_DEFS[8].id, content: "Bruh Ben's is an institution. You come at the king you best not miss.", hoursOld: 11 },
-  { id: SEED_PREFIX+"reply000000006", post_id: POST_DEFS[8].id, content: "The chili half smoke slaps, everything else is optional", hoursOld: 11.5 },
-  { id: SEED_PREFIX+"reply000000007", post_id: POST_DEFS[8].id, content: "Unpopular opinion posters in this city are usually interns from Ohio, js", hoursOld: 11.8 },
-  { id: SEED_PREFIX+"reply000000008", post_id: POST_DEFS[13].id, content: "This is satire right. RIGHT?", hoursOld: 0.7 },
-  { id: SEED_PREFIX+"reply000000009", post_id: POST_DEFS[19].id, content: "The raccoon was more organized than the last city council meeting", hoursOld: 0.5 },
-  { id: SEED_PREFIX+"reply000000010", post_id: POST_DEFS[19].id, content: "He grabbed a snack and walked out without paying. Aspirational.", hoursOld: 0.8 },
+  // Post 1: WMATA Red Line
+  { id: SEED_PREFIX+"reply000000001", post_id: POST_DEFS[0].id, content: "'Enhanced service' is WMATA for 'we looked at it'", hoursOld: 2.0 },
+  { id: SEED_PREFIX+"reply000000002", post_id: POST_DEFS[0].id, content: "The cone has been there since February. I have accepted it as infrastructure.", hoursOld: 1.7 },
+  { id: SEED_PREFIX+"reply000000003", post_id: POST_DEFS[0].id, content: "They emailed me about 'planned improvements' in 2019. Still waiting.", hoursOld: 1.3 },
+
+  // Post 2: 14th Street overrated
+  { id: SEED_PREFIX+"reply000000004", post_id: POST_DEFS[1].id, content: "THANK YOU. Saying it louder for the people in the back.", hoursOld: 5.3 },
+  { id: SEED_PREFIX+"reply000000005", post_id: POST_DEFS[1].id, content: "disagree. Compass Rose alone carries the whole block.", hoursOld: 5.1 },
+  { id: SEED_PREFIX+"reply000000006", post_id: POST_DEFS[1].id, content: "The 45 min wait is the point. You're paying for the story.", hoursOld: 4.8 },
+
+  // Post 3: job title people
+  { id: SEED_PREFIX+"reply000000007", post_id: POST_DEFS[2].id, content: "I once met someone who led with 'senior fellow' and I didn't know what to do with that", hoursOld: 0.9 },
+  { id: SEED_PREFIX+"reply000000008", post_id: POST_DEFS[2].id, content: "Hi I'm a director of strategic initiatives at a mid-size association and I took this personally", hoursOld: 0.7 },
+
+  // Post 5: late night food question
+  { id: SEED_PREFIX+"reply000000009", post_id: POST_DEFS[4].id, content: "Jumbo Slice after midnight on Adams Morgan is non-negotiable. I don't make the rules.", hoursOld: 7.8 },
+  { id: SEED_PREFIX+"reply000000010", post_id: POST_DEFS[4].id, content: "That 7-11 on H Street at 2am is actually incredible if you know what to order (hint: taquitos)", hoursOld: 7.5 },
+  { id: SEED_PREFIX+"reply000000011", post_id: POST_DEFS[4].id, content: "Old Ebbitt Grill oyster bar is open late and I will die defending that choice", hoursOld: 7.1 },
+  { id: SEED_PREFIX+"reply000000012", post_id: POST_DEFS[4].id, content: "please nobody say Founding Farmers. please.", hoursOld: 6.9 },
+
+  // Post 9: Ben's Chili Bowl hot take
+  { id: SEED_PREFIX+"reply000000013", post_id: POST_DEFS[8].id, content: "You have exactly 24 hours to delete this post before the U Street locals find it", hoursOld: 12.5 },
+  { id: SEED_PREFIX+"reply000000014", post_id: POST_DEFS[8].id, content: "The half smoke is an 11/10 so the average is fine actually", hoursOld: 12.2 },
+  { id: SEED_PREFIX+"reply000000015", post_id: POST_DEFS[8].id, content: "It's iconic specifically because it survived gentrification. That has value.", hoursOld: 11.9 },
+  { id: SEED_PREFIX+"reply000000016", post_id: POST_DEFS[8].id, content: "Moving from Ohio does not give you license to rank DC institutions. I said what I said.", hoursOld: 11.6 },
+
+  // Post 14: Congress kombucha
+  { id: SEED_PREFIX+"reply000000017", post_id: POST_DEFS[13].id, content: "The kombucha was labeled. This is now a federal incident.", hoursOld: 1.6 },
+  { id: SEED_PREFIX+"reply000000018", post_id: POST_DEFS[13].id, content: "This is satire right. RIGHT??", hoursOld: 1.4 },
+
+  // Post 20: raccoon CVS
+  { id: SEED_PREFIX+"reply000000019", post_id: POST_DEFS[19].id, content: "The cashier knew. He just respected the hustle.", hoursOld: 1.2 },
+  { id: SEED_PREFIX+"reply000000020", post_id: POST_DEFS[19].id, content: "Flamin Hots specifically is incredible taste. The raccoon has opinions.", hoursOld: 1.0 },
+  { id: SEED_PREFIX+"reply000000021", post_id: POST_DEFS[19].id, content: "He has more conviction than anyone I've met at a networking event", hoursOld: 0.8 },
+  { id: SEED_PREFIX+"reply000000022", post_id: POST_DEFS[19].id, content: "update: he was back at 9pm with a friend. They went straight to the snack aisle. This city is his.", hoursOld: 0.5 },
+
+  // Post 24: think tank
+  { id: SEED_PREFIX+"reply000000023", post_id: POST_DEFS[23].id, content: "I work at a think tank and I fully support this post", hoursOld: 3.4 },
+  { id: SEED_PREFIX+"reply000000024", post_id: POST_DEFS[23].id, content: "what are you thinking about. Right now. Out loud.", hoursOld: 3.1 },
+  { id: SEED_PREFIX+"reply000000025", post_id: POST_DEFS[23].id, content: "My brother told someone he 'ideates at a policy-focused research institute' and I haven't forgiven him", hoursOld: 2.9 },
 ];
 
 // 5 mod actions on posts: approvals[0,1], flag[2], warn[3], remove[4]
@@ -372,14 +402,14 @@ async function seed() {
       score: def.score,
       reply_count: def.reply_count,
       created_at: createdAt,
-      expires_at: in24h(createdAt),
+      expires_at: in30d(createdAt),
       status: "active",
     });
   }
   console.log("✅ 25 posts created");
 
   // ── 4. Replies ─────────────────────────────────────────────────────────────
-  console.log("💬 Creating 10 sample replies...");
+  console.log(`💬 Creating ${REPLY_DEFS.length} sample replies...`);
 
   for (const def of REPLY_DEFS) {
     await db.insert(replies).values({
@@ -392,7 +422,7 @@ async function seed() {
       status: "active",
     });
   }
-  console.log("✅ 10 replies created");
+  console.log(`✅ ${REPLY_DEFS.length} replies created`);
 
   // ── 5. Mod actions ─────────────────────────────────────────────────────────
   console.log("🛡️  Creating 5 mod actions...");

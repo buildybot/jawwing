@@ -70,17 +70,27 @@ export default function TermsPage() {
           </div>
         ))}
 
-        <div style={{ borderTop: "1px solid #1F1F1F", paddingTop: "32px", display: "flex", gap: "24px" }}>
-          <Link href="/privacy" style={{ ...MONO, color: "#777777", fontSize: "0.6875rem", letterSpacing: "0.06em", textDecoration: "none" }}
-            className="hover:text-white transition-colors">
-            PRIVACY POLICY →
-          </Link>
-          <Link href="/constitution" style={{ ...MONO, color: "#777777", fontSize: "0.6875rem", letterSpacing: "0.06em", textDecoration: "none" }}
-            className="hover:text-white transition-colors">
-            CONSTITUTION →
-          </Link>
+        <div style={{ borderTop: "1px solid #1F1F1F", paddingTop: "32px", display: "flex", flexWrap: "wrap", gap: "24px" }}>
+          {[
+            { href: "/about", label: "ABOUT" },
+            { href: "/terms", label: "TERMS" },
+            { href: "/privacy", label: "PRIVACY" },
+            { href: "/constitution", label: "CONSTITUTION" },
+            { href: "/transparency", label: "TRANSPARENCY" },
+          ].map(({ href, label }) => (
+            <Link key={href} href={href} style={{ ...MONO, color: "#777777", fontSize: "0.6875rem", letterSpacing: "0.06em", textDecoration: "none" }}
+              className="hover:text-white transition-colors">
+              {label}
+            </Link>
+          ))}
         </div>
       </main>
+
+      <footer style={{ borderTop: "1px solid #1F1F1F", padding: "24px" }}>
+        <p style={{ ...MONO, color: "#333333", fontSize: "0.625rem", letterSpacing: "0.06em", textAlign: "center" }}>
+          © {new Date().getFullYear()} JAWWING · ANONYMOUS LOCAL POSTS
+        </p>
+      </footer>
     </div>
   );
 }

@@ -8,7 +8,6 @@ import {
   getConstitutionVersion,
   getConstitutionAmendments,
   submitConstitutionAmendment,
-  isAuthenticated,
   formatTimeAgo,
   type ConstitutionRule,
   type ConstitutionVersionSummary,
@@ -132,8 +131,6 @@ export default function ConstitutionPage() {
   const [formError, setFormError] = useState("");
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [formSuccess, setFormSuccess] = useState(false);
-  const authed = typeof window !== "undefined" ? isAuthenticated() : false;
-
   useEffect(() => {
     // Load active constitution + versions in parallel
     Promise.all([
@@ -532,42 +529,23 @@ export default function ConstitutionPage() {
             Want to propose an amendment?
           </p>
           <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-            {authed ? (
-              <button
-                onClick={() => setShowAmendForm(!showAmendForm)}
-                style={{
-                  ...MONO,
-                  background: showAmendForm ? "#111" : "#FFFFFF",
-                  color: showAmendForm ? "#FFFFFF" : "#000000",
-                  border: "1px solid #FFFFFF",
-                  padding: "8px 20px",
-                  fontSize: "0.75rem",
-                  letterSpacing: "0.06em",
-                  fontWeight: 500,
-                  cursor: "pointer",
-                  transition: "background 150ms, color 150ms",
-                }}
-              >
-                {showAmendForm ? "CANCEL" : "PROPOSE AMENDMENT"}
-              </button>
-            ) : (
-              <Link
-                href="/"
-                style={{
-                  ...MONO,
-                  background: "#FFFFFF",
-                  color: "#000000",
-                  border: "1px solid #FFFFFF",
-                  padding: "8px 20px",
-                  fontSize: "0.75rem",
-                  letterSpacing: "0.06em",
-                  fontWeight: 500,
-                  textDecoration: "none",
-                }}
-              >
-                JOIN TO PROPOSE
-              </Link>
-            )}
+            <button
+              onClick={() => setShowAmendForm(!showAmendForm)}
+              style={{
+                ...MONO,
+                background: showAmendForm ? "#111" : "#FFFFFF",
+                color: showAmendForm ? "#FFFFFF" : "#000000",
+                border: "1px solid #FFFFFF",
+                padding: "8px 20px",
+                fontSize: "0.75rem",
+                letterSpacing: "0.06em",
+                fontWeight: 500,
+                cursor: "pointer",
+                transition: "background 150ms, color 150ms",
+              }}
+            >
+              {showAmendForm ? "CANCEL" : "PROPOSE AMENDMENT"}
+            </button>
           </div>
         </div>
 

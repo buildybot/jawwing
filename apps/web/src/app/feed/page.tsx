@@ -1,13 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import FeedTabs, { SortTab } from "@/components/FeedTabs";
 import PostCard, { Post as PostCardPost } from "@/components/PostCard";
 import CreatePostModal from "@/components/CreatePostModal";
 import { ToastProvider } from "@/components/Toast";
-import { fetchPosts, fetchNewPosts, createPost, isAuthenticated, getTerritoryFeed, type Post } from "@/lib/api";
+import { fetchPosts, fetchNewPosts, createPost, getTerritoryFeed, type Post } from "@/lib/api";
 import { requestLocation, reverseGeocode } from "@/lib/location";
 import { formatTimeAgo, formatDistance } from "@/lib/api";
 import { type TerritorySelection } from "@/components/TerritorySelector";
@@ -39,10 +38,9 @@ function toCardPost(
 }
 
 export default function FeedPage() {
-  const router = useRouter();
   const [activeTab, setActiveTab] = useState<SortTab>("hot");
   const [showModal, setShowModal] = useState(false);
-  const [showLoginBanner, setShowLoginBanner] = useState(false);
+
 
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -254,10 +252,6 @@ export default function FeedPage() {
   };
 
   const handleCreatePost = async (content: string, imageUrl?: string) => {
-    if (false) {
-      setShowLoginBanner(true);
-      throw new Error("Login required");
-    }
     if (userLat == null || userLng == null) {
       throw new Error("Location required to post.");
     }
@@ -266,10 +260,6 @@ export default function FeedPage() {
   };
 
   const handleFabClick = () => {
-    if (false) {
-      setShowLoginBanner(true);
-      return;
-    }
     if (isRemoteTerritory) return;
     setShowModal(true);
   };
@@ -290,68 +280,11 @@ export default function FeedPage() {
           onTerritoryChange={setSelectedTerritory}
         />
 
-        {/* Login banner */}
-        {showLoginBanner && (
-          <div
-            style={{
-              background: "#0A0A0A",
-              border: "1px solid #1F1F1F",
-              borderLeft: "2px solid #FFFFFF",
-              padding: "12px 16px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: "12px",
-              maxWidth: "480px",
-              margin: "0 auto",
-            }}
-          >
-            <span style={{ ...MONO, color: "#C0C0C0", fontSize: "0.75rem", letterSpacing: "0.04em" }}>
-              SIGN IN TO POST OR VOTE
-            </span>
-            <div style={{ display: "flex", gap: "8px" }}>
-              <button
-                onClick={() => router.push("/login")}
-                style={{
-                  ...MONO,
-                  background: "#FFFFFF",
-                  color: "#000000",
-                  border: "none",
-                  padding: "6px 14px",
-                  fontSize: "0.75rem",
-                  fontWeight: 600,
-                  letterSpacing: "0.06em",
-                  cursor: "pointer",
-                }}
-              >
-                LOGIN
-              </button>
-              <button
-                onClick={() => setShowLoginBanner(false)}
-                style={{
-                  ...MONO,
-                  background: "none",
-                  color: "#777777",
-                  border: "none",
-                  padding: "6px",
-                  fontSize: "0.875rem",
-                  cursor: "pointer",
-                }}
-              >
-                ✕
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Location fallback banner — amber/visible so users know GPS failed */}
+        {/* Location fallback banner — subtle note */}
         {locationFallback && !isRemoteTerritory && (
           <div
             style={{
-              background: "#1A1200",
-              border: "1px solid #3D2E00",
-              borderLeft: "3px solid #F5A500",
-              padding: "10px 16px",
+              padding: "6px 16px",
               maxWidth: "480px",
               margin: "0 auto",
               display: "flex",
@@ -359,10 +292,16 @@ export default function FeedPage() {
               gap: "8px",
             }}
           >
-            <span style={{ fontSize: "0.875rem", lineHeight: "1" }}>⚠</span>
-            <span style={{ ...MONO, color: "#F5A500", fontSize: "0.6875rem", letterSpacing: "0.06em" }}>
-              LOCATION UNAVAILABLE · SHOWING DC METRO
+            <span style={{ ...MONO, color: "#555555", fontSize: "0.625rem", letterSpacing: "0.06em" }}>
+              DC METRO
             </span>
+            <span style={{ color: "#333333", fontSize: "0.625rem" }}>·</span>
+            <button
+              onClick={() => window.location.reload()}
+              style={{ ...MONO, color: "#555555", fontSize: "0.625rem", letterSpacing: "0.06em", background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}
+            >
+              ENABLE LOCATION FOR YOUR AREA
+            </button>
           </div>
         )}
 
@@ -522,7 +461,6 @@ export default function FeedPage() {
                 <PostCard
                   key={post.id}
                   post={toCardPost(post, userLat, userLng, territoryName)}
-                  onLoginRequired={() => setShowLoginBanner(true)}
                 />
               ))}
             </div>

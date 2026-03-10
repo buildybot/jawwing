@@ -12,6 +12,8 @@ import { formatTimeAgo, formatDistance } from "@/lib/api";
 import { type TerritorySelection } from "@/components/TerritorySelector";
 import Link from "next/link";
 
+const FEED_CACHE_KEY = "jawwing_feed_cache";
+
 const MONO = { fontFamily: "var(--font-mono), monospace" } as const;
 const LIMIT = 20;
 const POLL_INTERVAL_MS = 30_000;
@@ -54,6 +56,25 @@ export default function FeedPage() {
   const [hasMore, setHasMore] = useState(true);
   const [offset, setOffset] = useState(0);
 
+  // Pull-to-refresh state
+  const [ptrState, setPtrState] = useState<"idle" | "pulling" | "ready" | "refreshing">("idle");
+  const [ptrHeight, setPtrHeight] = useState(0);
+  const touchStartYRef = useRef(0);
+  const PTR_THRESHOLD = 72;
+
+  // Load cached feed on first mount so returning users see content immediately
+  useEffect(() => {
+    try {
+      const cached = localStorage.getItem(FEED_CACHE_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached) as Post[];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setPosts(parsed);
+        }
+      }
+    } catch { /* noop */ }
+  }, []);
+
   // Welcome card
   const [welcomeDismissed, setWelcomeDismissed] = useState(true);
   useEffect(() => {
@@ -84,6 +105,18 @@ export default function FeedPage() {
   const [selectedTerritory, setSelectedTerritory] = useState<TerritorySelection>({ type: "near_me" });
 
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
+  // Scroll-to-top button
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setShowScrollTop(window.scrollY > 500);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // Track post ids for fade-in animation (new posts prepended)
+  const [animatedIds, setAnimatedIds] = useState<Set<string>>(new Set());
+  const prevPostIdsRef = useRef<Set<string>>(new Set());
 
   // Request real GPS in background — update coords when available
   useEffect(() => {
@@ -147,6 +180,8 @@ export default function FeedPage() {
           setPosts(fetchedPosts);
           if (fetchedPosts.length > 0) {
             latestTimestampRef.current = Math.max(...fetchedPosts.map((p) => p.created_at));
+            // Cache feed in localStorage for offline/returning users
+            try { localStorage.setItem(FEED_CACHE_KEY, JSON.stringify(fetchedPosts)); } catch { /* noop */ }
           }
         } else {
           setPosts((prev) => [...prev, ...fetchedPosts]);
@@ -154,7 +189,8 @@ export default function FeedPage() {
         setOffset(currentOffset + fetchedPosts.length);
         setHasMore(fetchedPosts.length === LIMIT);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load posts.");
+        const isOffline = !navigator.onLine || (err instanceof TypeError && err.message.toLowerCase().includes("fetch"));
+        setError(isOffline ? "CAN'T CONNECT · CHECK YOUR CONNECTION" : (err instanceof Error ? err.message : "Failed to load posts."));
       } finally {
         setLoading(false);
         setLoadingMore(false);
@@ -211,6 +247,16 @@ export default function FeedPage() {
       latestTimestampRef.current,
       ...newPosts.map((p) => p.created_at)
     );
+    const toAddIds = new Set(newPosts.map((p) => p.id));
+    setAnimatedIds((prev) => new Set([...prev, ...toAddIds]));
+    // Remove from animated set after animation completes
+    setTimeout(() => {
+      setAnimatedIds((prev) => {
+        const next = new Set(prev);
+        toAddIds.forEach((id) => next.delete(id));
+        return next;
+      });
+    }, 400);
     setPosts((prev) => {
       const existingIds = new Set(prev.map((p) => p.id));
       const toAdd = newPosts.filter((p) => !existingIds.has(p.id));
@@ -218,6 +264,7 @@ export default function FeedPage() {
     });
     setNewPosts([]);
     setShowNewBanner(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   // Infinite scroll
@@ -248,6 +295,36 @@ export default function FeedPage() {
     setShowModal(true);
   };
 
+  // ── Pull-to-refresh handlers ──────────────────────────────────────────────
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (window.scrollY === 0) {
+      touchStartYRef.current = e.touches[0].clientY;
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (window.scrollY !== 0 || loading) return;
+    const dy = e.touches[0].clientY - touchStartYRef.current;
+    if (dy <= 0) return;
+    const h = Math.min(dy * 0.5, PTR_THRESHOLD + 20);
+    setPtrHeight(h);
+    setPtrState(h >= PTR_THRESHOLD * 0.5 ? (dy > PTR_THRESHOLD ? "ready" : "pulling") : "idle");
+  };
+
+  const handleTouchEnd = () => {
+    if (ptrState === "ready") {
+      setPtrState("refreshing");
+      setPtrHeight(40);
+      loadFeed(true).finally(() => {
+        setPtrState("idle");
+        setPtrHeight(0);
+      });
+    } else {
+      setPtrState("idle");
+      setPtrHeight(0);
+    }
+  };
+
   const territoryName =
     selectedTerritory.type === "territory"
       ? selectedTerritory.territory.name
@@ -255,7 +332,22 @@ export default function FeedPage() {
 
   return (
     <ToastProvider>
-      <div style={{ background: "#000000", minHeight: "100vh" }}>
+      <div
+        style={{ background: "#000000", minHeight: "100vh" }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        {/* Pull-to-refresh indicator */}
+        {ptrState !== "idle" && (
+          <div
+            className="ptr-indicator"
+            style={{ height: ptrHeight, opacity: ptrHeight > 10 ? 1 : 0 }}
+          >
+            <span className={`ptr-arrow${ptrState === "ready" ? " ready" : ptrState === "refreshing" ? " spinning" : ""}`}>↻</span>
+            <span>{ptrState === "ready" ? "RELEASE TO REFRESH" : ptrState === "refreshing" ? "REFRESHING..." : "PULL TO REFRESH"}</span>
+          </div>
+        )}
         <Header
           location={locationLabel}
           userLat={userLat}
@@ -264,14 +356,11 @@ export default function FeedPage() {
           onTerritoryChange={setSelectedTerritory}
         />
 
-        {/* Location fallback banner */}
+        {/* Location fallback — subtle, not alarming */}
         {locationFallback && !isRemoteTerritory && (
           <div
             style={{
-              background: "#1A1200",
-              border: "1px solid #3D2E00",
-              borderLeft: "3px solid #F5A500",
-              padding: "10px 16px",
+              padding: "6px 16px",
               margin: "0 auto",
               display: "flex",
               alignItems: "center",
@@ -279,10 +368,16 @@ export default function FeedPage() {
             }}
             className="feed-container"
           >
-            <span style={{ fontSize: "0.875rem", lineHeight: "1" }}>⚠</span>
-            <span style={{ ...MONO, color: "#F5A500", fontSize: "0.6875rem", letterSpacing: "0.06em" }}>
-              LOCATION UNAVAILABLE · SHOWING DC METRO
+            <span style={{ ...MONO, color: "#555555", fontSize: "0.625rem", letterSpacing: "0.06em" }}>
+              DC METRO
             </span>
+            <span style={{ color: "#333333", fontSize: "0.625rem" }}>·</span>
+            <button
+              onClick={() => window.location.reload()}
+              style={{ ...MONO, color: "#555555", fontSize: "0.625rem", letterSpacing: "0.06em", background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}
+            >
+              ENABLE LOCATION FOR YOUR AREA
+            </button>
           </div>
         )}
 
@@ -359,8 +454,8 @@ export default function FeedPage() {
               style={{
                 background: "#0A0A0A",
                 border: "1px solid #1F1F1F",
-                borderLeft: "2px solid #FFFFFF",
-                padding: "16px",
+                borderLeft: "3px solid #FFFFFF",
+                padding: "20px 16px",
                 margin: "2px 0",
                 display: "flex",
                 alignItems: "flex-start",
@@ -369,15 +464,18 @@ export default function FeedPage() {
               }}
             >
               <div>
-                <p style={{ ...MONO, color: "#FFFFFF", fontSize: "0.75rem", fontWeight: 600, letterSpacing: "0.06em", marginBottom: "6px" }}>
-                  WELCOME TO JAWWING
+                <p style={{ ...MONO, color: "#FFFFFF", fontSize: "1rem", fontWeight: 700, letterSpacing: "0.08em", marginBottom: "10px", lineHeight: 1.2 }}>
+                  YOUR NEIGHBORHOOD<br />IS TALKING
                 </p>
-                <p style={{ color: "#777777", fontSize: "0.8125rem", lineHeight: 1.5, marginBottom: "10px" }}>
-                  Anonymous, location-based posts. No account required. AI-moderated.
+                <p style={{ color: "#C0C0C0", fontSize: "0.875rem", lineHeight: 1.6, marginBottom: "6px" }}>
+                  Anonymous posts from people near you. No accounts. No names. Just 300 characters and an opinion.
+                </p>
+                <p style={{ color: "#777777", fontSize: "0.8125rem", lineHeight: 1.5, marginBottom: "14px" }}>
+                  Posts expire in 24 hours. What happens here, stays here.
                 </p>
                 <Link
                   href="/about"
-                  style={{ ...MONO, color: "#C0C0C0", fontSize: "0.6875rem", letterSpacing: "0.06em", textDecoration: "none" }}
+                  style={{ ...MONO, color: "#777777", fontSize: "0.6875rem", letterSpacing: "0.06em", textDecoration: "none" }}
                   className="hover:text-white transition-colors"
                 >
                   LEARN MORE →
@@ -389,7 +487,7 @@ export default function FeedPage() {
                   background: "none",
                   border: "none",
                   color: "#555555",
-                  fontSize: "0.875rem",
+                  fontSize: "1rem",
                   cursor: "pointer",
                   flexShrink: 0,
                   padding: 0,
@@ -476,12 +574,36 @@ export default function FeedPage() {
           {/* Empty */}
           {!loading && !error && posts.length === 0 && (
             <div style={{ padding: "60px 16px", textAlign: "center" }}>
-              <p style={{ ...MONO, color: "#333333", fontSize: "0.75rem", letterSpacing: "0.06em", marginBottom: "8px" }}>
-                NO POSTS YET
+              <p style={{ ...MONO, color: "#FFFFFF", fontSize: "0.875rem", fontWeight: 700, letterSpacing: "0.1em", marginBottom: "10px" }}>
+                NOTHING HERE YET
               </p>
-              <p style={{ color: "#777777", fontSize: "0.875rem" }}>
-                {territoryName ? `Nothing in ${territoryName} yet.` : "Be the first to post in your area."}
+              <p style={{ color: "#777777", fontSize: "0.875rem", marginBottom: "28px" }}>
+                {territoryName ? `Be the first to post in ${territoryName}.` : "Be the first to post in your area."}
               </p>
+              {!isRemoteTerritory && (
+                <button
+                  onClick={handleFabClick}
+                  style={{
+                    background: "#FFFFFF",
+                    color: "#000000",
+                    border: "none",
+                    width: "56px",
+                    height: "56px",
+                    fontSize: "1.75rem",
+                    fontWeight: 300,
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    transition: "background 150ms",
+                    borderRadius: "2px",
+                  } as React.CSSProperties}
+                  className="hover:bg-[#C0C0C0]"
+                  aria-label="Create post"
+                >
+                  +
+                </button>
+              )}
             </div>
           )}
 
@@ -489,10 +611,16 @@ export default function FeedPage() {
           {!loading && !error && posts.length > 0 && (
             <div className="flex flex-col" style={{ gap: "2px", paddingTop: "2px" }}>
               {posts.map((post) => (
-                <PostCard
+                <div
                   key={post.id}
-                  post={toCardPost(post, userLat, userLng, territoryName)}
-                />
+                  style={animatedIds.has(post.id) ? {
+                    animation: "fadeInDown 200ms ease forwards",
+                  } : undefined}
+                >
+                  <PostCard
+                    post={toCardPost(post, userLat, userLng, territoryName)}
+                  />
+                </div>
               ))}
             </div>
           )}
@@ -520,10 +648,10 @@ export default function FeedPage() {
           disabled={isRemoteTerritory}
           style={{
             position: "fixed",
-            bottom: "24px",
+            bottom: "calc(24px + env(safe-area-inset-bottom))",
             right: "24px",
-            width: "52px",
-            height: "52px",
+            width: "56px",
+            height: "56px",
             background: isRemoteTerritory ? "#1F1F1F" : "#FFFFFF",
             color: isRemoteTerritory ? "#777777" : "#000000",
             border: isRemoteTerritory ? "1px solid #333333" : "none",
@@ -550,6 +678,37 @@ export default function FeedPage() {
           onClose={() => setShowModal(false)}
           onSubmit={handleCreatePost}
         />
+
+        {/* Scroll to top */}
+        <button
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          style={{
+            position: "fixed",
+            bottom: "24px",
+            left: "24px",
+            width: "36px",
+            height: "36px",
+            background: "#000000",
+            color: "#FFFFFF",
+            border: "1px solid #333333",
+            fontSize: "1rem",
+            lineHeight: 1,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 30,
+            opacity: showScrollTop ? 1 : 0,
+            pointerEvents: showScrollTop ? "auto" : "none",
+            transition: "opacity 200ms ease",
+            borderRadius: "2px",
+            ...MONO,
+          } as React.CSSProperties}
+          aria-label="Scroll to top"
+          title="Back to top"
+        >
+          ↑
+        </button>
       </div>
     </ToastProvider>
   );
