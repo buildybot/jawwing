@@ -875,6 +875,121 @@ export default function FeedPage() {
             </p>
           )}
 
+          {/* Algorithm & Info Footer */}
+          <div style={{
+            borderTop: "1px solid #1A1A1A",
+            margin: "40px 0 0",
+            padding: "32px 16px 24px",
+          }}>
+            {/* Navigation links */}
+            <div style={{
+              display: "flex",
+              gap: "16px",
+              flexWrap: "wrap",
+              marginBottom: "32px",
+            }}>
+              {[
+                { href: "/constitution", label: "CONSTITUTION" },
+                { href: "/transparency", label: "TRANSPARENCY" },
+                { href: "/terms", label: "TERMS" },
+                { href: "/privacy", label: "PRIVACY" },
+                { href: "/about", label: "ABOUT" },
+              ].map(link => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  style={{
+                    ...MONO,
+                    color: "#555555",
+                    fontSize: "0.625rem",
+                    letterSpacing: "0.1em",
+                    textDecoration: "none",
+                    padding: "6px 0",
+                    borderBottom: "1px solid transparent",
+                    transition: "color 150ms, border-color 150ms",
+                  }}
+                  className="hover:text-[#AAAAAA] hover:border-[#333]"
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </div>
+
+            {/* Algorithm explainer */}
+            <div style={{ marginBottom: "28px" }}>
+              <h3 style={{
+                ...MONO,
+                color: "#555555",
+                fontSize: "0.625rem",
+                letterSpacing: "0.12em",
+                fontWeight: 700,
+                marginBottom: "16px",
+              }}>
+                HOW THE FEED WORKS
+              </h3>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                {/* Sort modes */}
+                <div>
+                  <h4 style={{ ...MONO, color: "#888888", fontSize: "0.625rem", letterSpacing: "0.08em", fontWeight: 600, marginBottom: "6px" }}>
+                    SORT
+                  </h4>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    <p style={{ color: "#555555", fontSize: "0.75rem", lineHeight: 1.5, margin: 0 }}>
+                      <span style={{ ...MONO, color: "#888888", fontSize: "0.625rem", letterSpacing: "0.06em" }}>HOT </span>
+                      Ranks posts by a combination of votes, engagement, and freshness. Newer posts with more activity rise to the top. Posts closer to you get a small boost. Controversial posts (lots of both upvotes and downvotes) surface higher than buried ones.
+                    </p>
+                    <p style={{ color: "#555555", fontSize: "0.75rem", lineHeight: 1.5, margin: 0 }}>
+                      <span style={{ ...MONO, color: "#888888", fontSize: "0.625rem", letterSpacing: "0.06em" }}>NEW </span>
+                      Most recent posts first. No ranking, no algorithm. Pure chronological order.
+                    </p>
+                    <p style={{ color: "#555555", fontSize: "0.75rem", lineHeight: 1.5, margin: 0 }}>
+                      <span style={{ ...MONO, color: "#888888", fontSize: "0.625rem", letterSpacing: "0.06em" }}>TOP </span>
+                      Sorted by total engagement (upvotes + downvotes combined). The most interacted-with posts rise to the top, regardless of whether people agreed or not.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Scope modes */}
+                <div>
+                  <h4 style={{ ...MONO, color: "#888888", fontSize: "0.625rem", letterSpacing: "0.08em", fontWeight: 600, marginBottom: "6px" }}>
+                    SCOPE
+                  </h4>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    <p style={{ color: "#555555", fontSize: "0.75rem", lineHeight: 1.5, margin: 0 }}>
+                      <span style={{ ...MONO, color: "#888888", fontSize: "0.625rem", letterSpacing: "0.06em" }}>LOCAL </span>
+                      Posts within 5 kilometers of your current location. Your immediate neighborhood. If there aren{"'"}t enough posts nearby, the radius automatically expands until you see at least 10.
+                    </p>
+                    <p style={{ color: "#555555", fontSize: "0.75rem", lineHeight: 1.5, margin: 0 }}>
+                      <span style={{ ...MONO, color: "#888888", fontSize: "0.625rem", letterSpacing: "0.06em" }}>METRO </span>
+                      All posts in your metro area (about a 20-mile radius around the city center). See what your whole city is talking about.
+                    </p>
+                    <p style={{ color: "#555555", fontSize: "0.75rem", lineHeight: 1.5, margin: 0 }}>
+                      <span style={{ ...MONO, color: "#888888", fontSize: "0.625rem", letterSpacing: "0.06em" }}>COUNTRY </span>
+                      Every post, everywhere. Browse what people across all cities are posting. Posts closer to you still rank slightly higher in HOT mode.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Key details */}
+                <div>
+                  <h4 style={{ ...MONO, color: "#888888", fontSize: "0.625rem", letterSpacing: "0.08em", fontWeight: 600, marginBottom: "6px" }}>
+                    KEY DETAILS
+                  </h4>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                    <p style={{ color: "#555555", fontSize: "0.75rem", lineHeight: 1.5, margin: 0 }}>
+                      All posts expire after 24 hours. You can only post from your current GPS location, but you can browse and vote from anywhere. Content is moderated by AI agents following our public Constitution. No humans moderate this app.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <p style={{ ...MONO, color: "#333333", fontSize: "0.5625rem", letterSpacing: "0.06em" }}>
+              JAWWING · 2026
+            </p>
+          </div>
+
           <div style={{ height: "80px" }} />
         </main>
 
