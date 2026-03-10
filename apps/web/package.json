@@ -12,6 +12,7 @@
     "@google/generative-ai": "^0.21.0",
     "@libsql/client": "^0.17.0",
     "@types/jsonwebtoken": "^9.0.0",
+    "@vercel/blob": "^2.3.1",
     "drizzle-orm": "^0.45.1",
     "h3-js": "^4.4.0",
     "jsonwebtoken": "^9.0.0",

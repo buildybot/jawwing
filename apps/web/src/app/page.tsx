@@ -14,6 +14,8 @@ import { formatTimeAgo, formatDistance } from "@/lib/api";
 import { type TerritorySelection } from "@/components/TerritorySelector";
 import { useAuth } from "@/lib/auth";
 
+const HEADER_HEIGHT = 56; // px — keep in sync with Header component
+
 const MONO = { fontFamily: "var(--font-mono), monospace" } as const;
 const LIMIT = 20;
 const POLL_INTERVAL_MS = 30_000;
