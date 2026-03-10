@@ -57,10 +57,15 @@ export default function FeedPage() {
   const latestTimestampRef = useRef<number>(0);
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // DC Metro fallback
+  const DC_LAT = 38.9072;
+  const DC_LNG = -77.0369;
+
   const [userLat, setUserLat] = useState<number | undefined>();
   const [userLng, setUserLng] = useState<number | undefined>();
   const [locationLabel, setLocationLabel] = useState("Getting location...");
   const [locationError, setLocationError] = useState(false);
+  const [locationFallback, setLocationFallback] = useState(false);
 
   // Territory selection — default to "near me"
   const [selectedTerritory, setSelectedTerritory] = useState<TerritorySelection>({
@@ -69,19 +74,40 @@ export default function FeedPage() {
 
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
-  // Get location on mount
+  // Get location on mount — 5s timeout, fall back to DC Metro
   useEffect(() => {
+    let cancelled = false;
+
+    const fallbackToDC = () => {
+      if (cancelled) return;
+      setLocationError(true);
+      setLocationFallback(true);
+      setUserLat(DC_LAT);
+      setUserLng(DC_LNG);
+      setLocationLabel("DC Metro");
+    };
+
+    const timeoutId = setTimeout(fallbackToDC, 5_000);
+
     requestLocation()
       .then(async ({ lat, lng }) => {
+        if (cancelled) return;
+        clearTimeout(timeoutId);
         setUserLat(lat);
         setUserLng(lng);
         const label = await reverseGeocode(lat, lng);
-        setLocationLabel(label);
+        if (!cancelled) setLocationLabel(label);
       })
       .catch(() => {
-        setLocationError(true);
-        setLocationLabel("Location unavailable");
+        clearTimeout(timeoutId);
+        fallbackToDC();
       });
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Check if user is browsing a remote territory (not physically near it)
@@ -91,11 +117,7 @@ export default function FeedPage() {
   const loadFeed = useCallback(
     async (reset = false) => {
       if (selectedTerritory.type === "near_me") {
-        if (locationError && !userLat) {
-          setError("Location required to load feed.");
-          setLoading(false);
-          return;
-        }
+        // If location is still resolving, wait
         if (userLat == null || userLng == null) return;
       }
 
@@ -319,6 +341,24 @@ export default function FeedPage() {
                 ✕
               </button>
             </div>
+          </div>
+        )}
+
+        {/* Location fallback banner */}
+        {locationFallback && !isRemoteTerritory && (
+          <div
+            style={{
+              background: "#0A0A0A",
+              border: "1px solid #1F1F1F",
+              borderLeft: "2px solid #555555",
+              padding: "10px 16px",
+              maxWidth: "480px",
+              margin: "0 auto",
+            }}
+          >
+            <span style={{ ...MONO, color: "#555555", fontSize: "0.6875rem", letterSpacing: "0.06em" }}>
+              LOCATION UNAVAILABLE · SHOWING DC METRO
+            </span>
           </div>
         )}
 

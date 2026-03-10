@@ -218,6 +218,21 @@ export const reports = sqliteTable(
   })
 );
 
+// ─── waitlist ─────────────────────────────────────────────────────────────────
+
+export const waitlist = sqliteTable(
+  "waitlist",
+  {
+    id: text("id").primaryKey(),
+    email: text("email").unique().notNull(),
+    created_at: integer("created_at").notNull(),
+  },
+  (t) => ({
+    idxWaitlistEmail: uniqueIndex("idx_waitlist_email").on(t.email),
+    idxWaitlistCreatedAt: index("idx_waitlist_created_at").on(t.created_at),
+  })
+);
+
 // ─── Type exports ─────────────────────────────────────────────────────────────
 
 export type User = typeof users.$inferSelect;
@@ -236,3 +251,5 @@ export type ApiKey = typeof api_keys.$inferSelect;
 export type NewApiKey = typeof api_keys.$inferInsert;
 export type Report = typeof reports.$inferSelect;
 export type NewReport = typeof reports.$inferInsert;
+export type Waitlist = typeof waitlist.$inferSelect;
+export type NewWaitlist = typeof waitlist.$inferInsert;

@@ -39,6 +39,7 @@ export {
   territories,
   api_keys,
   reports,
+  waitlist,
 } from "./schema";
 
 // ─── Re-export types ──────────────────────────────────────────────────────────
@@ -60,6 +61,8 @@ export type {
   NewApiKey,
   Report,
   NewReport,
+  Waitlist,
+  NewWaitlist,
 } from "./schema";
 
 // ─── Re-export schema (for drizzle-kit / migrations) ─────────────────────────

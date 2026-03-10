@@ -11,6 +11,14 @@ export default function WaitlistForm() {
     e.preventDefault();
     if (!email) return;
 
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setStatus("error");
+      setMessage("Please enter a valid email address.");
+      return;
+    }
+
     setStatus("loading");
     try {
       const res = await fetch("/api/waitlist", {
@@ -21,14 +29,15 @@ export default function WaitlistForm() {
 
       if (res.ok) {
         setStatus("success");
-        setMessage("You're on the list.");
+        setMessage("YOU'RE ON THE LIST");
         setEmail("");
       } else {
-        throw new Error("Failed");
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? "Failed");
       }
-    } catch {
+    } catch (err) {
       setStatus("error");
-      setMessage("Something went wrong. Try again.");
+      setMessage(err instanceof Error ? err.message : "Something went wrong. Try again.");
     }
   };
 
@@ -38,8 +47,9 @@ export default function WaitlistForm() {
         style={{
           fontFamily: "var(--font-mono), monospace",
           color: "#FFFFFF",
-          letterSpacing: "0.04em",
-          fontSize: "0.875rem",
+          letterSpacing: "0.08em",
+          fontSize: "0.8125rem",
+          fontWeight: 700,
           border: "1px solid #333333",
           padding: "12px 20px",
         }}
@@ -90,7 +100,7 @@ export default function WaitlistForm() {
           transition: "opacity 150ms",
         }}
       >
-        {status === "loading" ? "..." : "JOIN WAITLIST"}
+        {status === "loading" ? "JOINING..." : "JOIN WAITLIST"}
       </button>
       {status === "error" && (
         <p
