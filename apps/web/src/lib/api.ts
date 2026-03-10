@@ -44,6 +44,8 @@ export interface Post {
   metro?: string | null;
   video_url?: string | null;
   video_thumbnail?: string | null;
+  mod_confidence?: number | null;
+  mod_action_id?: string | null;
   // computed client-side
   timeAgo?: string;
   distance?: string;

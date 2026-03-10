@@ -122,6 +122,7 @@ export async function POST(req: NextRequest, context: RouteContext): Promise<Nex
       parent_reply_id: (parent_reply_id as string | null) ?? null,
       user_id: anonymousId,
       ip_hash: ipHash,
+      account_id: replierAccountId,
       content: trimmed,
       created_at: nowTs,
       status: "active",

@@ -47,6 +47,7 @@ export {
   saved_posts,
   notifications,
   blocks,
+  banned_ips,
 } from "./schema";
 
 // ─── Re-export types ──────────────────────────────────────────────────────────

@@ -66,6 +66,7 @@ const FALLBACK_SECTIONS: Section[] = [
       { id: "II.3", section: "II", heading: "PROHIBITED CONTENT", tag: "II.3", text: "CSAM. Any sexualized content involving minors. Zero tolerance. Immediate removal and report to NCMEC." },
       { id: "II.4", section: "II", heading: "PROHIBITED CONTENT", tag: "II.4", text: "Doxxing. Posting private identifying information (home address, phone, workplace) without consent." },
       { id: "II.5", section: "II", heading: "PROHIBITED CONTENT", tag: "II.5", text: "Spam. Automated or repetitive content designed to flood the feed or manipulate vote counts." },
+      { id: "II.6", section: "II", heading: "PROHIBITED CONTENT", tag: "II.6", text: "Sexually explicit content. Nudity, pornography, sexual solicitation, and graphic sexual descriptions. This platform is not for adult content." },
     ],
   },
   {

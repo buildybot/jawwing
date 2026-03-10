@@ -53,6 +53,14 @@ export const CONSTITUTION_RULES = {
       clarification:
         "Discussing illegal topics (drug policy, crime news, legal gray areas) is different from actively facilitating illegal acts.",
     },
+    {
+      id: "II.6",
+      name: "Sexually Explicit Content",
+      description:
+        "Nudity, pornography, sexual solicitation, and graphic sexual descriptions. This platform is not for adult content. Applies to both text and images.",
+      clarification:
+        "Educational discussions of sexuality, clinical language, and non-graphic references are permitted. Obvious NSFW content should be flagged with high confidence (>0.9). Borderline or ambiguous content may use lower confidence.",
+    },
   ],
   restricted: [
     {
@@ -282,6 +290,17 @@ export async function reviewPost(post: Post): Promise<ModerationDecision> {
     } catch (dbErr) {
       console.error("[mod/engine] Failed to log fallback mod action:", dbErr);
     }
+    // Set post to active (posts start as "pending")
+    try {
+      const rawClient = getRawClient();
+      if (fallbackAction === "approve") {
+        await rawClient.execute({ sql: "UPDATE posts SET status = 'active', mod_confidence = 1 WHERE id = ?", args: [post.id] });
+      } else {
+        await rawClient.execute({ sql: "UPDATE posts SET status = 'moderated', mod_confidence = 0 WHERE id = ?", args: [post.id] });
+      }
+    } catch (e) {
+      console.error("[mod/engine] Failed to update post status in fallback:", e);
+    }
     return fallbackDecision;
   }
 
@@ -403,7 +422,12 @@ export async function reviewPost(post: Post): Promise<ModerationDecision> {
         await rawClient.execute({ sql: "UPDATE posts SET status = 'moderated', mod_confidence = ? WHERE id = ?", args: [decision.confidence, post.id] });
       }
     } else {
-      await rawClient.execute({ sql: "UPDATE posts SET mod_confidence = ? WHERE id = ?", args: [decision.confidence, post.id] });
+      // Approved — set status to "active" (posts start as "pending")
+      if (actionId) {
+        await rawClient.execute({ sql: "UPDATE posts SET status = 'active', mod_action_id = ?, mod_confidence = ? WHERE id = ?", args: [actionId, decision.confidence, post.id] });
+      } else {
+        await rawClient.execute({ sql: "UPDATE posts SET status = 'active', mod_confidence = ? WHERE id = ?", args: [decision.confidence, post.id] });
+      }
     }
   } catch (updateErr) {
     console.error("[mod/engine] Failed to update post status/confidence:", updateErr);

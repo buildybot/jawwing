@@ -360,6 +360,11 @@ export default function PostPage() {
   const [voted, setVoted] = useState<"up" | "down" | null>(null);
   const [voting, setVoting] = useState(false);
 
+  const [modDetail, setModDetail] = useState<{
+    action?: string; reasoning?: string; rule_cited?: string | null;
+    confidence?: number | null; agent_id?: string; created_at?: number; status?: string;
+  } | null>(null);
+
   const [replyVotes, setReplyVotes] = useState<Map<string, ReplyVoteState>>(new Map());
 
   // Top-level comment input (fixed bottom bar)
@@ -377,6 +382,15 @@ export default function PostPage() {
       .then((data) => {
         setPost(data.post);
         setScore(data.post.score);
+        // Fetch mod detail if reviewed
+        if (data.post.mod_confidence != null) {
+          fetch(`/api/v1/posts/${id}/mod`)
+            .then((r) => r.json())
+            .then((d) => setModDetail(d))
+            .catch(() => {});
+        } else {
+          setModDetail({ status: "pending" });
+        }
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Post not found."))
       .finally(() => setPostLoading(false));
@@ -667,6 +681,62 @@ export default function PostPage() {
                   <ReportButton postId={post.id} size="sm" />
                 </div>
               </div>
+
+              {/* Inline mod section */}
+              {modDetail && (
+                <div style={{
+                  marginTop: "16px",
+                  borderTop: "1px solid #1F1F1F",
+                  paddingTop: "12px",
+                  ...MONO,
+                }}>
+                  {modDetail.status === "pending" && (
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span style={{ color: "#888888", fontSize: "0.5625rem", letterSpacing: "0.08em" }}>⏳ AWAITING AI REVIEW</span>
+                    </div>
+                  )}
+                  {modDetail.action && (
+                    <>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+                        <span style={{ fontSize: "0.5625rem", letterSpacing: "0.12em", color: "#555" }}>AI REVIEWED</span>
+                        <span style={{
+                          fontSize: "0.5625rem",
+                          letterSpacing: "0.1em",
+                          color: modDetail.action === "approve" ? "#22C55E"
+                            : (modDetail.action === "flag" && modDetail.reasoning?.includes("AI review failed")) ? "#EAB308"
+                            : modDetail.action === "flag" ? "#EAB308"
+                            : "#EF4444",
+                        }}>
+                          {modDetail.action === "approve" ? "✓ APPROVED"
+                            : (modDetail.action === "flag" && modDetail.reasoning?.includes("AI review failed")) ? "⚠ REVIEW FAILED"
+                            : modDetail.action === "flag" ? "⚠ FLAGGED"
+                            : modDetail.action === "remove" ? "✗ REMOVED"
+                            : modDetail.action === "warn" ? "⚠ WARNED"
+                            : modDetail.action.toUpperCase()}
+                        </span>
+                        {post.mod_confidence != null && (
+                          <span style={{ color: "#555", fontSize: "0.5625rem", letterSpacing: "0.06em" }}>
+                            {Math.round(post.mod_confidence * 100)}% CONFIDENCE
+                          </span>
+                        )}
+                        {modDetail.rule_cited && (
+                          <span style={{ color: "#555", fontSize: "0.5625rem", letterSpacing: "0.06em" }}>
+                            RULE {modDetail.rule_cited}
+                          </span>
+                        )}
+                      </div>
+                      {modDetail.reasoning && (
+                        <p style={{ color: "#555", fontSize: "0.5rem", letterSpacing: "0.04em", lineHeight: 1.6, marginBottom: "6px" }}>
+                          {modDetail.reasoning}
+                        </p>
+                      )}
+                      <p style={{ color: "#333", fontSize: "0.4375rem", letterSpacing: "0.06em", lineHeight: 1.5 }}>
+                        THIS POST WAS REVIEWED BY AN AI AGENT FOLLOWING THE JAWWING CONSTITUTION
+                      </p>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

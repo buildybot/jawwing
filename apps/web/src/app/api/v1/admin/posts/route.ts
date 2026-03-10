@@ -1,8 +1,70 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, posts, nanoid } from "@jawwing/db";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, desc, like, and, or, gte } from "drizzle-orm";
 import { latLngToH3 } from "@jawwing/api/geo";
 import crypto from "crypto";
+import { isAdmin } from "@jawwing/api/admin";
+
+// ─── GET /api/v1/admin/posts ──────────────────────────────────────────────────
+// Paginated post list with search and status filter
+
+export async function GET(req: NextRequest): Promise<NextResponse> {
+  const admin = await isAdmin(req);
+  if (!admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  const { searchParams } = new URL(req.url);
+  const limit = Math.min(parseInt(searchParams.get("limit") ?? "50"), 200);
+  const offset = parseInt(searchParams.get("offset") ?? "0");
+  const status = searchParams.get("status") ?? "";
+  const search = searchParams.get("search") ?? "";
+
+  try {
+    const conditions: ReturnType<typeof eq>[] = [];
+    if (status && ["active", "moderated", "removed"].includes(status)) {
+      conditions.push(eq(posts.status, status as "active" | "moderated" | "removed"));
+    }
+
+    // Build query with optional filters using raw SQL for flexibility
+    let whereClause = "1=1";
+    const args: (string | number)[] = [];
+    if (status && ["active", "moderated", "removed"].includes(status)) {
+      whereClause += " AND p.status = ?";
+      args.push(status);
+    }
+    if (search) {
+      whereClause += " AND p.content LIKE ?";
+      args.push(`%${search}%`);
+    }
+
+    const rows = await db.execute(sql`
+      SELECT 
+        p.id, 
+        substr(p.content, 1, 150) as content,
+        p.score, p.upvotes, p.downvotes, p.reply_count,
+        p.status, p.created_at, p.h3_index, p.mod_confidence,
+        p.account_id, p.image_url, p.video_url
+      FROM posts p
+      WHERE ${sql.raw(whereClause.replace("?", "?").replace(/\?/g, () => {
+        const val = args.shift();
+        return typeof val === "string" ? `'${val.replace(/'/g, "''")}'` : String(val);
+      }))}
+      ORDER BY p.created_at DESC
+      LIMIT ${limit} OFFSET ${offset}
+    `);
+
+    const totalRows = await db.execute(sql`SELECT COUNT(*) as count FROM posts`);
+
+    return NextResponse.json({
+      posts: rows.rows,
+      total: Number(totalRows.rows[0]?.count ?? 0),
+      limit,
+      offset,
+    });
+  } catch (err) {
+    console.error("[GET /api/v1/admin/posts]", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
 
 // ─── Auth helper ──────────────────────────────────────────────────────────────
 

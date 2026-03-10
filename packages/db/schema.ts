@@ -67,6 +67,7 @@ export const accounts = sqliteTable(
     session_ids: text("session_ids"), // JSON array of linked jw_session IDs
     notification_prefs: text("notification_prefs").default('{"replies":true,"trending":false}'),
     push_token: text("push_token"),
+    is_admin: integer("is_admin").notNull().default(0),
     created_at: integer("created_at").notNull(),
     last_seen_at: integer("last_seen_at"),
   },
@@ -99,9 +100,9 @@ export const posts = sqliteTable(
     reply_count: integer("reply_count").notNull().default(0),
     created_at: integer("created_at").notNull(),
     expires_at: integer("expires_at").notNull(),
-    status: text("status", { enum: ["active", "moderated", "removed"] })
+    status: text("status", { enum: ["pending", "active", "moderated", "removed"] })
       .notNull()
-      .default("active"),
+      .default("pending"),
     mod_action_id: text("mod_action_id"),
     image_url: text("image_url"),
     image_width: integer("image_width"),

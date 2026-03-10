@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState, useEffect, useRef } from "react";
+import { memo, useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { votePost } from "@/lib/api";
 import { useToast } from "./Toast";
@@ -397,6 +397,201 @@ function VideoPreview({ videoUrl, thumbnail }: { videoUrl: string; thumbnail: st
         </div>
       </div>
     </a>
+  );
+}
+
+// ─── Mod Badge ───────────────────────────────────────────────────────────────
+
+interface ModDetail {
+  action?: string;
+  reasoning?: string;
+  rule_cited?: string | null;
+  confidence?: number | null;
+  agent_id?: string;
+  created_at?: number;
+  status?: string;
+}
+
+function ModBadge({ postId, modConfidence }: { postId: string; modConfidence: number | null | undefined }) {
+  const [open, setOpen] = useState(false);
+  const [detail, setDetail] = useState<ModDetail | null>(null);
+  const [loading, setLoading] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  // Determine badge type
+  const isFailedReview =
+    modConfidence === 0;
+
+  let icon: string;
+  let color: string;
+  let label: string;
+
+  if (modConfidence == null) {
+    icon = "⏳";
+    color = "#888888";
+    label = "PENDING";
+  } else if (isFailedReview) {
+    icon = "⚠";
+    color = "#EAB308";
+    label = "REVIEW FAILED";
+  } else if (modConfidence >= 0.7) {
+    icon = "✓";
+    color = "#22C55E";
+    label = "APPROVED";
+  } else if (modConfidence > 0) {
+    icon = "⚠";
+    color = "#EAB308";
+    label = "LOW CONF";
+  } else {
+    icon = "✗";
+    color = "#EF4444";
+    label = "FLAGGED";
+  }
+
+  const fetchDetail = useCallback(async () => {
+    if (detail || loading || modConfidence == null) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/v1/posts/${postId}/mod`);
+      const data: ModDetail = await res.json();
+      // Check if failed review
+      if (data.action === "flag" && data.reasoning && data.reasoning.includes("AI review failed")) {
+        setDetail({ ...data, action: "failed" });
+      } else {
+        setDetail(data);
+      }
+    } catch {
+      setDetail({ status: "error" });
+    } finally {
+      setLoading(false);
+    }
+  }, [postId, detail, loading, modConfidence]);
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (modConfidence == null) {
+      setOpen((o) => !o);
+      return;
+    }
+    setOpen((o) => {
+      if (!o) fetchDetail();
+      return !o;
+    });
+  };
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const actionLabel = detail?.action
+    ? detail.action === "failed" ? "REVIEW FAILED"
+    : detail.action === "approve" ? "APPROVED"
+    : detail.action === "flag" ? "FLAGGED"
+    : detail.action === "remove" ? "REMOVED"
+    : detail.action === "warn" ? "WARNED"
+    : detail.action.toUpperCase()
+    : null;
+
+  return (
+    <div ref={ref} style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
+      <button
+        onClick={handleClick}
+        title={modConfidence == null ? "AWAITING AI REVIEW" : `AI MODERATED — ${label}`}
+        style={{
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+          padding: "2px 4px",
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "3px",
+          ...MONO,
+          fontSize: "0.5625rem",
+          letterSpacing: "0.08em",
+          color,
+        }}
+      >
+        <span>{icon}</span>
+        <span>{label}</span>
+      </button>
+      {open && (
+        <div
+          style={{
+            position: "absolute",
+            top: "calc(100% + 4px)",
+            right: 0,
+            zIndex: 100,
+            background: "#0A0A0A",
+            border: "1px solid #333",
+            padding: "12px 14px",
+            minWidth: "220px",
+            maxWidth: "280px",
+            ...MONO,
+          }}
+          onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}
+        >
+          {modConfidence == null ? (
+            <>
+              <p style={{ color: "#888888", fontSize: "0.625rem", letterSpacing: "0.1em", marginBottom: "6px" }}>⏳ AWAITING AI REVIEW</p>
+              <p style={{ color: "#555", fontSize: "0.5625rem", letterSpacing: "0.06em", lineHeight: 1.5 }}>
+                THIS POST HAS NOT YET BEEN REVIEWED BY THE JAWWING AI MODERATOR.
+              </p>
+            </>
+          ) : (
+            <>
+              <p style={{ color: "#AAAAAA", fontSize: "0.625rem", letterSpacing: "0.12em", marginBottom: "8px", borderBottom: "1px solid #222", paddingBottom: "6px" }}>
+                AI REVIEWED
+              </p>
+              {loading && (
+                <p style={{ color: "#555", fontSize: "0.5625rem", letterSpacing: "0.06em" }}>LOADING...</p>
+              )}
+              {!loading && detail && detail.status !== "error" && (
+                <>
+                  {actionLabel && (
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
+                      <span style={{ color: "#888888", fontSize: "0.5625rem", letterSpacing: "0.08em" }}>ACTION</span>
+                      <span style={{ color: detail?.action === "failed" ? "#EAB308" : detail?.action === "approve" ? "#22C55E" : "#EF4444", fontSize: "0.5625rem", letterSpacing: "0.08em" }}>{actionLabel}</span>
+                    </div>
+                  )}
+                  {modConfidence != null && (
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
+                      <span style={{ color: "#888888", fontSize: "0.5625rem", letterSpacing: "0.08em" }}>CONFIDENCE</span>
+                      <span style={{ color: "#AAAAAA", fontSize: "0.5625rem", letterSpacing: "0.08em" }}>{Math.round(modConfidence * 100)}%</span>
+                    </div>
+                  )}
+                  {detail.rule_cited && (
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
+                      <span style={{ color: "#888888", fontSize: "0.5625rem", letterSpacing: "0.08em" }}>RULE</span>
+                      <span style={{ color: "#AAAAAA", fontSize: "0.5625rem", letterSpacing: "0.08em" }}>{detail.rule_cited}</span>
+                    </div>
+                  )}
+                  {detail.reasoning && (
+                    <p style={{ color: "#777777", fontSize: "0.5rem", letterSpacing: "0.04em", lineHeight: 1.5, marginTop: "6px", borderTop: "1px solid #1F1F1F", paddingTop: "6px" }}>
+                      {detail.reasoning}
+                    </p>
+                  )}
+                </>
+              )}
+              {!loading && (!detail || detail.status === "error") && (
+                <p style={{ color: "#555", fontSize: "0.5625rem", letterSpacing: "0.06em" }}>UNABLE TO LOAD DETAILS</p>
+              )}
+              <p style={{ color: "#333", fontSize: "0.4375rem", letterSpacing: "0.06em", lineHeight: 1.5, marginTop: "8px", borderTop: "1px solid #1F1F1F", paddingTop: "6px" }}>
+                THIS POST WAS REVIEWED BY AN AI AGENT FOLLOWING THE JAWWING CONSTITUTION
+              </p>
+            </>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -884,21 +1079,10 @@ function PostCard({ post, variant = "card", feedScope }: PostCardProps) {
               <span style={{ ...MONO, fontSize: "0.625rem", letterSpacing: "0.08em", color: "#888888", textTransform: "uppercase" }}>{post.metro}</span>
             </>
           )}
-          {post.mod_confidence != null && (
+          {(post.mod_confidence !== undefined) && (
             <>
               <span style={{ color: "#1F1F1F" }}>·</span>
-              <span
-                title={`AI MODERATION CONFIDENCE — THIS POST WAS REVIEWED BY AI AND SCORED ${Math.round(post.mod_confidence * 100)}%`}
-                style={{
-                  ...MONO,
-                  fontSize: "0.625rem",
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase",
-                  color: post.mod_confidence >= 0.9 ? "#22C55E" : post.mod_confidence >= 0.7 ? "#EAB308" : "#EF4444",
-                }}
-              >
-                AI {Math.round(post.mod_confidence * 100)}%
-              </span>
+              <ModBadge postId={post.id} modConfidence={post.mod_confidence} />
             </>
           )}
         </Link>

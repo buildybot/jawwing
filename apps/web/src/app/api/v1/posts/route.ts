@@ -328,6 +328,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       limit,
       offset,
       hexes: territoryHexes,
+      blockedUserIds,
     });
 
     const resultsWithMetro = results.map((p) => sanitizePostForResponse({ ...p, metro: getMetroName(p.lat, p.lng) }));
@@ -495,19 +496,30 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       reply_count: 0,
       created_at: nowTs,
       expires_at,
-      status: needsVideoReview ? "moderated" : "active",
+      status: "pending",
       video_url: videoMeta?.video_url ?? null,
       video_thumbnail: videoMeta?.video_thumbnail ?? null,
     }).returning();
 
     lastPositionMap.set(ipHash, { lat, lng, ts: nowTs });
 
-    // Run moderation inline — Gemini Flash is ~200ms, acceptable latency
-    // Can't use after()/setImmediate() reliably on Vercel serverless
+    // Run moderation inline — posts start as "pending", moderation sets final status
+    // Gemini Flash is ~200ms, acceptable latency for content safety
     try {
       await moderatePost(created);
+      // Re-fetch post to get updated status after moderation
+      const [updated] = await db.select().from(posts).where(eq(posts.id, id)).limit(1);
+      if (updated) Object.assign(created, updated);
     } catch (modErr) {
-      console.error("[MOD] Moderation error (non-blocking):", modErr);
+      console.error("[MOD] Moderation error — auto-approving with flag:", modErr);
+      // Fallback: approve the post but mark that moderation failed
+      // This prevents posts from being stuck in "pending" when the AI is down
+      await db.update(posts).set({
+        status: "active",
+        mod_confidence: 0,
+      }).where(eq(posts.id, id));
+      created.status = "active";
+      created.mod_confidence = 0;
     }
 
     const response = NextResponse.json({ post: sanitizePostForResponse(created) }, { status: 201 });
