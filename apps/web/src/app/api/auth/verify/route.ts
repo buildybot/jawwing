@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyCode } from "@jawwing/api/auth";
+import { checkAndConsumeCode } from "@jawwing/api/auth";
 import { validate, VerifySchema } from "@jawwing/api/validation";
 import { checkEmailRateLimit } from "@jawwing/api/middleware";
+import { findOrCreateAccount, signAccountToken, buildAccountCookieHeader } from "@jawwing/api/accounts";
+import { getAnonymousId } from "@jawwing/api/anonymous";
 
 // ─── POST /api/auth/verify ────────────────────────────────────────────────────
 
@@ -30,9 +32,25 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       );
     }
 
-    const result = await verifyCode(email, code);
+    // Verify the 6-digit code (uses the existing in-memory code store)
+    checkAndConsumeCode(email, code);
 
-    return NextResponse.json({ token: result.token, user: result.user });
+    // Get the current anonymous session ID to link to this account
+    const sessionId = getAnonymousId(req);
+
+    // Find or create account by email hash, linking the session
+    const account = await findOrCreateAccount(email, sessionId);
+
+    // Issue account JWT as httpOnly cookie
+    const token = signAccountToken(account.id);
+    const cookieHeader = buildAccountCookieHeader(token);
+
+    const response = NextResponse.json({ ok: true, accountId: account.id });
+    // httpOnly JWT for security
+    response.headers.append("Set-Cookie", cookieHeader);
+    // Non-httpOnly flag so client JS can detect login state
+    response.headers.append("Set-Cookie", `jw_account_ok=1; Path=/; SameSite=Lax; Max-Age=${60 * 60 * 24 * 365}`);
+    return response;
   } catch (err) {
     console.error("[POST /api/auth/verify]", err);
     const message = err instanceof Error ? err.message : "Verification failed";

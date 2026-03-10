@@ -171,6 +171,23 @@ export async function sendVerificationCode(email: string): Promise<void> {
 
 // ─── Code verification + user creation ───────────────────────────────────────
 
+/**
+ * Check and consume a verification code WITHOUT creating a user record.
+ * Used by the optional email accounts system.
+ * Throws if code is invalid/expired.
+ */
+export function checkAndConsumeCode(email: string, code: string): void {
+  const normalized = normalizeEmail(email);
+  const pending = pendingCodes.get(normalized);
+  if (!pending) throw new Error("No pending verification code for this email");
+  if (Date.now() > pending.expiresAt) {
+    pendingCodes.delete(normalized);
+    throw new Error("Verification code has expired");
+  }
+  if (pending.code !== code.trim()) throw new Error("Invalid verification code");
+  pendingCodes.delete(normalized);
+}
+
 /** Verify code, create user if new, return JWT session token. */
 export async function verifyCode(
   email: string,

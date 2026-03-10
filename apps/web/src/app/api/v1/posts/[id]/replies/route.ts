@@ -9,6 +9,7 @@ import {
   buildSessionCookieHeader,
 } from "@jawwing/api/anonymous";
 import { isBanned } from "@jawwing/api/bans";
+import { notifyPostReply } from "@jawwing/api/notifications";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -122,6 +123,9 @@ export async function POST(req: NextRequest, context: RouteContext): Promise<Nex
     await db.update(posts)
       .set({ reply_count: sql`${posts.reply_count} + 1` })
       .where(eq(posts.id, post_id));
+
+    // Notify post author (fire and forget)
+    notifyPostReply(post_id, trimmed).catch(() => {/* best-effort */});
 
     // ── Set session cookie if needed ─────────────────────────────────────────
     const response = NextResponse.json({ reply: created }, { status: 201 });

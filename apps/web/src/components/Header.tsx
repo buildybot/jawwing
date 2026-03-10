@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import TerritorySelector, { type TerritorySelection } from "./TerritorySelector";
 
 const MONO = { fontFamily: "var(--font-mono), monospace" } as const;
@@ -21,6 +22,12 @@ export default function Header({
   onTerritoryChange,
 }: HeaderProps) {
   const showSelector = selectedTerritory !== undefined && onTerritoryChange !== undefined;
+
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  useEffect(() => {
+    // Check non-httpOnly flag cookie for account login state
+    setIsLoggedIn(document.cookie.includes("jw_account_ok=1"));
+  }, []);
 
   return (
     <header
@@ -74,21 +81,52 @@ export default function Header({
           )}
         </div>
 
-        {/* Right: info link */}
-        <Link
-          href="/about"
-          style={{
-            ...MONO,
-            color: "#333333",
-            fontSize: "0.6875rem",
-            letterSpacing: "0.06em",
-            textDecoration: "none",
-            flexShrink: 0,
-          }}
-          className="hover:text-[#777777] transition-colors"
-        >
-          ?
-        </Link>
+        {/* Right: info + account */}
+        <div className="flex items-center gap-3" style={{ flexShrink: 0 }}>
+          {isLoggedIn ? (
+            <Link
+              href="/my-posts"
+              title="Your posts"
+              style={{
+                ...MONO,
+                color: "#555555",
+                fontSize: "0.6875rem",
+                letterSpacing: "0.06em",
+                textDecoration: "none",
+              }}
+              className="hover:text-[#999999] transition-colors"
+            >
+              •
+            </Link>
+          ) : (
+            <Link
+              href="/signin"
+              style={{
+                ...MONO,
+                color: "#333333",
+                fontSize: "0.5625rem",
+                letterSpacing: "0.08em",
+                textDecoration: "none",
+              }}
+              className="hover:text-[#777777] transition-colors"
+            >
+              SIGN IN
+            </Link>
+          )}
+          <Link
+            href="/about"
+            style={{
+              ...MONO,
+              color: "#333333",
+              fontSize: "0.6875rem",
+              letterSpacing: "0.06em",
+              textDecoration: "none",
+            }}
+            className="hover:text-[#777777] transition-colors"
+          >
+            ?
+          </Link>
+        </div>
       </div>
 
       {/* Sub-nav */}

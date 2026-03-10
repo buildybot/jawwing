@@ -29,7 +29,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // Email rate limit: 3 attempts per email per 10 minutes
+    // Email rate limit: 3 attempts per email per hour
     const rateLimit = checkEmailRateLimit(email, "send-code");
     if (!rateLimit.allowed) {
       return NextResponse.json(
@@ -40,10 +40,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     await sendVerificationCode(email);
 
-    return NextResponse.json({ ok: true, message: "Verification code sent" });
+    // Always return ok — never reveal if email exists or not
+    return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[POST /api/auth/send-code]", err);
-    const message = err instanceof Error ? err.message : "Failed to send verification code";
-    return NextResponse.json({ error: message, code: "INTERNAL_ERROR" }, { status: 500 });
+    // Return ok even on error to avoid leaking info
+    return NextResponse.json({ ok: true });
   }
 }

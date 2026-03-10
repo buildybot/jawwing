@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, posts, territories, nanoid, now } from "@jawwing/db";
-import { eq } from "drizzle-orm";
+import { eq, gt, and, desc, sql, inArray } from "drizzle-orm";
 import { checkRateLimit } from "@jawwing/api/middleware";
 import { latLngToH3 } from "@jawwing/api/geo";
 import { buildFeedQuery, type SortMode } from "@jawwing/api/feed";
@@ -11,6 +11,7 @@ import {
   hasSessionCookie,
   buildSessionCookieHeader,
 } from "@jawwing/api/anonymous";
+import { getAccountFromToken } from "@jawwing/api/accounts";
 import { isBanned } from "@jawwing/api/bans";
 import { onPostCreated } from "@jawwing/mod/automod";
 import { CONSTITUTION_RULES } from "@jawwing/mod/engine";
@@ -75,17 +76,16 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     // EVERYWHERE mode: return all active posts, no geo filter
     if (mode === "everywhere") {
       const nowTs = Math.floor(Date.now() / 1000);
-      const { gt: dbGt, eq: dbEq, and: dbAnd, desc: dbDesc, sql: dbSql } = await import("drizzle-orm");
-      const conditions = dbAnd(dbGt(posts.expires_at, nowTs), dbEq(posts.status, "active"));
+      const conditions = and(gt(posts.expires_at, nowTs), eq(posts.status, "active"));
       const HOT_GRAVITY = 1.8;
       let results;
       if (sort === "new") {
-        results = await db.select().from(posts).where(conditions).orderBy(dbDesc(posts.created_at)).limit(limit).offset(offset);
+        results = await db.select().from(posts).where(conditions).orderBy(desc(posts.created_at)).limit(limit).offset(offset);
       } else if (sort === "top") {
-        results = await db.select().from(posts).where(conditions).orderBy(dbDesc(posts.score)).limit(limit).offset(offset);
+        results = await db.select().from(posts).where(conditions).orderBy(desc(posts.score)).limit(limit).offset(offset);
       } else {
         results = await db.select().from(posts).where(conditions)
-          .orderBy(dbDesc(dbSql<number>`CAST(${posts.score} + 1 AS REAL) / EXP(${HOT_GRAVITY} * LOG((CAST(unixepoch() - ${posts.created_at} AS REAL) / 3600.0) + 2.0))`))
+          .orderBy(desc(sql<number>`CAST(${posts.score} + 1 AS REAL) / EXP(${HOT_GRAVITY} * LOG((CAST(unixepoch() - ${posts.created_at} AS REAL) / 3600.0) + 2.0))`))
           .limit(limit).offset(offset);
       }
       return NextResponse.json({ posts: results, meta: { limit, offset, count: results.length, mode: "everywhere" } });
@@ -150,6 +150,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const ipHash = getIpHash(req);
     const anonymousId = getAnonymousId(req);
     const needsCookie = !hasSessionCookie(req);
+
+    // Optional: link post to email account if logged in
+    let accountId: string | null = null;
+    const accountToken = req.cookies.get("jw_account")?.value;
+    if (accountToken) {
+      const account = await getAccountFromToken(accountToken);
+      if (account) accountId = account.id;
+    }
 
     // Ban check
     if (isBanned(ipHash)) {
@@ -258,6 +266,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const [created] = await db.insert(posts).values({
       id,
       user_id: anonymousId,
+      account_id: accountId,
       ip_hash: ipHash,
       content,
       lat,

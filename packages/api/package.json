@@ -11,7 +11,11 @@
     "./middleware": "./middleware.ts",
     "./auth": "./auth.ts",
     "./cors": "./cors.ts",
-    "./validation": "./validation.ts"
+    "./validation": "./validation.ts",
+    "./accounts": "./accounts.ts",
+    "./notifications": "./notifications.ts",
+    "./anonymous": "./anonymous.ts",
+    "./bans": "./bans.ts"
   },
   "scripts": {
     "build": "tsc",
