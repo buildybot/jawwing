@@ -4,6 +4,7 @@ import { withAuth, checkRateLimit, type AuthenticatedRequest } from "@jawwing/ap
 import { latLngToH3 } from "@jawwing/api/geo";
 import { buildFeedQuery, type SortMode } from "@jawwing/api/feed";
 import { validate, PostSchema } from "@jawwing/api/validation";
+import { onPostCreated } from "@jawwing/mod/automod";
 
 // ─── Sanitize content — strip HTML tags ───────────────────────────────────────
 
@@ -83,6 +84,9 @@ async function createPost(req: AuthenticatedRequest): Promise<NextResponse> {
       id, user_id: user.id, content, lat, lng,
       h3_index, score: 0, reply_count: 0, created_at: nowTs, expires_at, status: "active",
     }).returning();
+
+    // Fire async moderation pipeline — does NOT block post creation
+    onPostCreated(created);
 
     return NextResponse.json({ post: created }, { status: 201 });
   } catch (err) {

@@ -10,7 +10,7 @@ const LABEL: React.CSSProperties = {
   letterSpacing: "0.1em",
   fontSize: "0.6875rem",
   fontWeight: 600,
-  color: "#555555",
+  color: "#777777",
   textTransform: "uppercase" as const,
 };
 
@@ -21,7 +21,10 @@ export default function HomePage() {
     <div style={{ background: "#000000", minHeight: "100vh" }} className="flex flex-col">
 
       {/* Nav */}
-      <nav style={{ borderBottom: "1px solid #1F1F1F" }} className="flex items-center justify-between px-6 py-4">
+      <nav
+        style={{ borderBottom: "1px solid #1F1F1F", background: "#000000", position: "sticky", top: 0, zIndex: 50 }}
+        className="flex items-center justify-between px-6 py-4"
+      >
         <span style={{ ...MONO, letterSpacing: "0.14em", fontWeight: 700, fontSize: "0.875rem", color: "#FFFFFF" }}>
           JAWWING
         </span>
@@ -33,8 +36,8 @@ export default function HomePage() {
             <Link
               key={href}
               href={href}
-              style={{ ...MONO, letterSpacing: "0.06em", fontSize: "0.6875rem", color: "#555555", textDecoration: "none" }}
-              className="hover:text-white transition-colors"
+              style={{ ...MONO, letterSpacing: "0.06em", fontSize: "0.6875rem", color: "#C0C0C0", textDecoration: "none" }}
+              className="hover:text-white transition-colors hidden sm:inline"
             >
               {label}
             </Link>
@@ -43,18 +46,18 @@ export default function HomePage() {
             href="/login"
             style={{
               ...MONO,
-              letterSpacing: "0.06em",
-              fontSize: "0.75rem",
-              fontWeight: 500,
-              color: "#000000",
-              background: "#FFFFFF",
+              letterSpacing: "0.08em",
+              fontSize: "0.6875rem",
+              fontWeight: 600,
+              color: "#FFFFFF",
+              background: "transparent",
               border: "1px solid #FFFFFF",
               padding: "6px 16px",
               textDecoration: "none",
             }}
-            className="hover:bg-transparent hover:text-white transition-colors"
+            className="hover:bg-white hover:text-black transition-colors"
           >
-            GET STARTED
+            LOGIN
           </Link>
         </div>
       </nav>
@@ -68,7 +71,7 @@ export default function HomePage() {
               ...MONO,
               letterSpacing: "0.1em",
               fontSize: "0.6875rem",
-              color: "#555555",
+              color: "#777777",
               border: "1px solid #1F1F1F",
               padding: "4px 12px",
               marginBottom: "40px",
@@ -92,7 +95,7 @@ export default function HomePage() {
 
           <p
             style={{
-              color: "#A0A0A0",
+              color: "#C0C0C0",
               fontSize: "1.125rem",
               letterSpacing: "0.01em",
               lineHeight: 1.6,
@@ -123,7 +126,7 @@ export default function HomePage() {
             START TALKING →
           </Link>
 
-          <p style={{ ...MONO, color: "#555555", fontSize: "0.6875rem", letterSpacing: "0.06em", marginTop: "16px" }}>
+          <p style={{ ...MONO, color: "#777777", fontSize: "0.6875rem", letterSpacing: "0.06em", marginTop: "16px" }}>
             SMS VERIFICATION ONLY · NO EMAIL · NO PASSWORDS
           </p>
         </section>
@@ -169,7 +172,7 @@ export default function HomePage() {
                   <h3 style={{ ...MONO, color: "#FFFFFF", fontWeight: 700, fontSize: "0.875rem", letterSpacing: "0.08em", marginBottom: "12px" }}>
                     {item.title}
                   </h3>
-                  <p style={{ color: "#A0A0A0", fontSize: "0.875rem", lineHeight: 1.6 }}>
+                  <p style={{ color: "#C0C0C0", fontSize: "0.875rem", lineHeight: 1.6 }}>
                     {item.desc}
                   </p>
                 </div>
@@ -211,7 +214,7 @@ export default function HomePage() {
                   <span style={{ ...MONO, color: "#333333", fontSize: "0.75rem", marginTop: "2px", flexShrink: 0 }}>
                     —
                   </span>
-                  <p style={{ color: "#A0A0A0", fontSize: "0.9375rem", lineHeight: 1.5, margin: 0 }}>
+                  <p style={{ color: "#C0C0C0", fontSize: "0.9375rem", lineHeight: 1.5, margin: 0 }}>
                     {point}
                   </p>
                 </div>
@@ -261,7 +264,7 @@ export default function HomePage() {
               style={{
                 ...MONO,
                 display: "inline-block",
-                color: "#555555",
+                color: "#777777",
                 fontSize: "0.75rem",
                 letterSpacing: "0.06em",
                 textDecoration: "none",
@@ -279,7 +282,7 @@ export default function HomePage() {
         <section style={{ ...DIVIDER, borderBottom: "1px solid #1F1F1F" }} className="px-6 py-12">
           <div style={{ maxWidth: "480px" }} className="mx-auto text-center">
             <p style={{ ...LABEL, display: "block", marginBottom: "8px" }}>COMING TO APP STORES</p>
-            <p style={{ color: "#555555", fontSize: "0.8125rem", lineHeight: 1.5, marginBottom: "20px" }}>
+            <p style={{ color: "#777777", fontSize: "0.8125rem", lineHeight: 1.5, marginBottom: "20px" }}>
               Get notified when Jawwing hits iOS and Android.
             </p>
             <WaitlistForm />
@@ -304,7 +307,7 @@ export default function HomePage() {
               <Link
                 key={href}
                 href={href}
-                style={{ ...MONO, letterSpacing: "0.06em", fontSize: "0.6875rem", color: "#555555", textDecoration: "none" }}
+                style={{ ...MONO, letterSpacing: "0.06em", fontSize: "0.6875rem", color: "#777777", textDecoration: "none" }}
                 className="hover:text-white transition-colors"
               >
                 {label}

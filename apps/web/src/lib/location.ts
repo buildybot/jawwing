@@ -14,7 +14,7 @@ export function requestLocation(): Promise<LatLng> {
     navigator.geolocation.getCurrentPosition(
       (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
       (err) => reject(new Error(err.message)),
-      { enableHighAccuracy: false, timeout: 10_000, maximumAge: 60_000 }
+      { enableHighAccuracy: true, timeout: 10_000, maximumAge: 60_000 }
     );
   });
 }
@@ -24,7 +24,7 @@ export function watchLocation(callback: (loc: LatLng) => void): () => void {
   const id = navigator.geolocation.watchPosition(
     (pos) => callback({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
     (err) => console.warn("[location] watchPosition error:", err.message),
-    { enableHighAccuracy: false, timeout: 10_000, maximumAge: 30_000 }
+    { enableHighAccuracy: true, timeout: 10_000, maximumAge: 30_000 }
   );
   return () => navigator.geolocation.clearWatch(id);
 }

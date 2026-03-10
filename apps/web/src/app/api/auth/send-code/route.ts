@@ -21,6 +21,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     const { phone } = parsed.data;
 
+    // Graceful fallback: Twilio not configured
+    if (!process.env.TWILIO_ACCOUNT_SID) {
+      return NextResponse.json(
+        { ok: false, error: "SMS service not configured" },
+        { status: 503 }
+      );
+    }
+
     // SMS rate limit: 3 attempts per phone per 10 minutes
     const rateLimit = checkSmsRateLimit(phone, "send-code");
     if (!rateLimit.allowed) {

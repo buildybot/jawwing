@@ -149,9 +149,9 @@ Rules:
 
 // ─── Gemini client ────────────────────────────────────────────────────────────
 
-function getGenAI(): GoogleGenerativeAI {
+function getGenAI(): GoogleGenerativeAI | null {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error("GEMINI_API_KEY is required");
+  if (!apiKey) return null;
   return new GoogleGenerativeAI(apiKey);
 }
 
@@ -163,6 +163,33 @@ const AI_AGENT_ID = process.env.MOD_AGENT_ID ?? "agent-system";
 
 export async function reviewPost(post: Post): Promise<ModerationDecision> {
   const genAI = getGenAI();
+
+  // Graceful fallback: if GEMINI_API_KEY is not configured, auto-approve
+  if (!genAI) {
+    const fallbackDecision: ModerationDecision = {
+      action: "approve",
+      ruleCited: null,
+      reasoning: "Moderation service unavailable — auto-approved",
+      confidence: 1,
+    };
+    try {
+      await db.insert(mod_actions).values({
+        id: nanoid(),
+        post_id: post.id,
+        agent_id: AI_AGENT_ID,
+        action: fallbackDecision.action,
+        rule_cited: fallbackDecision.ruleCited,
+        reasoning: fallbackDecision.reasoning,
+        created_at: now(),
+        appealed: false,
+        appeal_result: null,
+      });
+    } catch (dbErr) {
+      console.error("[mod/engine] Failed to log fallback mod action:", dbErr);
+    }
+    return fallbackDecision;
+  }
+
   const model = genAI.getGenerativeModel({
     model: "gemini-2.0-flash",
     systemInstruction: SYSTEM_PROMPT,
