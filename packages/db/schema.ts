@@ -103,6 +103,8 @@ export const posts = sqliteTable(
     image_url: text("image_url"),
     image_width: integer("image_width"),
     image_height: integer("image_height"),
+    video_url: text("video_url"),
+    video_thumbnail: text("video_thumbnail"),
   },
   (t) => ({
     idxPostsUserId: index("idx_posts_user_id").on(t.user_id),

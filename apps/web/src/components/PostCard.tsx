@@ -20,6 +20,8 @@ export interface Post {
   territoryName?: string;
   user_id?: string;
   metro?: string | null;
+  video_url?: string | null;
+  video_thumbnail?: string | null;
 }
 
 export interface PostCardProps {
@@ -276,6 +278,108 @@ function LinkPreview({ url }: { url: string }) {
   );
 }
 
+// ─── Video preview ───────────────────────────────────────────────────────────
+
+function VideoPreview({ videoUrl, thumbnail }: { videoUrl: string; thumbnail: string | null | undefined }) {
+  if (!thumbnail) {
+    // No thumbnail: show plain link
+    return (
+      <a
+        href={videoUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          display: "block",
+          marginTop: "10px",
+          padding: "10px 12px",
+          background: "#000000",
+          border: "1px solid #1F1F1F",
+          color: "#FFFFFF",
+          textDecoration: "none",
+          fontFamily: "var(--font-mono), monospace",
+          fontSize: "0.75rem",
+          letterSpacing: "0.04em",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        WATCH VIDEO
+      </a>
+    );
+  }
+
+  return (
+    <a
+      href={videoUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{ display: "block", marginTop: "10px", textDecoration: "none", position: "relative" }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      {/* 16:9 aspect ratio container */}
+      <div
+        style={{
+          position: "relative",
+          width: "100%",
+          paddingTop: "56.25%",
+          background: "#000000",
+          border: "1px solid #1F1F1F",
+          overflow: "hidden",
+        }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={thumbnail}
+          alt="Video preview"
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            display: "block",
+          }}
+          loading="lazy"
+        />
+        {/* Play button overlay */}
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "rgba(0,0,0,0.3)",
+          }}
+        >
+          <div
+            style={{
+              width: "56px",
+              height: "56px",
+              background: "rgba(0,0,0,0.7)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              border: "2px solid #FFFFFF",
+            }}
+          >
+            {/* Triangle play icon */}
+            <div
+              style={{
+                width: 0,
+                height: 0,
+                borderTop: "11px solid transparent",
+                borderBottom: "11px solid transparent",
+                borderLeft: "18px solid #FFFFFF",
+                marginLeft: "4px",
+              }}
+            />
+          </div>
+        </div>
+      </div>
+    </a>
+  );
+}
+
 // ─── Score animation ──────────────────────────────────────────────────────────
 
 function AnimatedScore({ value, voted }: { value: number; voted: "up" | "down" | null }) {
@@ -349,7 +453,11 @@ function PostCard({ post, variant = "card", feedScope }: PostCardProps) {
     toast.show("BLOCKED", 2000);
   };
 
-  const imageUrls = matchImageUrls(post.content);
+  const contentImageUrls = matchImageUrls(post.content);
+  // Include the post's image_url field (from uploads/seeding) if not already in content
+  const imageUrls = post.image_url && !contentImageUrls.includes(post.image_url)
+    ? [post.image_url, ...contentImageUrls]
+    : contentImageUrls;
   const linkPreviewUrl = matchLinkPreviewUrl(post.content);
 
   const vote = async (dir: "up" | "down") => {
@@ -481,6 +589,9 @@ function PostCard({ post, variant = "card", feedScope }: PostCardProps) {
 
           {/* Link preview */}
           {linkPreviewUrl && <LinkPreview url={linkPreviewUrl} />}
+
+          {/* Video preview */}
+          {post.video_url && <VideoPreview videoUrl={post.video_url} thumbnail={post.video_thumbnail} />}
 
           {/* Bottom meta */}
           <div style={{ display: "flex", gap: "12px", marginTop: "12px", alignItems: "center" }}>
@@ -627,6 +738,9 @@ function PostCard({ post, variant = "card", feedScope }: PostCardProps) {
 
       {/* Link preview */}
       {linkPreviewUrl && <LinkPreview url={linkPreviewUrl} />}
+
+      {/* Video preview */}
+      {post.video_url && <VideoPreview videoUrl={post.video_url} thumbnail={post.video_thumbnail} />}
 
       {/* Territory badge */}
       {post.territoryName && (

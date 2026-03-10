@@ -10,6 +10,7 @@ import {
 } from "@jawwing/api/anonymous";
 import { isBanned } from "@jawwing/api/bans";
 import { notifyPostReply } from "@jawwing/api/notifications";
+import { reviewPost } from "@jawwing/mod/engine";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -126,6 +127,32 @@ export async function POST(req: NextRequest, context: RouteContext): Promise<Nex
 
     // Notify post author (fire and forget)
     notifyPostReply(post_id, trimmed).catch(() => {/* best-effort */});
+
+    // Moderate reply via AI (fire and forget)
+    // Note: reviewPost logs mod_actions against posts.id (FK constraint), so for replies
+    // we pass the parent post_id but check the reply content. On removal, we update the reply.
+    setImmediate(() => {
+      const fakePostForReview = {
+        ...post,
+        id: post_id, // use parent post_id so mod_actions FK is valid
+        content: trimmed,
+        image_url: null,
+        image_width: null,
+        image_height: null,
+        video_url: null,
+        video_thumbnail: null,
+      } as Parameters<typeof reviewPost>[0];
+      reviewPost(fakePostForReview).then((decision) => {
+        console.log(`[MOD] Reply ${created.id} (post ${post_id}): ${decision.action} - ${decision.reasoning.slice(0, 80)}`);
+        if (decision.action === "remove") {
+          db.update(replies).set({ status: "removed" }).where(eq(replies.id, created.id)).catch((err) => {
+            console.error('[MOD] Failed to remove reply:', err);
+          });
+        }
+      }).catch((err) => {
+        console.error('[MOD] Error reviewing reply:', err);
+      });
+    });
 
     // ── Set session cookie if needed ─────────────────────────────────────────
     const response = NextResponse.json({ reply: created }, { status: 201 });

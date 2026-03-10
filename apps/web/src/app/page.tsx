@@ -101,6 +101,7 @@ function toCardPost(
     territoryName,
     user_id: post.user_id,
     metro: post.metro ?? null,
+    image_url: post.image_url ?? null,
   };
 }
 

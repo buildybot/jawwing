@@ -16,6 +16,81 @@ import { isBanned } from "@jawwing/api/bans";
 import { onPostCreated } from "@jawwing/mod/automod";
 import { CONSTITUTION_RULES } from "@jawwing/mod/engine";
 
+// ─── Video URL extraction ─────────────────────────────────────────────────────
+
+interface VideoMeta {
+  video_url: string;
+  video_id: string | null;
+  video_thumbnail: string | null;
+}
+
+function extractVideoMeta(content: string): VideoMeta | null {
+  const urlMatches = content.match(/https?:\/\/[^\s)>\]"]+/gi);
+  if (!urlMatches) return null;
+
+  for (const raw of urlMatches) {
+    try {
+      const u = new URL(raw);
+      const hostname = u.hostname.replace(/^www\./, "").toLowerCase();
+
+      // YouTube: youtube.com/watch?v=ID or youtube.com/shorts/ID
+      if (hostname === "youtube.com") {
+        let videoId: string | null = null;
+        if (u.pathname.startsWith("/watch")) {
+          videoId = u.searchParams.get("v");
+        } else if (u.pathname.startsWith("/shorts/")) {
+          videoId = u.pathname.split("/shorts/")[1]?.split(/[?#]/)[0] ?? null;
+        } else if (u.pathname.startsWith("/embed/")) {
+          videoId = u.pathname.split("/embed/")[1]?.split(/[?#]/)[0] ?? null;
+        }
+        if (videoId) {
+          return {
+            video_url: raw,
+            video_id: videoId,
+            video_thumbnail: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+          };
+        }
+      }
+
+      // youtu.be/ID
+      if (hostname === "youtu.be") {
+        const videoId = u.pathname.slice(1).split(/[?#]/)[0];
+        if (videoId) {
+          return {
+            video_url: raw,
+            video_id: videoId,
+            video_thumbnail: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+          };
+        }
+      }
+
+      // Vimeo: vimeo.com/ID
+      if (hostname === "vimeo.com") {
+        const videoId = u.pathname.slice(1).split(/[?#/]/)[0];
+        if (videoId && /^\d+$/.test(videoId)) {
+          return {
+            video_url: raw,
+            video_id: videoId,
+            video_thumbnail: null, // Vimeo requires API call for thumbnail
+          };
+        }
+      }
+
+      // TikTok: tiktok.com/@user/video/ID
+      if (hostname === "tiktok.com") {
+        return {
+          video_url: raw,
+          video_id: null,
+          video_thumbnail: null,
+        };
+      }
+    } catch {
+      // invalid URL, skip
+    }
+  }
+  return null;
+}
+
 // ─── Anti-Spoofing: In-memory last-known position per IP hash ─────────────────
 
 interface LastPosition {
@@ -332,6 +407,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       }
     }
 
+    // ── Video metadata extraction ──────────────────────────────────────────────
+    const videoMeta = extractVideoMeta(content);
+
     const [created] = await db.insert(posts).values({
       id,
       user_id: anonymousId,
@@ -346,6 +424,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       created_at: nowTs,
       expires_at,
       status: needsVideoReview ? "moderated" : "active",
+      video_url: videoMeta?.video_url ?? null,
+      video_thumbnail: videoMeta?.video_thumbnail ?? null,
     }).returning();
 
     lastPositionMap.set(ipHash, { lat, lng, ts: nowTs });
