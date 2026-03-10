@@ -21,7 +21,7 @@ export default function PostNotFound() {
             ...MONO,
             fontSize: "0.6875rem",
             letterSpacing: "0.1em",
-            color: "#555555",
+            color: "#777777",
             marginBottom: "16px",
           }}
         >
@@ -39,7 +39,7 @@ export default function PostNotFound() {
         >
           POST EXPIRED
         </h1>
-        <p style={{ color: "#555555", fontSize: "0.875rem", lineHeight: 1.6, marginBottom: "40px" }}>
+        <p style={{ color: "#777777", fontSize: "0.875rem", lineHeight: 1.6, marginBottom: "40px" }}>
           This post no longer exists or has been removed by the AI moderator.
         </p>
         <Link

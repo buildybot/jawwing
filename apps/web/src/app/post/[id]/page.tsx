@@ -83,7 +83,7 @@ function ReplyItem({ reply, depth, voteStates, onVote, onReplyTo }: ReplyItemPro
             <button
               onClick={() => onVote(reply.id, "up")}
               style={{
-                color: vs.voted === "up" ? "#FFFFFF" : "#555555",
+                color: vs.voted === "up" ? "#FFFFFF" : "#777777",
                 background: "none",
                 border: "none",
                 cursor: "pointer",
@@ -95,13 +95,13 @@ function ReplyItem({ reply, depth, voteStates, onVote, onReplyTo }: ReplyItemPro
             >
               ▲
             </button>
-            <span style={{ ...MONO, color: "#555555", fontSize: "0.6875rem", minWidth: "16px", textAlign: "center" }}>
+            <span style={{ ...MONO, color: "#777777", fontSize: "0.6875rem", minWidth: "16px", textAlign: "center" }}>
               {vs.score}
             </span>
             <button
               onClick={() => onVote(reply.id, "down")}
               style={{
-                color: vs.voted === "down" ? "#A0A0A0" : "#555555",
+                color: vs.voted === "down" ? "#C0C0C0" : "#777777",
                 background: "none",
                 border: "none",
                 cursor: "pointer",
@@ -116,14 +116,14 @@ function ReplyItem({ reply, depth, voteStates, onVote, onReplyTo }: ReplyItemPro
             </button>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <span style={{ ...MONO, color: "#555555", fontSize: "0.6875rem", letterSpacing: "0.02em" }}>
+            <span style={{ ...MONO, color: "#777777", fontSize: "0.6875rem", letterSpacing: "0.02em" }}>
               {formatTimeAgo(reply.created_at)}
             </span>
             <button
               onClick={() => onReplyTo(reply.id, reply.content.slice(0, 40))}
               style={{
                 ...MONO,
-                color: "#555555",
+                color: "#777777",
                 background: "none",
                 border: "none",
                 cursor: "pointer",
@@ -132,7 +132,7 @@ function ReplyItem({ reply, depth, voteStates, onVote, onReplyTo }: ReplyItemPro
                 padding: 0,
                 transition: "color 150ms",
               }}
-              className="hover:text-[#A0A0A0]"
+              className="hover:text-[#C0C0C0]"
             >
               REPLY
             </button>
@@ -314,7 +314,7 @@ export default function PostPage() {
         <nav style={{ borderBottom: "1px solid #1F1F1F" }} className="px-4 py-4 flex items-center gap-3">
           <button
             onClick={() => router.back()}
-            style={{ ...MONO, color: "#555555", background: "none", border: "none", cursor: "pointer", fontSize: "0.875rem", letterSpacing: "0.04em" }}
+            style={{ ...MONO, color: "#777777", background: "none", border: "none", cursor: "pointer", fontSize: "0.875rem", letterSpacing: "0.04em" }}
             className="hover:text-white transition-colors"
           >
             ← BACK
@@ -371,7 +371,7 @@ export default function PostPage() {
                     onClick={() => vote("up")}
                     disabled={voting}
                     style={{
-                      color: voted === "up" ? "#FFFFFF" : "#555555",
+                      color: voted === "up" ? "#FFFFFF" : "#777777",
                       background: "none", border: "none",
                       cursor: voting ? "wait" : "pointer",
                       fontSize: "0.875rem",
@@ -384,7 +384,7 @@ export default function PostPage() {
                   <span
                     style={{
                       ...MONO,
-                      color: voted === "up" ? "#FFFFFF" : voted === "down" ? "#555555" : "#A0A0A0",
+                      color: voted === "up" ? "#FFFFFF" : voted === "down" ? "#777777" : "#C0C0C0",
                       fontSize: "1rem",
                       fontWeight: 600,
                       minWidth: "28px",
@@ -397,7 +397,7 @@ export default function PostPage() {
                     onClick={() => vote("down")}
                     disabled={voting}
                     style={{
-                      color: voted === "down" ? "#A0A0A0" : "#555555",
+                      color: voted === "down" ? "#C0C0C0" : "#777777",
                       background: "none", border: "none",
                       cursor: voting ? "wait" : "pointer",
                       fontSize: "0.875rem",
@@ -410,7 +410,7 @@ export default function PostPage() {
                   </button>
                 </div>
 
-                <div style={{ ...MONO, color: "#555555", fontSize: "0.6875rem", letterSpacing: "0.02em", display: "flex", gap: "8px" }}>
+                <div style={{ ...MONO, color: "#777777", fontSize: "0.6875rem", letterSpacing: "0.02em", display: "flex", gap: "8px" }}>
                   <span>↩ {post.reply_count}</span>
                   <span style={{ color: "#1F1F1F" }}>·</span>
                   <span>{formatTimeAgo(post.created_at)}</span>
@@ -426,7 +426,7 @@ export default function PostPage() {
                 ...MONO,
                 fontSize: "0.625rem",
                 letterSpacing: "0.1em",
-                color: "#555555",
+                color: "#777777",
                 padding: "12px 16px",
                 borderBottom: "1px solid #1F1F1F",
               }}
@@ -486,7 +486,7 @@ export default function PostPage() {
                   gap: "8px",
                 }}
               >
-                <span style={{ ...MONO, color: "#555555", fontSize: "0.5625rem", letterSpacing: "0.08em" }}>
+                <span style={{ ...MONO, color: "#777777", fontSize: "0.5625rem", letterSpacing: "0.08em" }}>
                   REPLYING TO: "{replyingTo.excerpt}{replyingTo.excerpt.length >= 40 ? "..." : ""}"
                 </span>
                 <button
@@ -494,7 +494,7 @@ export default function PostPage() {
                   style={{
                     background: "none",
                     border: "none",
-                    color: "#555555",
+                    color: "#777777",
                     cursor: "pointer",
                     fontSize: "0.75rem",
                     padding: 0,
@@ -538,7 +538,7 @@ export default function PostPage() {
                 }}
                 onFocus={(e) => (e.currentTarget.style.borderColor = "#333333")}
                 onBlur={(e) => (e.currentTarget.style.borderColor = "#1F1F1F")}
-                className="placeholder:text-[#555555]"
+                className="placeholder:text-[#777777]"
               />
               {isAuthenticated() ? (
                 <button
@@ -547,7 +547,7 @@ export default function PostPage() {
                   style={{
                     ...MONO,
                     background: replyContent.trim() && !submitting ? "#FFFFFF" : "transparent",
-                    color: replyContent.trim() && !submitting ? "#000000" : "#555555",
+                    color: replyContent.trim() && !submitting ? "#000000" : "#777777",
                     border: `1px solid ${replyContent.trim() && !submitting ? "#FFFFFF" : "#333333"}`,
                     padding: "8px 16px",
                     fontSize: "0.75rem",

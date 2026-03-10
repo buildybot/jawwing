@@ -103,6 +103,36 @@ async function createPost(req: AuthenticatedRequest): Promise<NextResponse> {
     }
 
     const { lat, lng } = parsed.data;
+
+    // ── Anti-spoofing checks ──────────────────────────────────────────────────
+
+    // 1. Reject null island (0,0) — almost certainly a missing/failed GPS fix
+    if (lat === 0 && lng === 0) {
+      return NextResponse.json(
+        { error: "Invalid location: null island coordinates rejected", code: "INVALID_LOCATION" },
+        { status: 422 }
+      );
+    }
+
+    // 2. Teleportation check — reject if user moved >100km in <5 minutes
+    const nowSec = Math.floor(Date.now() / 1000);
+    const lastPos = lastPositionMap.get(user.id);
+    if (lastPos) {
+      const elapsed = nowSec - lastPos.ts;
+      if (elapsed < TELEPORT_WINDOW_SEC) {
+        const distKm = haversineKm(lastPos.lat, lastPos.lng, lat, lng);
+        if (distKm > TELEPORT_MAX_KM) {
+          return NextResponse.json(
+            {
+              error: `Location jump too large (${Math.round(distKm)}km in ${elapsed}s). Try again later.`,
+              code: "LOCATION_SPOOFING",
+            },
+            { status: 422 }
+          );
+        }
+      }
+    }
+
     // Sanitize: strip HTML then re-trim (PostSchema already validated length pre-sanitize;
     // re-check after sanitize to be safe)
     const content = sanitizeContent(parsed.data.content);
@@ -119,6 +149,9 @@ async function createPost(req: AuthenticatedRequest): Promise<NextResponse> {
       id, user_id: user.id, content, lat, lng,
       h3_index, score: 0, reply_count: 0, created_at: nowTs, expires_at, status: "active",
     }).returning();
+
+    // Update last known position for teleportation check on future posts
+    lastPositionMap.set(user.id, { lat, lng, ts: nowTs });
 
     // Fire async moderation pipeline — does NOT block post creation
     onPostCreated(created);

@@ -1,5 +1,4 @@
 import Link from "next/link";
-import WaitlistForm from "@/components/WaitlistForm";
 
 const MONO: React.CSSProperties = {
   fontFamily: "var(--font-mono), 'JetBrains Mono', monospace",
@@ -57,7 +56,7 @@ export default function HomePage() {
             }}
             className="hover:bg-white hover:text-black transition-colors"
           >
-            LOGIN
+            SIGN UP
           </Link>
         </div>
       </nav>
@@ -77,7 +76,7 @@ export default function HomePage() {
               marginBottom: "40px",
             }}
           >
-            ANONYMOUS · LOCAL · 2026
+            ANONYMOUS · LOCAL · LIVE NOW
           </div>
 
           <h1
@@ -103,8 +102,8 @@ export default function HomePage() {
               marginBottom: "48px",
             }}
           >
-            Jawwing is anonymous, location-based posts.
-            No accounts. No names. Just your neighborhood, talking.
+            Anonymous, location-based posts. No names. No profiles.
+            Just your neighborhood, unfiltered. AI-moderated by a public constitution.
           </p>
 
           <Link
@@ -127,7 +126,7 @@ export default function HomePage() {
           </Link>
 
           <p style={{ ...MONO, color: "#777777", fontSize: "0.6875rem", letterSpacing: "0.06em", marginTop: "16px" }}>
-            SMS VERIFICATION ONLY · NO EMAIL · NO PASSWORDS
+            EMAIL VERIFICATION ONLY · NO PASSWORDS · FREE
           </p>
         </section>
 
@@ -145,17 +144,17 @@ export default function HomePage() {
                 {
                   num: "01",
                   title: "DROP IN",
-                  desc: "Open Jawwing. See what people near you are posting. No signup required to browse.",
+                  desc: "Open Jawwing. See what people near you are posting. Browse the feed without an account.",
                 },
                 {
                   num: "02",
                   title: "SPEAK UP",
-                  desc: "Post anonymously. 300 characters. Your post lives for 24 hours, then disappears.",
+                  desc: "Post anonymously. 300 characters. Your post lives for 24 hours, then disappears forever.",
                 },
                 {
                   num: "03",
                   title: "STAY REAL",
-                  desc: "AI moderators enforce a public constitution. No human mods. No bias. You can audit every decision.",
+                  desc: "AI moderators enforce a public constitution. No human mods. No bias. Every decision is auditable.",
                 },
               ].map((item, i) => (
                 <div
@@ -275,17 +274,6 @@ export default function HomePage() {
             >
               Or read the Constitution first →
             </Link>
-          </div>
-        </section>
-
-        {/* Secondary Waitlist — App Store Notifications */}
-        <section style={{ ...DIVIDER, borderBottom: "1px solid #1F1F1F" }} className="px-6 py-12">
-          <div style={{ maxWidth: "480px" }} className="mx-auto text-center">
-            <p style={{ ...LABEL, display: "block", marginBottom: "8px" }}>COMING TO APP STORES</p>
-            <p style={{ color: "#777777", fontSize: "0.8125rem", lineHeight: 1.5, marginBottom: "20px" }}>
-              Get notified when Jawwing hits iOS and Android.
-            </p>
-            <WaitlistForm />
           </div>
         </section>
 

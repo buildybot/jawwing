@@ -2,12 +2,12 @@ import { z } from "zod";
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
 
-export const PhoneSchema = z.object({
-  phone: z.string().regex(/^\+[1-9]\d{1,14}$/, "phone must be a valid E.164 number (e.g. +12125551234)"),
+export const EmailSchema = z.object({
+  email: z.string().email("email must be a valid email address"),
 });
 
 export const VerifySchema = z.object({
-  phone: z.string().regex(/^\+[1-9]\d{1,14}$/, "phone must be a valid E.164 number"),
+  email: z.string().email("email must be a valid email address"),
   code: z.string().regex(/^\d{6}$/, "code must be exactly 6 digits"),
 });
 

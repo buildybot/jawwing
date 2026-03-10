@@ -34,7 +34,7 @@ export default function NotFound() {
         >
           THIS TERRITORY IS UNCHARTED
         </h1>
-        <p style={{ color: "#555555", fontSize: "0.875rem", lineHeight: 1.6, marginBottom: "40px" }}>
+        <p style={{ color: "#777777", fontSize: "0.875rem", lineHeight: 1.6, marginBottom: "40px" }}>
           The page you&apos;re looking for doesn&apos;t exist or has been removed.
         </p>
         <Link

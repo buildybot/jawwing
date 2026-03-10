@@ -344,19 +344,23 @@ export default function FeedPage() {
           </div>
         )}
 
-        {/* Location fallback banner */}
+        {/* Location fallback banner — amber/visible so users know GPS failed */}
         {locationFallback && !isRemoteTerritory && (
           <div
             style={{
-              background: "#0A0A0A",
-              border: "1px solid #1F1F1F",
-              borderLeft: "2px solid #777777",
+              background: "#1A1200",
+              border: "1px solid #3D2E00",
+              borderLeft: "3px solid #F5A500",
               padding: "10px 16px",
               maxWidth: "480px",
               margin: "0 auto",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
             }}
           >
-            <span style={{ ...MONO, color: "#777777", fontSize: "0.6875rem", letterSpacing: "0.06em" }}>
+            <span style={{ fontSize: "0.875rem", lineHeight: "1" }}>⚠</span>
+            <span style={{ ...MONO, color: "#F5A500", fontSize: "0.6875rem", letterSpacing: "0.06em" }}>
               LOCATION UNAVAILABLE · SHOWING DC METRO
             </span>
           </div>

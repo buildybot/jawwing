@@ -13,6 +13,7 @@ import { nanoid } from "nanoid";
 import { eq } from "drizzle-orm";
 import { db, users, api_keys, now as dbNow } from "@jawwing/db";
 import type { User } from "@jawwing/db";
+import { Resend } from "resend";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -71,22 +72,18 @@ const ANIMALS = [
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-/** Normalize phone to E.164. Assumes US (+1) if no country code present. */
-export function normalizePhone(phone: string): string {
-  const digits = phone.replace(/\D/g, "");
-  if (digits.startsWith("1") && digits.length === 11) return `+${digits}`;
-  if (digits.length === 10) return `+1${digits}`;
-  if (phone.startsWith("+")) return `+${digits}`;
-  return `+${digits}`;
+/** Normalize email: lowercase + trim. */
+export function normalizeEmail(email: string): string {
+  return email.toLowerCase().trim();
 }
 
-/** SHA-256 hash of phone with env salt. */
-export function hashPhone(phone: string): string {
-  const salt = process.env.PHONE_HASH_SALT;
-  if (!salt) throw new Error("PHONE_HASH_SALT env var is required");
+/** SHA-256 hash of email with env salt. */
+export function hashEmail(email: string): string {
+  const salt = process.env.EMAIL_HASH_SALT ?? process.env.PHONE_HASH_SALT;
+  if (!salt) throw new Error("EMAIL_HASH_SALT env var is required");
   return crypto
     .createHash("sha256")
-    .update(salt + normalizePhone(phone))
+    .update(salt + normalizeEmail(email))
     .digest("hex");
 }
 
@@ -97,31 +94,73 @@ export function generateDisplayName(): string {
   return `${adj}${animal}`;
 }
 
-// ─── SMS verification ─────────────────────────────────────────────────────────
+// ─── Email verification ───────────────────────────────────────────────────────
 
-/** Send a 6-digit SMS verification code via Twilio. */
-export async function sendVerificationCode(phone: string): Promise<void> {
-  const sid = process.env.TWILIO_ACCOUNT_SID;
-  const token = process.env.TWILIO_AUTH_TOKEN;
-  const from = process.env.TWILIO_PHONE_NUMBER;
-
-  if (!sid || !token || !from) {
-    throw new Error(
-      "Twilio env vars missing: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER"
-    );
+/** Send a 6-digit email verification code via Resend. */
+export async function sendVerificationCode(email: string): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    throw new Error("RESEND_API_KEY env var is required");
   }
 
-  const normalized = normalizePhone(phone);
+  const normalized = normalizeEmail(email);
   const code = String(Math.floor(100_000 + Math.random() * 900_000));
 
-  // Lazy-import twilio so it doesn't load in environments that don't use it
-  const { default: twilio } = await import("twilio");
-  const client = twilio(sid, token);
+  const resend = new Resend(apiKey);
 
-  await client.messages.create({
-    body: `Your Jawwing code is: ${code}`,
-    from,
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Your Jawwing verification code</title>
+</head>
+<body style="margin:0;padding:0;background:#000000;font-family:'Courier New',Courier,monospace;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#000000;min-height:100vh;">
+    <tr>
+      <td align="center" valign="middle" style="padding:48px 24px;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:400px;">
+          <!-- Wordmark -->
+          <tr>
+            <td align="center" style="padding-bottom:48px;">
+              <span style="font-family:'Courier New',Courier,monospace;font-size:20px;font-weight:700;letter-spacing:0.18em;color:#FFFFFF;">JAWWING</span>
+            </td>
+          </tr>
+          <!-- Label -->
+          <tr>
+            <td align="center" style="padding-bottom:16px;">
+              <span style="font-family:'Courier New',Courier,monospace;font-size:11px;letter-spacing:0.1em;color:#777777;text-transform:uppercase;">Your verification code</span>
+            </td>
+          </tr>
+          <!-- Code -->
+          <tr>
+            <td align="center" style="padding:24px;border:1px solid #1F1F1F;background:#0A0A0A;margin-bottom:24px;">
+              <span style="font-family:'Courier New',Courier,monospace;font-size:48px;font-weight:700;letter-spacing:0.3em;color:#FFFFFF;">${code}</span>
+            </td>
+          </tr>
+          <!-- Expiry -->
+          <tr>
+            <td align="center" style="padding-top:24px;">
+              <span style="font-family:'Courier New',Courier,monospace;font-size:11px;letter-spacing:0.06em;color:#777777;">This code expires in 5 minutes.</span>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding-top:8px;">
+              <span style="font-family:'Courier New',Courier,monospace;font-size:11px;letter-spacing:0.06em;color:#333333;">Do not share it with anyone.</span>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  await resend.emails.send({
+    from: "noreply@jawwing.com",
     to: normalized,
+    subject: "Your Jawwing verification code",
+    html,
   });
 
   pendingCodes.set(normalized, {
@@ -134,13 +173,13 @@ export async function sendVerificationCode(phone: string): Promise<void> {
 
 /** Verify code, create user if new, return JWT session token. */
 export async function verifyCode(
-  phone: string,
+  email: string,
   code: string
 ): Promise<AuthResult> {
-  const normalized = normalizePhone(phone);
+  const normalized = normalizeEmail(email);
   const pending = pendingCodes.get(normalized);
 
-  if (!pending) throw new Error("No pending verification code for this number");
+  if (!pending) throw new Error("No pending verification code for this email");
   if (Date.now() > pending.expiresAt) {
     pendingCodes.delete(normalized);
     throw new Error("Verification code has expired");
@@ -150,11 +189,11 @@ export async function verifyCode(
   // Code consumed — delete immediately
   pendingCodes.delete(normalized);
 
-  const phoneHash = hashPhone(phone);
+  const emailHash = hashEmail(email);
 
   // Find or create user
   let user = await db.query.users.findFirst({
-    where: eq(users.phone_hash, phoneHash),
+    where: eq(users.phone_hash, emailHash),
   });
 
   if (!user) {
@@ -164,7 +203,7 @@ export async function verifyCode(
 
     await db.insert(users).values({
       id,
-      phone_hash: phoneHash,
+      phone_hash: emailHash,
       display_name: displayName,
       type: "human",
       verified: true,

@@ -51,7 +51,7 @@ export default function GlobalError({
         >
           SOMETHING BROKE
         </h1>
-        <p style={{ color: "#555555", fontSize: "0.875rem", lineHeight: 1.6, marginBottom: "40px" }}>
+        <p style={{ color: "#777777", fontSize: "0.875rem", lineHeight: 1.6, marginBottom: "40px" }}>
           An unexpected error occurred. It&apos;s not you — it&apos;s us.
         </p>
         <button
