@@ -27,6 +27,41 @@ function parseMeta(html: string, property: string): string | undefined {
   return undefined;
 }
 
+const BROWSER_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
+
+async function fetchOG(url: string): Promise<OGData | null> {
+  const res = await fetch(url, {
+    headers: {
+      "User-Agent": BROWSER_UA,
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "Accept-Language": "en-US,en;q=0.9",
+    },
+    redirect: "follow",
+    signal: AbortSignal.timeout(8000),
+  });
+
+  if (!res.ok) return null;
+
+  const html = await res.text();
+  return {
+    url,
+    title:
+      parseMeta(html, "og:title") ||
+      parseMeta(html, "twitter:title") ||
+      html.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1]?.trim(),
+    description:
+      parseMeta(html, "og:description") ||
+      parseMeta(html, "twitter:description") ||
+      parseMeta(html, "description"),
+    image:
+      parseMeta(html, "og:image") || parseMeta(html, "twitter:image"),
+  };
+}
+
+const OG_RESPONSE_HEADERS = {
+  "Cache-Control": "s-maxage=3600, stale-while-revalidate=7200",
+};
+
 export async function GET(req: NextRequest) {
   const rawUrl = req.nextUrl.searchParams.get("url");
   if (!rawUrl) {
@@ -44,46 +79,39 @@ export async function GET(req: NextRequest) {
   const cacheKey = parsedUrl.href;
   const cached = ogCache.get(cacheKey);
   if (cached && cached.expires > Date.now()) {
-    return NextResponse.json(cached.data);
+    return NextResponse.json(cached.data, { headers: OG_RESPONSE_HEADERS });
   }
 
-  try {
-    const res = await fetch(parsedUrl.href, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (compatible; Jawwing/1.0; +https://jawwing.com)",
-        Accept: "text/html,application/xhtml+xml",
-      },
-      signal: AbortSignal.timeout(5000),
-    });
+  const isReddit = /reddit\.com/i.test(parsedUrl.hostname);
 
-    if (!res.ok) {
-      const data: OGData = { url: rawUrl, error: "fetch_failed" };
-      ogCache.set(cacheKey, { data, expires: Date.now() + CACHE_TTL });
-      return NextResponse.json(data);
+  try {
+    let data = await fetchOG(parsedUrl.href);
+
+    // Reddit fallback: try old.reddit.com which has more reliable OG tags
+    if (!data && isReddit) {
+      const oldUrl = parsedUrl.href.replace(/(?:www\.)?reddit\.com/, "old.reddit.com");
+      data = await fetchOG(oldUrl);
     }
 
-    const html = await res.text();
+    if (!data) {
+      const errData: OGData = { url: rawUrl, error: "fetch_failed" };
+      ogCache.set(cacheKey, { data: errData, expires: Date.now() + 5 * 60 * 1000 });
+      return NextResponse.json(errData, { headers: OG_RESPONSE_HEADERS });
+    }
 
-    const data: OGData = {
-      url: rawUrl,
-      title:
-        parseMeta(html, "og:title") ||
-        parseMeta(html, "twitter:title") ||
-        html.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1]?.trim(),
-      description:
-        parseMeta(html, "og:description") ||
-        parseMeta(html, "twitter:description") ||
-        parseMeta(html, "description"),
-      image:
-        parseMeta(html, "og:image") || parseMeta(html, "twitter:image"),
-    };
+    // For Reddit: if primary fetch had no OG, try old.reddit fallback even on success
+    if (isReddit && !data.title && !data.image) {
+      const oldUrl = parsedUrl.href.replace(/(?:www\.)?reddit\.com/, "old.reddit.com");
+      const fallback = await fetchOG(oldUrl);
+      if (fallback?.title || fallback?.image) data = fallback;
+    }
 
-    ogCache.set(cacheKey, { data, expires: Date.now() + CACHE_TTL });
-    return NextResponse.json(data);
+    const result: OGData = { ...data, url: rawUrl };
+    ogCache.set(cacheKey, { data: result, expires: Date.now() + CACHE_TTL });
+    return NextResponse.json(result, { headers: OG_RESPONSE_HEADERS });
   } catch {
-    const data: OGData = { url: rawUrl, error: "fetch_failed" };
-    ogCache.set(cacheKey, { data, expires: Date.now() + 5 * 60 * 1000 }); // short cache on error
-    return NextResponse.json(data);
+    const errData: OGData = { url: rawUrl, error: "fetch_failed" };
+    ogCache.set(cacheKey, { data: errData, expires: Date.now() + 5 * 60 * 1000 });
+    return NextResponse.json(errData, { headers: OG_RESPONSE_HEADERS });
   }
 }

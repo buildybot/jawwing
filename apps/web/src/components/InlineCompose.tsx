@@ -3,6 +3,14 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 
+interface OGPreview {
+  url: string;
+  title?: string;
+  description?: string;
+  image?: string;
+  error?: string;
+}
+
 interface InlineComposeProps {
   locationLabel?: string;
   hasLocation?: boolean;
@@ -41,6 +49,12 @@ export default function InlineCompose({
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [promptIndex, setPromptIndex] = useState(0);
 
+  const [ogPreview, setOgPreview] = useState<OGPreview | null>(null);
+  const [ogLoading, setOgLoading] = useState(false);
+  const [ogDismissed, setOgDismissed] = useState(false);
+  const ogDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastOgUrl = useRef<string | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -59,6 +73,37 @@ export default function InlineCompose({
       textareaRef.current.focus();
     }
   }, [expanded]);
+
+  const handleContentChange = (val: string) => {
+    setContent(val.slice(0, MAX));
+    // Detect URL and fetch OG preview
+    const match = val.match(/(https?:\/\/[^\s]+)/);
+    const url = match ? match[1] : null;
+    if (!url) {
+      setOgPreview(null);
+      setOgDismissed(false);
+      lastOgUrl.current = null;
+      if (ogDebounceRef.current) clearTimeout(ogDebounceRef.current);
+      return;
+    }
+    if (url === lastOgUrl.current) return; // same URL, no refetch
+    if (ogDebounceRef.current) clearTimeout(ogDebounceRef.current);
+    ogDebounceRef.current = setTimeout(async () => {
+      if (ogDismissed && url === lastOgUrl.current) return;
+      lastOgUrl.current = url;
+      setOgDismissed(false);
+      setOgLoading(true);
+      try {
+        const res = await fetch(`/api/v1/og?url=${encodeURIComponent(url)}`);
+        const data: OGPreview = await res.json();
+        setOgPreview(data);
+      } catch {
+        setOgPreview(null);
+      } finally {
+        setOgLoading(false);
+      }
+    }, 500);
+  };
 
   const handleExpand = () => {
     if (disabled) return;

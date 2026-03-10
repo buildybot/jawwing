@@ -32,14 +32,14 @@ export default function Header({
     <header
       style={{
         background: "#000000",
-        borderBottom: "1px solid #1F1F1F",
+        borderBottom: "1px solid #333333",
         position: "sticky",
         top: 0,
         zIndex: 40,
         width: "100%",
       }}
     >
-      {/* Single row — wordmark left, city center, icons right */}
+      {/* Main row */}
       <div className="feed-container mx-auto flex items-center justify-between px-4 py-3">
         {/* Wordmark */}
         <Link
@@ -70,7 +70,7 @@ export default function Header({
             <span
               style={{
                 ...MONO,
-                color: "#888888",
+                color: "#AAAAAA",
                 fontSize: "0.6875rem",
                 letterSpacing: "0.06em",
               }}
@@ -80,53 +80,108 @@ export default function Header({
           )}
         </div>
 
-        {/* Right: settings gear + account */}
-        <div className="flex items-center gap-3" style={{ flexShrink: 0 }}>
+        {/* Right side */}
+        <div className="flex items-center gap-4" style={{ flexShrink: 0 }}>
           {isLoggedIn ? (
-            <Link
-              href="/my-posts"
-              title="Your posts"
-              style={{
-                ...MONO,
-                color: "#888888",
-                fontSize: "0.6875rem",
-                letterSpacing: "0.06em",
-                textDecoration: "none",
-              }}
-              className="hover:text-[#AAAAAA] transition-colors"
-            >
-              •
-            </Link>
+            <>
+              <Link
+                href="/my-posts"
+                title="Your posts"
+                style={{
+                  ...MONO,
+                  color: "#FFFFFF",
+                  fontSize: "0.6875rem",
+                  letterSpacing: "0.08em",
+                  textDecoration: "none",
+                  fontWeight: 600,
+                }}
+                className="hover:text-[#CCCCCC] transition-colors"
+              >
+                MY POSTS
+              </Link>
+              <Link
+                href="/settings"
+                title="Settings"
+                style={{
+                  ...MONO,
+                  color: "#FFFFFF",
+                  fontSize: "0.9rem",
+                  textDecoration: "none",
+                  lineHeight: 1,
+                }}
+                className="hover:text-[#CCCCCC] transition-colors"
+              >
+                ⚙
+              </Link>
+            </>
           ) : (
-            <Link
-              href="/signin"
-              style={{
-                ...MONO,
-                color: "#888888",
-                fontSize: "0.5625rem",
-                letterSpacing: "0.08em",
-                textDecoration: "none",
-              }}
-              className="hover:text-[#AAAAAA] transition-colors"
-            >
-              SIGN IN
-            </Link>
+            <>
+              <Link
+                href="/signin"
+                style={{
+                  ...MONO,
+                  color: "#FFFFFF",
+                  fontSize: "0.6875rem",
+                  letterSpacing: "0.08em",
+                  textDecoration: "none",
+                  fontWeight: 600,
+                  border: "1px solid #444444",
+                  padding: "5px 12px",
+                }}
+                className="hover:bg-[#FFFFFF] hover:text-[#000000] transition-all"
+              >
+                SIGN IN
+              </Link>
+              <Link
+                href="/settings"
+                title="Settings"
+                style={{
+                  ...MONO,
+                  color: "#AAAAAA",
+                  fontSize: "0.9rem",
+                  textDecoration: "none",
+                  lineHeight: 1,
+                }}
+                className="hover:text-[#FFFFFF] transition-colors"
+              >
+                ⚙
+              </Link>
+            </>
           )}
+        </div>
+      </div>
+
+      {/* Secondary nav — legible links */}
+      <div
+        className="feed-container mx-auto flex items-center gap-5 px-4"
+        style={{
+          borderTop: "1px solid #1A1A1A",
+          paddingTop: "6px",
+          paddingBottom: "6px",
+        }}
+      >
+        {[
+          { href: "/constitution", label: "CONSTITUTION" },
+          { href: "/transparency", label: "TRANSPARENCY" },
+          { href: "/terms", label: "TERMS" },
+          { href: "/privacy", label: "PRIVACY" },
+        ].map(({ href, label }) => (
           <Link
-            href="/settings"
-            title="Settings"
+            key={href}
+            href={href}
             style={{
               ...MONO,
-              color: "#888888",
-              fontSize: "0.875rem",
+              fontSize: "0.6875rem",
+              letterSpacing: "0.06em",
+              color: "#AAAAAA",
               textDecoration: "none",
-              lineHeight: 1,
+              fontWeight: 500,
             }}
-            className="hover:text-[#AAAAAA] transition-colors"
+            className="hover:text-[#FFFFFF] transition-colors"
           >
-            ⚙
+            {label}
           </Link>
-        </div>
+        ))}
       </div>
     </header>
   );

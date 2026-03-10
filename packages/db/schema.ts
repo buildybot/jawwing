@@ -161,6 +161,7 @@ export const replies = sqliteTable(
     // Anonymous session cookie value — NOT a reference to users table
     user_id: text("user_id"),
     ip_hash: text("ip_hash"),
+    account_id: text("account_id"),
     content: text("content").notNull(),
     created_at: integer("created_at").notNull(),
     status: text("status", { enum: ["active", "moderated", "removed"] })
@@ -410,6 +411,25 @@ export const notifications = sqliteTable(
   (t) => ({
     idxNotifAccount: index("idx_notif_account").on(t.account_id),
     idxNotifUnread: index("idx_notif_unread").on(t.account_id, t.read),
+  })
+);
+
+// ─── blocks ───────────────────────────────────────────────────────────────────
+// Server-side blocks — persisted in DB so they work across devices
+
+export const blocks = sqliteTable(
+  "blocks",
+  {
+    id: text("id").primaryKey(),
+    blocker_hash: text("blocker_hash").notNull(),
+    blocker_account_id: text("blocker_account_id"),
+    blocked_user_id: text("blocked_user_id").notNull(),
+    created_at: integer("created_at").notNull(),
+  },
+  (t) => ({
+    idxBlocksBlockerHash: index("idx_blocks_blocker_hash").on(t.blocker_hash),
+    idxBlocksBlockerAccount: index("idx_blocks_blocker_account").on(t.blocker_account_id),
+    uniqBlock: uniqueIndex("uniq_block").on(t.blocker_hash, t.blocked_user_id),
   })
 );
 

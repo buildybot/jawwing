@@ -63,6 +63,14 @@ function matchLinkPreviewUrl(content: string): string | null {
   );
 }
 
+// ─── URL shortener ────────────────────────────────────────────────────────────
+
+function shortenUrl(url: string): string {
+  let s = url.replace(/^https?:\/\//, "").replace(/^www\./, "");
+  if (s.length > 35) s = s.slice(0, 32) + "...";
+  return s;
+}
+
 // ─── Content renderer (text + clickable links) ───────────────────────────────
 
 function ContentWithLinks({ content, fontSize }: { content: string; fontSize?: string }) {
@@ -83,7 +91,7 @@ function ContentWithLinks({ content, fontSize }: { content: string; fontSize?: s
         style={{ color: "#FFFFFF", textDecoration: "underline" }}
         onClick={(e) => e.stopPropagation()}
       >
-        {url}
+        {shortenUrl(url)}
       </a>
     );
     last = m.index + url.length;

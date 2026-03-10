@@ -21,9 +21,7 @@ Jawwing does not currently operate as a registered legal entity. References to "
 
 The Service is available only to users located in the United States. By using Jawwing, you represent that you are at least 18 years old and located in the United States.
 
-If you believe a minor has used Jawwing, contact legal@jawwing.com immediately. We will delete any associated data.
-
-By using the Service, you represent that you are at least 13 years old.`,
+If you believe a minor has used Jawwing, contact legal@jawwing.com immediately. We will delete any associated data.`,
   },
   {
     title: "3. Anonymous Use",

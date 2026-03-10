@@ -46,6 +46,7 @@ export {
   accounts,
   saved_posts,
   notifications,
+  blocks,
 } from "./schema";
 
 // ─── Re-export types ──────────────────────────────────────────────────────────
