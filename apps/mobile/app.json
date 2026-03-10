@@ -15,7 +15,9 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.jawwing.app",
-      "associatedDomains": ["applinks:jawwing.com"]
+      "associatedDomains": [
+        "applinks:jawwing.com"
+      ]
     },
     "android": {
       "package": "com.jawwing.app",
@@ -30,7 +32,10 @@
               "pathPrefix": "/post"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ],
       "adaptiveIcon": {
@@ -53,8 +58,7 @@
         {
           "locationAlwaysAndWhenInUsePermission": "Jawwing uses your location to show you nearby posts."
         }
-      ],
-      "react-native-webview"
+      ]
     ],
     "experiments": {
       "typedRoutes": true

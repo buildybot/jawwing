@@ -5,8 +5,9 @@ import Header from "@/components/Header";
 import FeedTabs, { SortTab } from "@/components/FeedTabs";
 import PostCard, { Post as PostCardPost } from "@/components/PostCard";
 import CreatePostModal from "@/components/CreatePostModal";
+import InlineCompose from "@/components/InlineCompose";
 import { ToastProvider } from "@/components/Toast";
-import { fetchPosts, fetchNewPosts, createPost, getTerritoryFeed, type Post } from "@/lib/api";
+import { fetchPosts, fetchNewPosts, createPost, type Post } from "@/lib/api";
 import { requestLocation, reverseGeocode } from "@/lib/location";
 import { formatTimeAgo, formatDistance } from "@/lib/api";
 import { type TerritorySelection } from "@/components/TerritorySelector";
@@ -17,6 +18,7 @@ import { useBlockedUsers } from "@/hooks/useBlockedUsers";
 
 const FEED_CACHE_KEY = "jawwing_feed_cache";
 const FEED_SCOPE_KEY = "jawwing_feed_scope";
+const CITY_SELECTION_KEY = "jawwing_city_selection";
 
 const MONO = { fontFamily: "var(--font-mono), monospace" } as const;
 const LIMIT = 50; // fetch more so client-side sort has enough to work with
@@ -127,12 +129,20 @@ export default function FeedPage() {
   const touchStartYRef = useRef(0);
   const PTR_THRESHOLD = 72;
 
-  // Load saved scope on mount (cache is just a brief placeholder, never blocks fresh fetch)
+  // Load saved scope + city on mount
   useEffect(() => {
     try {
       const savedScope = localStorage.getItem(FEED_SCOPE_KEY) as FeedScope | null;
       if (savedScope && ["local", "metro", "country"].includes(savedScope)) {
         setFeedScope(savedScope);
+      }
+      // Restore saved city selection
+      const savedCity = localStorage.getItem(CITY_SELECTION_KEY);
+      if (savedCity) {
+        const city = JSON.parse(savedCity);
+        if (city && city.name && city.lat != null && city.lng != null) {
+          setSelectedTerritory({ type: "city", city });
+        }
       }
       // Show cached posts ONLY as a brief flash while real data loads (max 3 seconds)
       const cached = localStorage.getItem(FEED_CACHE_KEY);
@@ -212,7 +222,7 @@ export default function FeedPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const isRemoteTerritory = selectedTerritory.type === "territory";
+  const isRemoteTerritory = selectedTerritory.type === "city";
 
   // Load feed
   const loadFeed = useCallback(
@@ -234,13 +244,15 @@ export default function FeedPage() {
         const currentOffset = reset ? 0 : offset;
         let fetchedPosts: Post[];
 
-        if (selectedTerritory.type === "territory") {
-          // Remote territory selected via header selector — use territory feed
-          const data = await getTerritoryFeed(
-            selectedTerritory.territory.id,
+        if (selectedTerritory.type === "city") {
+          // Remote city selected — fetch using city center coords + territory mode
+          const data = await fetchPosts(
+            selectedTerritory.city.lat,
+            selectedTerritory.city.lng,
             activeTab as "hot" | "new" | "top",
             LIMIT,
-            currentOffset
+            currentOffset,
+            "territory"
           );
           fetchedPosts = data.posts;
         } else {
@@ -301,7 +313,7 @@ export default function FeedPage() {
         }
 
         // Client-side distance-boosted sort for HOT tab
-        if (activeTab === "hot" && selectedTerritory.type !== "territory") {
+        if (activeTab === "hot" && selectedTerritory.type !== "city") {
           fetchedPosts = sortPostsHot(fetchedPosts, userLat, userLng, feedScope);
         }
 
@@ -348,7 +360,7 @@ export default function FeedPage() {
   // Poll for new posts
   const pollForNew = useCallback(async () => {
     if (latestTimestampRef.current === 0) return;
-    if (selectedTerritory.type !== "near_me") return;
+    if (selectedTerritory.type === "city") return;
     if (activeTab === "top") return;
 
     try {
@@ -413,7 +425,7 @@ export default function FeedPage() {
     return () => observer.disconnect();
   }, [hasMore, loadingMore, loading, loadFeed]);
 
-  const handleCreatePost = async (content: string) => {
+  const handleCreatePost = async (content: string, _imageUrl?: string) => {
     if (userLat == null || userLng == null) {
       throw new Error("Location required to post.");
     }
@@ -457,8 +469,8 @@ export default function FeedPage() {
   };
 
   const territoryName =
-    selectedTerritory.type === "territory"
-      ? selectedTerritory.territory.name
+    selectedTerritory.type === "city"
+      ? selectedTerritory.city.name
       : undefined;
 
   return (
@@ -561,51 +573,53 @@ export default function FeedPage() {
             </button>
           </div>
 
-          {/* Scope selector — only shown in near_me mode */}
-          {!isRemoteTerritory && (
-            <div
-              style={{
-                display: "flex",
-                gap: "6px",
-                padding: "8px 16px",
-                borderBottom: "1px solid #1A1A1A",
-              }}
-            >
-              {(["local", "metro", "country"] as FeedScope[]).map((scope) => {
-                const active = feedScope === scope;
-                return (
-                  <button
-                    key={scope}
-                    onClick={() => {
-                      setFeedScope(scope);
-                      try { localStorage.setItem(FEED_SCOPE_KEY, scope); } catch { /* noop */ }
-                    }}
-                    style={{
-                      ...MONO,
-                      background: active ? "#FFFFFF" : "transparent",
-                      color: active ? "#000000" : "#555555",
-                      border: `1px solid ${active ? "#FFFFFF" : "#2A2A2A"}`,
-                      padding: "4px 10px",
-                      fontSize: "0.625rem",
-                      fontWeight: active ? 700 : 400,
-                      letterSpacing: "0.08em",
-                      cursor: "pointer",
-                      borderRadius: "2px",
-                      transition: "all 150ms",
-                      lineHeight: 1.4,
-                    }}
-                  >
-                    {SCOPE_LABELS[scope]}
-                  </button>
-                );
-              })}
-              {expandedScope && (
-                <span style={{ ...MONO, color: "#555555", fontSize: "0.5625rem", letterSpacing: "0.06em", alignSelf: "center", marginLeft: "4px" }}>
-                  NO POSTS NEARBY · SHOWING {expandedLabel || "DC METRO"}
-                </span>
-              )}
-            </div>
-          )}
+          {/* Scope selector */}
+          <div
+            style={{
+              display: "flex",
+              gap: "6px",
+              padding: "8px 16px",
+              borderBottom: "1px solid #1A1A1A",
+            }}
+          >
+            {(["local", "metro", "country"] as FeedScope[]).map((scope) => {
+              const active = feedScope === scope && !isRemoteTerritory;
+              const disabled = isRemoteTerritory && scope === "local";
+              return (
+                <button
+                  key={scope}
+                  onClick={() => {
+                    if (disabled) return;
+                    setFeedScope(scope);
+                    try { localStorage.setItem(FEED_SCOPE_KEY, scope); } catch { /* noop */ }
+                  }}
+                  disabled={disabled}
+                  style={{
+                    ...MONO,
+                    background: active ? "#FFFFFF" : "transparent",
+                    color: disabled ? "#2A2A2A" : active ? "#000000" : "#555555",
+                    border: `1px solid ${active ? "#FFFFFF" : disabled ? "#1A1A1A" : "#2A2A2A"}`,
+                    padding: "4px 10px",
+                    fontSize: "0.625rem",
+                    fontWeight: active ? 700 : 400,
+                    letterSpacing: "0.08em",
+                    cursor: disabled ? "not-allowed" : "pointer",
+                    borderRadius: "2px",
+                    transition: "all 150ms",
+                    lineHeight: 1.4,
+                  }}
+                  title={disabled ? "LOCAL not available for remote cities" : undefined}
+                >
+                  {SCOPE_LABELS[scope]}
+                </button>
+              );
+            })}
+            {!isRemoteTerritory && expandedScope && (
+              <span style={{ ...MONO, color: "#555555", fontSize: "0.5625rem", letterSpacing: "0.06em", alignSelf: "center", marginLeft: "4px" }}>
+                NO POSTS NEARBY · SHOWING {expandedLabel || "DC METRO"}
+              </span>
+            )}
+          </div>
 
           {/* Territory header */}
           {territoryName && (
@@ -625,6 +639,14 @@ export default function FeedPage() {
               <span>{territoryName.toUpperCase()}</span>
               <span style={{ color: "#1F1F1F" }}>TERRITORY</span>
             </div>
+          )}
+
+          {/* Inline compose bar */}
+          {!isRemoteTerritory && (
+            <InlineCompose
+              locationLabel={locationLabel}
+              onSubmit={handleCreatePost}
+            />
           )}
 
           {/* Welcome card */}
@@ -829,36 +851,36 @@ export default function FeedPage() {
           <div style={{ height: "80px" }} />
         </main>
 
-        {/* FAB */}
-        <button
-          onClick={handleFabClick}
-          disabled={isRemoteTerritory}
-          style={{
-            position: "fixed",
-            bottom: "calc(24px + env(safe-area-inset-bottom))",
-            right: "24px",
-            width: "56px",
-            height: "56px",
-            background: isRemoteTerritory ? "#1F1F1F" : "#FFFFFF",
-            color: isRemoteTerritory ? "#777777" : "#000000",
-            border: isRemoteTerritory ? "1px solid #333333" : "none",
-            fontSize: "1.5rem",
-            lineHeight: 1,
-            cursor: isRemoteTerritory ? "not-allowed" : "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontWeight: 300,
-            zIndex: 30,
-            transition: "background 150ms, color 150ms",
-            borderRadius: "2px",
-          } as React.CSSProperties}
-          className={isRemoteTerritory ? "" : "hover:bg-[#C0C0C0]"}
-          aria-label={isRemoteTerritory ? "You can only post where you are" : "Create post"}
-          title={isRemoteTerritory ? "You can only post where you are" : undefined}
-        >
-          +
-        </button>
+        {/* FAB — subtle secondary CTA (inline compose is primary) */}
+        {!isRemoteTerritory && (
+          <button
+            onClick={handleFabClick}
+            style={{
+              position: "fixed",
+              bottom: "calc(24px + env(safe-area-inset-bottom))",
+              right: "24px",
+              width: "40px",
+              height: "40px",
+              background: "#000000",
+              color: "#555555",
+              border: "1px solid #333333",
+              fontSize: "1.25rem",
+              lineHeight: 1,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontWeight: 300,
+              zIndex: 30,
+              transition: "border-color 150ms, color 150ms",
+              borderRadius: "2px",
+            } as React.CSSProperties}
+            className="hover:border-[#777] hover:text-[#C0C0C0]"
+            aria-label="Create post"
+          >
+            +
+          </button>
+        )}
 
         <CreatePostModal
           open={showModal}
