@@ -10,7 +10,7 @@ Your privacy matters. This policy explains what data Jawwing collects, what it d
 ## 1. The Short Version
 
 - We collect almost nothing
-- Your phone number is hashed — we never see or store the real thing
+- Your email address is hashed — we never see or store the real thing
 - We use your location to place posts, but don't track you
 - We don't sell your data. Ever.
 - Posts expire after 24 hours and are deleted
@@ -24,7 +24,7 @@ Your privacy matters. This policy explains what data Jawwing collects, what it d
 
 | Data | Why |
 |------|-----|
-| **Hashed phone number** | Verify you're a real person; prevent duplicate accounts |
+| **Hashed email address** | Verify you're a real person; prevent duplicate accounts |
 | **Location (at post time)** | Attach your post to a place |
 | **Device info** | Basic technical data (OS, browser/app version, IP address) for security and abuse prevention |
 | **Post content** | To display it on the platform |
@@ -36,8 +36,7 @@ Location is collected **only at the moment you post** — we don't track your lo
 ### What We Do NOT Collect
 
 - ❌ Your real name
-- ❌ Email address
-- ❌ Your actual phone number (only the hash)
+- ❌ Your actual email address (only the hash)
 - ❌ Browsing history outside Jawwing
 - ❌ Contacts or address book
 - ❌ Photos or media from your device (unless you explicitly attach them to a post)
@@ -51,7 +50,7 @@ Location is collected **only at the moment you post** — we don't track your lo
 We use the data we collect to:
 
 - **Run the platform** — display posts, apply votes, serve location-based feeds
-- **Verify accounts** — confirm phone ownership to prevent spam and bots
+- **Verify accounts** — confirm email ownership to prevent spam and bots
 - **Moderate content** — our AI moderation system reviews posts against our Mod Constitution
 - **Prevent abuse** — detect and block spammers, bad actors, and policy violations
 - **Improve Jawwing** — aggregate, anonymized analytics to understand how the platform is used (not linked to you personally)
@@ -70,7 +69,7 @@ We do **not** use your data for:
 
 | Recipient | Circumstances |
 |-----------|---------------|
-| **Twilio** | SMS verification only — they process your phone number for the verification step, then we hash it. Twilio's privacy policy applies during that step. |
+| **Resend** | Email verification only — they deliver the verification code to your email address. Resend's privacy policy applies during that step. |
 | **Turso** (database) | Our US-based database provider stores your data. They're a processor, not a controller — they don't use your data for their own purposes. |
 | **Vercel** (hosting) | Our infrastructure provider. Same deal — processor only. |
 | **Law enforcement** | Only if legally required by a valid court order, subpoena, or warrant. We'll notify you if legally permitted to do so. |
@@ -85,7 +84,7 @@ We don't sell data. We don't share it with advertisers. We don't do data broker 
 |-----------|-----------|
 | Posts | **24 hours** — then automatically deleted |
 | Location data (from posts) | Deleted with the post (24 hours) |
-| Account data (handle, hashed phone) | Until you delete your account |
+| Account data (handle, hashed email) | Until you delete your account |
 | Device/session logs | Up to 90 days for security purposes |
 | Moderation logs | Up to 1 year (abuse prevention) |
 
@@ -119,7 +118,7 @@ Jawwing is not directed at children under 13. We don't knowingly collect data fr
 
 We take reasonable steps to protect your data:
 
-- Phone numbers are **hashed using a one-way function** — we can't reverse them
+- Email addresses are **hashed using a one-way function** — we can't reverse them
 - Data is stored on Turso (US-based, encrypted at rest)
 - HTTPS everywhere
 - Access controls on our internal systems

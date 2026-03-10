@@ -111,28 +111,28 @@ export function checkRateLimit(
   return { allowed, remaining, resetAt: entry.resetAt };
 }
 
-// ─── SMS Rate Limits ──────────────────────────────────────────────────────────
+// ─── Email Rate Limits ────────────────────────────────────────────────────────
 
-// send-code: 3 per phone per 10 minutes
-const SMS_SEND_LIMIT = 3;
-const SMS_SEND_WINDOW_MS = 10 * 60 * 1000;
+// send-code: 3 per email per 10 minutes
+const EMAIL_SEND_LIMIT = 3;
+const EMAIL_SEND_WINDOW_MS = 10 * 60 * 1000;
 
-// verify: 5 per phone per 10 minutes
-const SMS_VERIFY_LIMIT = 5;
-const SMS_VERIFY_WINDOW_MS = 10 * 60 * 1000;
+// verify: 5 per email per 10 minutes
+const EMAIL_VERIFY_LIMIT = 5;
+const EMAIL_VERIFY_WINDOW_MS = 10 * 60 * 1000;
 
 /**
- * Check SMS-specific rate limits.
- * @param phone  E.164 phone number used as the key
+ * Check email-specific rate limits.
+ * @param email  Email address used as the key
  * @param action "send-code" | "verify"
  */
-export function checkSmsRateLimit(
-  phone: string,
+export function checkEmailRateLimit(
+  email: string,
   action: "send-code" | "verify" = "send-code"
 ): { allowed: boolean; remaining: number; resetAt: number } {
-  const limit = action === "send-code" ? SMS_SEND_LIMIT : SMS_VERIFY_LIMIT;
-  const windowMs = action === "send-code" ? SMS_SEND_WINDOW_MS : SMS_VERIFY_WINDOW_MS;
-  const key = `sms:${action}:${phone}`;
+  const limit = action === "send-code" ? EMAIL_SEND_LIMIT : EMAIL_VERIFY_LIMIT;
+  const windowMs = action === "send-code" ? EMAIL_SEND_WINDOW_MS : EMAIL_VERIFY_WINDOW_MS;
+  const key = `email:${action}:${email}`;
   const now = Date.now();
 
   let entry = rateLimitStore.get(key);

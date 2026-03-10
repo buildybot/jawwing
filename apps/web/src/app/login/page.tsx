@@ -12,8 +12,8 @@ function LoginPageInner() {
   const searchParams = useSearchParams();
   const { isAuthenticated, isLoading, login, logout, user } = useAuth();
 
-  const [step, setStep] = useState<"phone" | "code">("phone");
-  const [phone, setPhone] = useState("");
+  const [step, setStep] = useState<"email" | "code">("email");
+  const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +32,7 @@ function LoginPageInner() {
     setError(null);
     setLoading(true);
     try {
-      await sendCode(phone.trim());
+      await sendCode(email.trim());
       setStep("code");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to send code.");
@@ -46,7 +46,7 @@ function LoginPageInner() {
     setError(null);
     setLoading(true);
     try {
-      const result = await verifyCode(phone.trim(), code.trim());
+      const result = await verifyCode(email.trim(), code.trim());
       login(result.token, {
         id: result.user.id,
         displayName: result.user.display_name ?? result.user.id,
@@ -158,7 +158,7 @@ function LoginPageInner() {
           </span>
         </div>
 
-        {step === "phone" ? (
+        {step === "email" ? (
           <form onSubmit={handleSendCode}>
             <label
               style={{
@@ -170,13 +170,13 @@ function LoginPageInner() {
                 marginBottom: "8px",
               }}
             >
-              PHONE NUMBER
+              EMAIL ADDRESS
             </label>
             <input
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="+1 555 000 0000"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
               autoFocus
               required
               style={{
@@ -204,21 +204,21 @@ function LoginPageInner() {
 
             <button
               type="submit"
-              disabled={loading || !phone.trim()}
+              disabled={loading || !email.trim()}
               style={{
                 ...MONO,
                 display: "block",
                 width: "100%",
                 marginTop: "16px",
-                background: phone.trim() && !loading ? "#FFFFFF" : "transparent",
-                color: phone.trim() && !loading ? "#000000" : "#777777",
-                border: `1px solid ${phone.trim() && !loading ? "#FFFFFF" : "#333333"}`,
+                background: email.trim() && !loading ? "#FFFFFF" : "transparent",
+                color: email.trim() && !loading ? "#000000" : "#777777",
+                border: `1px solid ${email.trim() && !loading ? "#FFFFFF" : "#333333"}`,
                 borderRadius: 0,
                 padding: "12px",
                 fontSize: "0.8125rem",
                 fontWeight: 600,
                 letterSpacing: "0.08em",
-                cursor: phone.trim() && !loading ? "pointer" : "not-allowed",
+                cursor: email.trim() && !loading ? "pointer" : "not-allowed",
                 transition: "all 150ms",
               }}
             >
@@ -235,13 +235,13 @@ function LoginPageInner() {
                 marginTop: "24px",
               }}
             >
-              ANONYMOUS · NO PASSWORD · SMS ONLY
+              ANONYMOUS · NO PASSWORD · EMAIL ONLY
             </p>
           </form>
         ) : (
           <form onSubmit={handleVerify}>
             <p style={{ ...MONO, color: "#777777", fontSize: "0.75rem", letterSpacing: "0.04em", marginBottom: "24px" }}>
-              CODE SENT TO {phone}
+              CODE SENT TO {email}
             </p>
 
             <label style={{ ...MONO, display: "block", fontSize: "0.625rem", letterSpacing: "0.1em", color: "#777777", marginBottom: "8px" }}>
@@ -307,7 +307,7 @@ function LoginPageInner() {
 
             <button
               type="button"
-              onClick={() => { setStep("phone"); setCode(""); setError(null); }}
+              onClick={() => { setStep("email"); setCode(""); setError(null); }}
               style={{
                 ...MONO,
                 display: "block",
@@ -322,7 +322,7 @@ function LoginPageInner() {
                 cursor: "pointer",
               }}
             >
-              ← CHANGE NUMBER
+              ← CHANGE EMAIL
             </button>
           </form>
         )}

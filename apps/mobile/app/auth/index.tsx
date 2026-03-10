@@ -14,15 +14,13 @@ import { useRouter } from 'expo-router';
 import { colors, spacing, typography, tracking, lineHeight } from '../../lib/theme';
 import { sendCode, verifyCode } from '../../lib/api';
 
-type Step = 'phone' | 'code';
-
-const COUNTRY_CODE = '+1'; // MVP: US only
+type Step = 'email' | 'code';
 
 export default function AuthScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const [step, setStep] = useState<Step>('phone');
-  const [phone, setPhone] = useState('');
+  const [step, setStep] = useState<Step>('email');
+  const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,14 +35,14 @@ export default function AuthScreen() {
 
   const handleSendCode = async () => {
     setError(null);
-    const cleaned = phone.replace(/\D/g, '');
-    if (cleaned.length < 10) {
-      setError('ENTER A VALID PHONE NUMBER');
+    const trimmed = email.trim().toLowerCase();
+    if (!trimmed || !trimmed.includes('@')) {
+      setError('ENTER A VALID EMAIL ADDRESS');
       return;
     }
     setLoading(true);
     try {
-      await sendCode(`${COUNTRY_CODE}${cleaned}`);
+      await sendCode(trimmed);
       setStep('code');
       setTimeout(() => codeRef.current?.focus(), 300);
     } catch {
@@ -56,10 +54,9 @@ export default function AuthScreen() {
 
   const handleVerify = async () => {
     setError(null);
-    const cleaned = phone.replace(/\D/g, '');
     setLoading(true);
     try {
-      await verifyCode(`${COUNTRY_CODE}${cleaned}`, code);
+      await verifyCode(email.trim().toLowerCase(), code);
       router.replace('/(tabs)');
     } catch {
       setError('INVALID CODE. TRY AGAIN.');
@@ -86,28 +83,23 @@ export default function AuthScreen() {
 
         {/* Form */}
         <View style={styles.form}>
-          {step === 'phone' ? (
+          {step === 'email' ? (
             <>
-              <Text style={styles.label}>PHONE NUMBER</Text>
-              <View style={styles.phoneRow}>
-                <View style={styles.countryCode}>
-                  <Text style={styles.countryCodeText}>{COUNTRY_CODE}</Text>
-                </View>
-                <View style={styles.inputDivider} />
-                <TextInput
-                  style={styles.phoneInput}
-                  placeholder="(555) 000-0000"
-                  placeholderTextColor={colors.textMuted}
-                  keyboardType="phone-pad"
-                  value={phone}
-                  onChangeText={setPhone}
-                  maxLength={14}
-                  autoFocus
-                  selectionColor={colors.textPrimary}
-                  returnKeyType="send"
-                  onSubmitEditing={handleSendCode}
-                />
-              </View>
+              <Text style={styles.label}>EMAIL ADDRESS</Text>
+              <TextInput
+                style={styles.emailInput}
+                placeholder="you@example.com"
+                placeholderTextColor={colors.textMuted}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                value={email}
+                onChangeText={setEmail}
+                autoFocus
+                selectionColor={colors.textPrimary}
+                returnKeyType="send"
+                onSubmitEditing={handleSendCode}
+              />
               <View style={styles.divider} />
               <Text style={styles.hint}>
                 We'll send a 6-digit code. No account. No profile. Just your location.
@@ -129,7 +121,7 @@ export default function AuthScreen() {
             <>
               <Text style={styles.label}>VERIFICATION CODE</Text>
               <Text style={styles.subLabel}>
-                Sent to {COUNTRY_CODE} {phone}
+                Sent to {email}
               </Text>
               <TextInput
                 ref={codeRef}
@@ -154,10 +146,10 @@ export default function AuthScreen() {
               )}
               <TouchableOpacity
                 style={styles.backBtn}
-                onPress={() => { setStep('phone'); setCode(''); setError(null); }}
+                onPress={() => { setStep('email'); setCode(''); setError(null); }}
                 activeOpacity={0.6}
               >
-                <Text style={styles.backText}>← CHANGE NUMBER</Text>
+                <Text style={styles.backText}>← CHANGE EMAIL</Text>
               </TouchableOpacity>
             </>
           )}
@@ -210,33 +202,14 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     letterSpacing: tracking.wide,
   },
-  phoneRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  emailInput: {
     borderWidth: 1,
     borderColor: colors.borderBright,
-    marginBottom: spacing.md,
-  },
-  countryCode: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-  },
-  countryCodeText: {
-    fontSize: typography.body,
-    color: colors.textSecondary,
-    letterSpacing: tracking.wide,
-  },
-  inputDivider: {
-    width: 1,
-    height: '100%',
-    backgroundColor: colors.border,
-  },
-  phoneInput: {
-    flex: 1,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     fontSize: typography.body,
     color: colors.textPrimary,
+    marginBottom: spacing.md,
   },
   codeInput: {
     borderWidth: 1,

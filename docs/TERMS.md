@@ -24,7 +24,7 @@ Parents: if you believe your child under 13 has an account, contact us at **lega
 ## 3. Your Account
 
 ### Sign-Up
-You register with a phone number. We verify it via SMS (powered by Twilio), then hash it — we never store your actual phone number in plain text. You're assigned a randomly generated anonymous handle. You don't choose a name; we assign one.
+You register with an email address. We verify it via a one-time code (powered by Resend), then hash it — we never store your actual email address in plain text. You're assigned a randomly generated anonymous handle. You don't choose a name; we assign one.
 
 ### Anonymity — No Guarantees
 Jawwing is designed for anonymity, but **we cannot guarantee it**. Your posts are tied to a location. If you post information that identifies you, that's on you. Law enforcement or court orders may require us to share data we do have. Use judgment about what you post.
