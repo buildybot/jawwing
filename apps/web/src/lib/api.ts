@@ -364,5 +364,12 @@ export function formatDistance(lat1: number, lng1: number, lat2: number, lng2: n
       Math.cos((lat2 * Math.PI) / 180) *
       Math.sin(dLng / 2) ** 2;
   const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return dist < 0.1 ? "<0.1mi" : `${dist.toFixed(1)}mi`;
+  // PRIVACY: Use vague distance ranges to prevent triangulation
+  if (dist < 1) return "NEARBY";
+  if (dist < 5) return "<5mi";
+  if (dist < 10) return "<10mi";
+  if (dist < 25) return "<25mi";
+  if (dist < 50) return "<50mi";
+  if (dist < 100) return "<100mi";
+  return `${Math.round(dist / 50) * 50}mi`;
 }

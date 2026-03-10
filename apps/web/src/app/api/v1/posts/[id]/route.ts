@@ -20,7 +20,17 @@ export async function GET(req: NextRequest, context: RouteContext): Promise<Next
     const upvotes = voteSummary.find((v) => v.value === 1)?.count ?? 0;
     const downvotes = voteSummary.find((v) => v.value === -1)?.count ?? 0;
 
-    return NextResponse.json({ post: { ...post, reply_count: replyCountRow?.count ?? 0, votes: { upvotes, downvotes } } });
+    // Sanitize coordinates for privacy — round to ~1km, strip IP/user_id
+    const sanitized = {
+      ...post,
+      lat: Math.round(post.lat * 100) / 100,
+      lng: Math.round(post.lng * 100) / 100,
+      ip_hash: undefined,
+      user_id: undefined,
+      reply_count: replyCountRow?.count ?? 0,
+      votes: { upvotes, downvotes },
+    };
+    return NextResponse.json({ post: sanitized });
   } catch (err) {
     console.error("[GET /api/v1/posts/:id]", err);
     return NextResponse.json({ error: "Internal server error", code: "INTERNAL_ERROR" }, { status: 500 });

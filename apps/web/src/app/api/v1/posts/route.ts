@@ -91,6 +91,19 @@ function extractVideoMeta(content: string): VideoMeta | null {
   return null;
 }
 
+// ─── Privacy: strip exact coordinates from responses ──────────────────────────
+// Round to 2 decimal places (~1.1km) so client can still compute approximate
+// distance but nobody can pinpoint the poster's exact location.
+function sanitizePostForResponse<T extends { lat: number; lng: number; ip_hash?: string | null; user_id?: string | null }>(post: T): T {
+  return {
+    ...post,
+    lat: Math.round(post.lat * 100) / 100,
+    lng: Math.round(post.lng * 100) / 100,
+    ip_hash: undefined,  // never expose IP hash to clients
+    user_id: undefined,  // never expose user_id to clients
+  };
+}
+
 // ─── Anti-Spoofing: In-memory last-known position per IP hash ─────────────────
 
 interface LastPosition {
@@ -259,7 +272,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
           `))
           .limit(limit).offset(offset);
       }
-      const resultsWithMetro = results.map((p) => ({ ...p, metro: getMetroName(p.lat, p.lng) }));
+      const resultsWithMetro = results.map((p) => sanitizePostForResponse({ ...p, metro: getMetroName(p.lat, p.lng) }));
       return NextResponse.json({ posts: resultsWithMetro, meta: { limit, offset, count: results.length, mode: "everywhere" } });
     }
 
@@ -299,7 +312,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       hexes: territoryHexes,
     });
 
-    const resultsWithMetro = results.map((p) => ({ ...p, metro: getMetroName(p.lat, p.lng) }));
+    const resultsWithMetro = results.map((p) => sanitizePostForResponse({ ...p, metro: getMetroName(p.lat, p.lng) }));
     return NextResponse.json({
       posts: resultsWithMetro,
       meta: {
@@ -439,14 +452,21 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // ── Video metadata extraction ──────────────────────────────────────────────
     const videoMeta = extractVideoMeta(content);
 
+    // ── Fuzz coordinates for privacy (~1 mile radius) ──────────────────────
+    // Round to 2 decimal places (~1.1km grid) then add random noise ±0.005 (~500m)
+    // This prevents exact location from being stored or returned.
+    // h3_index is computed from real coords above so territory lookup stays accurate.
+    const fuzzedLat = Math.round(lat * 100) / 100 + (Math.random() - 0.5) * 0.01;
+    const fuzzedLng = Math.round(lng * 100) / 100 + (Math.random() - 0.5) * 0.01;
+
     const [created] = await db.insert(posts).values({
       id,
       user_id: anonymousId,
       account_id: accountId,
       ip_hash: ipHash,
       content,
-      lat,
-      lng,
+      lat: fuzzedLat,
+      lng: fuzzedLng,
       h3_index,
       score: 0,
       reply_count: 0,
@@ -461,7 +481,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     onPostCreated(created);
 
-    const response = NextResponse.json({ post: created }, { status: 201 });
+    const response = NextResponse.json({ post: sanitizePostForResponse(created) }, { status: 201 });
 
     // Set session cookie if new visitor
     if (needsCookie) {

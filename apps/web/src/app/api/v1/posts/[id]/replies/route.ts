@@ -32,7 +32,9 @@ export async function GET(req: NextRequest, context: RouteContext): Promise<Next
       .orderBy(asc(replies.created_at))
       .limit(limit).offset(offset);
 
-    return NextResponse.json({ replies: results, meta: { limit, offset, count: results.length } });
+    // Strip sensitive fields
+    const sanitized = results.map((r) => ({ ...r, ip_hash: undefined, user_id: undefined }));
+    return NextResponse.json({ replies: sanitized, meta: { limit, offset, count: results.length } });
   } catch (err) {
     console.error("[GET /api/v1/posts/:id/replies]", err);
     return NextResponse.json({ error: "Internal server error", code: "INTERNAL_ERROR" }, { status: 500 });
@@ -155,7 +157,7 @@ export async function POST(req: NextRequest, context: RouteContext): Promise<Nex
     });
 
     // ── Set session cookie if needed ─────────────────────────────────────────
-    const response = NextResponse.json({ reply: created }, { status: 201 });
+    const response = NextResponse.json({ reply: { ...created, ip_hash: undefined, user_id: undefined } }, { status: 201 });
     if (needsCookie) {
       response.headers.set("Set-Cookie", buildSessionCookieHeader(anonymousId));
     }

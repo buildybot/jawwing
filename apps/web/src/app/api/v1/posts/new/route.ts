@@ -55,8 +55,16 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       .orderBy(desc(posts.created_at))
       .limit(limit);
 
+    // Sanitize coordinates for privacy
+    const sanitized = results.map((p) => ({
+      ...p,
+      lat: Math.round(p.lat * 100) / 100,
+      lng: Math.round(p.lng * 100) / 100,
+      ip_hash: undefined,
+      user_id: undefined,
+    }));
     return NextResponse.json({
-      posts: results,
+      posts: sanitized,
       meta: { since, count: results.length },
     });
   } catch (err) {
