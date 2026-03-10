@@ -5,6 +5,9 @@ import { useState, useEffect } from "react";
 const MONO = { fontFamily: "var(--font-mono), monospace" } as const;
 const DISMISS_KEY = "jawwing_app_banner_dismissed";
 
+// Toggle this to true once the app is live on the App Store
+const APP_STORE_LIVE = false;
+
 export default function AppBanner() {
   const [visible, setVisible] = useState(false);
 
@@ -21,7 +24,7 @@ export default function AppBanner() {
     try { localStorage.setItem(DISMISS_KEY, "1"); } catch { /* noop */ }
   };
 
-  if (!visible) return null;
+  if (!visible || !APP_STORE_LIVE) return null;
 
   return (
     <div
