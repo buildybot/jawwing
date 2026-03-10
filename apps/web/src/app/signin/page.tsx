@@ -14,6 +14,12 @@ export default function SignInPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // Consent checkboxes
+  const [termsChecked, setTermsChecked] = useState(false);
+  const [privacyChecked, setPrivacyChecked] = useState(false);
+  const [constitutionChecked, setConstitutionChecked] = useState(false);
+  const allConsented = termsChecked && privacyChecked && constitutionChecked;
+
   async function handleSendCode(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -39,6 +45,10 @@ export default function SignInPage() {
 
   async function handleVerify(e: React.FormEvent) {
     e.preventDefault();
+    if (!allConsented) {
+      setError("You must agree to all three documents to continue.");
+      return;
+    }
     setLoading(true);
     setError("");
     try {
@@ -59,6 +69,19 @@ export default function SignInPage() {
       setLoading(false);
     }
   }
+
+  const checkboxStyle = (checked: boolean): React.CSSProperties => ({
+    width: 16,
+    height: 16,
+    border: `1px solid ${checked ? "#fff" : "#444"}`,
+    background: checked ? "#fff" : "#000",
+    cursor: "pointer",
+    flexShrink: 0,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 0,
+  });
 
   return (
     <div
@@ -231,9 +254,65 @@ export default function SignInPage() {
                 letterSpacing: "0.3em",
                 outline: "none",
                 boxSizing: "border-box",
-                marginBottom: 16,
+                marginBottom: 24,
               }}
             />
+
+            {/* Three-checkbox consent */}
+            <div style={{ borderTop: "1px solid #1F1F1F", paddingTop: 20, marginBottom: 20 }}>
+              <p style={{ ...MONO, color: "#555", fontSize: "0.5625rem", letterSpacing: "0.1em", marginBottom: 16 }}>
+                AGREEMENTS REQUIRED
+              </p>
+
+              {/* Terms */}
+              <label style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 14, cursor: "pointer" }}>
+                <div
+                  style={checkboxStyle(termsChecked)}
+                  onClick={() => setTermsChecked(v => !v)}
+                >
+                  {termsChecked && <span style={{ color: "#000", fontSize: 11, fontWeight: 700, lineHeight: 1 }}>✓</span>}
+                </div>
+                <span style={{ ...MONO, fontSize: "0.5625rem", color: "#888", letterSpacing: "0.06em", lineHeight: 1.6 }}>
+                  I HAVE READ AND AGREE TO THE{" "}
+                  <Link href="/terms" target="_blank" style={{ color: "#fff", textDecorationLine: "underline" }}>
+                    TERMS OF SERVICE
+                  </Link>
+                </span>
+              </label>
+
+              {/* Privacy */}
+              <label style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 14, cursor: "pointer" }}>
+                <div
+                  style={checkboxStyle(privacyChecked)}
+                  onClick={() => setPrivacyChecked(v => !v)}
+                >
+                  {privacyChecked && <span style={{ color: "#000", fontSize: 11, fontWeight: 700, lineHeight: 1 }}>✓</span>}
+                </div>
+                <span style={{ ...MONO, fontSize: "0.5625rem", color: "#888", letterSpacing: "0.06em", lineHeight: 1.6 }}>
+                  I HAVE READ AND AGREE TO THE{" "}
+                  <Link href="/privacy" target="_blank" style={{ color: "#fff", textDecorationLine: "underline" }}>
+                    PRIVACY POLICY
+                  </Link>
+                </span>
+              </label>
+
+              {/* Constitution */}
+              <label style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 0, cursor: "pointer" }}>
+                <div
+                  style={checkboxStyle(constitutionChecked)}
+                  onClick={() => setConstitutionChecked(v => !v)}
+                >
+                  {constitutionChecked && <span style={{ color: "#000", fontSize: 11, fontWeight: 700, lineHeight: 1 }}>✓</span>}
+                </div>
+                <span style={{ ...MONO, fontSize: "0.5625rem", color: "#888", letterSpacing: "0.06em", lineHeight: 1.6 }}>
+                  I HAVE READ AND AGREE TO THE{" "}
+                  <Link href="/constitution" target="_blank" style={{ color: "#fff", textDecorationLine: "underline" }}>
+                    CONSTITUTION
+                  </Link>
+                </span>
+              </label>
+            </div>
+
             {error && (
               <p style={{ ...MONO, color: "#f44", fontSize: "0.625rem", marginBottom: 12 }}>
                 {error}
@@ -241,18 +320,18 @@ export default function SignInPage() {
             )}
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !allConsented}
               style={{
                 ...MONO,
                 display: "block",
                 width: "100%",
-                background: loading ? "#111" : "#fff",
-                color: loading ? "#555" : "#000",
-                border: "1px solid #fff",
+                background: (loading || !allConsented) ? "#111" : "#fff",
+                color: (loading || !allConsented) ? "#555" : "#000",
+                border: `1px solid ${allConsented ? "#fff" : "#333"}`,
                 padding: "10px 20px",
                 fontSize: "0.6875rem",
                 letterSpacing: "0.1em",
-                cursor: loading ? "default" : "pointer",
+                cursor: (loading || !allConsented) ? "default" : "pointer",
                 fontWeight: 700,
                 marginBottom: 12,
               }}

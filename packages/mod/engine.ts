@@ -235,8 +235,85 @@ Rules:
 - Always cite the most relevant rule if taking action.
 - If approving, ruleCited should be null.`;
 
-// ─── Gemini client ────────────────────────────────────────────────────────────
+// ─── AI Provider Abstraction ──────────────────────────────────────────────────
+// Supports Groq (primary, free, fast) and Gemini (fallback)
 
+interface AIProvider {
+  name: string;
+  reviewText(systemPrompt: string, userPrompt: string): Promise<string>;
+  reviewWithImage?(systemPrompt: string, userPrompt: string, imageData: { data: string; mimeType: string }): Promise<string>;
+}
+
+function getGroqProvider(): AIProvider | null {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) return null;
+  return {
+    name: "groq/llama-3.3-70b",
+    async reviewText(systemPrompt: string, userPrompt: string): Promise<string> {
+      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "llama-3.3-70b-versatile",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+          temperature: 0.1,
+          max_tokens: 500,
+          response_format: { type: "json_object" },
+        }),
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!res.ok) {
+        const body = await res.text();
+        throw new Error(`Groq API ${res.status}: ${body.slice(0, 200)}`);
+      }
+      const data = await res.json();
+      return data.choices[0].message.content;
+    },
+    // Groq doesn't support image input natively — fall through to Gemini for images
+  };
+}
+
+function getGeminiProvider(): AIProvider | null {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+  const genAI = new GoogleGenerativeAI(apiKey);
+  return {
+    name: "gemini/2.5-flash",
+    async reviewText(systemPrompt: string, userPrompt: string): Promise<string> {
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash", systemInstruction: systemPrompt });
+      const result = await model.generateContent(userPrompt);
+      return result.response.text().trim();
+    },
+    async reviewWithImage(systemPrompt: string, userPrompt: string, imageData: { data: string; mimeType: string }): Promise<string> {
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash", systemInstruction: systemPrompt });
+      const result = await model.generateContent([
+        { text: userPrompt },
+        { inlineData: imageData },
+      ]);
+      return result.response.text().trim();
+    },
+  };
+}
+
+/** Get the best available AI provider. Priority: Groq (free, fast) → Gemini (fallback) */
+function getProvider(): AIProvider | null {
+  return getGroqProvider() ?? getGeminiProvider();
+}
+
+/** Get a provider that supports image review (only Gemini currently) */
+function getImageProvider(): AIProvider | null {
+  const gemini = getGeminiProvider();
+  if (gemini?.reviewWithImage) return gemini;
+  return null;
+}
+
+// Legacy — keep for backward compat
 function getGenAI(): GoogleGenerativeAI | null {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return null;
@@ -265,124 +342,149 @@ async function fetchImageAsBase64(url: string): Promise<{ data: string; mimeType
   }
 }
 
+/** Log a moderation decision and update post status. Reusable across all review paths. */
+async function logAndUpdatePost(post: Post, decision: ModerationDecision): Promise<ModerationDecision> {
+  let actionId: string | null = null;
+  try {
+    actionId = nanoid();
+    await db.insert(mod_actions).values({
+      id: actionId, post_id: post.id, agent_id: AI_AGENT_ID,
+      action: decision.action, rule_cited: decision.ruleCited,
+      reasoning: decision.reasoning, created_at: now(),
+      appealed: false, appeal_result: null,
+    });
+  } catch (dbErr) {
+    console.error("[mod/engine] Failed to log mod action:", dbErr);
+    actionId = null;
+  }
+
+  try {
+    const rawClient = getRawClient();
+    const statusMap: Record<string, string> = { remove: "removed", flag: "moderated", warn: "moderated", approve: "active" };
+    const newStatus = statusMap[decision.action] ?? "active";
+    if (actionId) {
+      await rawClient.execute({ sql: `UPDATE posts SET status = ?, mod_action_id = ?, mod_confidence = ? WHERE id = ?`, args: [newStatus, actionId, decision.confidence, post.id] });
+    } else {
+      await rawClient.execute({ sql: `UPDATE posts SET status = ?, mod_confidence = ? WHERE id = ?`, args: [newStatus, decision.confidence, post.id] });
+    }
+  } catch (updateErr) {
+    console.error("[mod/engine] Failed to update post status:", updateErr);
+  }
+
+  console.log('[MOD] Decision for', post.id, ':', decision.action, 'confidence:', decision.confidence);
+  return decision;
+}
+
 export async function reviewPost(post: Post): Promise<ModerationDecision> {
   console.log('[MOD] Reviewing post:', post.id, 'content:', post.content.slice(0, 50));
 
-  const genAI = getGenAI();
+  const provider = getProvider();
 
-  // Graceful fallback: if GEMINI_API_KEY is not configured, auto-approve (or flag if image present)
-  if (!genAI) {
-    console.warn('[MOD] WARNING: No GEMINI_API_KEY - auto-approving');
+  // No AI provider available — fallback
+  if (!provider) {
+    console.warn('[MOD] WARNING: No AI provider (GROQ_API_KEY or GEMINI_API_KEY) - auto-approving text, flagging images');
     const fallbackAction = post.image_url ? "flag" : "approve";
     const fallbackDecision: ModerationDecision = {
       action: fallbackAction,
       ruleCited: null,
       reasoning: post.image_url
-        ? "Moderation service unavailable. Post with image flagged for manual review."
-        : "Moderation service unavailable. Auto-approved.",
-      confidence: 1,
+        ? "No moderation AI available. Post with image held for manual review."
+        : "No moderation AI available. Auto-approved.",
+      confidence: fallbackAction === "approve" ? 1 : 0,
     };
     try {
       await db.insert(mod_actions).values({
-        id: nanoid(),
-        post_id: post.id,
-        agent_id: AI_AGENT_ID,
-        action: fallbackDecision.action,
-        rule_cited: fallbackDecision.ruleCited,
-        reasoning: fallbackDecision.reasoning,
-        created_at: now(),
-        appealed: false,
-        appeal_result: null,
+        id: nanoid(), post_id: post.id, agent_id: AI_AGENT_ID,
+        action: fallbackDecision.action, rule_cited: fallbackDecision.ruleCited,
+        reasoning: fallbackDecision.reasoning, created_at: now(),
+        appealed: false, appeal_result: null,
       });
     } catch (dbErr) {
       console.error("[mod/engine] Failed to log fallback mod action:", dbErr);
     }
-    // Set post to active (posts start as "pending")
     try {
       const rawClient = getRawClient();
-      if (fallbackAction === "approve") {
-        await rawClient.execute({ sql: "UPDATE posts SET status = 'active', mod_confidence = 1 WHERE id = ?", args: [post.id] });
-      } else {
-        await rawClient.execute({ sql: "UPDATE posts SET status = 'moderated', mod_confidence = 0 WHERE id = ?", args: [post.id] });
-      }
+      const newStatus = fallbackAction === "approve" ? "active" : "moderated";
+      await rawClient.execute({ sql: `UPDATE posts SET status = '${newStatus}', mod_confidence = ? WHERE id = ?`, args: [fallbackDecision.confidence, post.id] });
     } catch (e) {
       console.error("[mod/engine] Failed to update post status in fallback:", e);
     }
     return fallbackDecision;
   }
 
-  const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash",
-    systemInstruction: SYSTEM_PROMPT,
-  });
+  console.log(`[MOD] Using provider: ${provider.name}`);
 
-  // Build content parts — text + optional image
-  type ContentPart = { text: string } | { inlineData: { data: string; mimeType: string } };
-  const contentParts: ContentPart[] = [
-    { text: `Please review this post:\n\n"${post.content}"` },
-  ];
-
+  // Handle image posts — need image-capable provider (Gemini)
   if (post.image_url) {
-    const imageData = await fetchImageAsBase64(post.image_url);
-    if (imageData) {
-      contentParts.push({ inlineData: imageData });
-      contentParts[0] = { text: `Please review this post (it includes an attached image):\n\n"${post.content}"` };
-    } else {
-      // Can't download image — flag for review
-      console.warn(`[mod/engine] Failed to download image for post ${post.id}: ${post.image_url}`);
+    const imageProvider = getImageProvider();
+    if (imageProvider?.reviewWithImage) {
+      const imageData = await fetchImageAsBase64(post.image_url);
+      if (imageData) {
+        try {
+          const text = await imageProvider.reviewWithImage(
+            SYSTEM_PROMPT,
+            `Please review this post (it includes an attached image):\n\n"${post.content}"`,
+            imageData
+          );
+          const cleaned = text.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+          const parsed = JSON.parse(cleaned);
+          const decision: ModerationDecision = {
+            action: parsed.action as ModerationAction,
+            ruleCited: parsed.ruleCited ?? null,
+            reasoning: `[${imageProvider.name}] ${parsed.reasoning ?? ""}`,
+            confidence: typeof parsed.confidence === "number" ? parsed.confidence : 0.5,
+          };
+          if (decision.action === "remove" && decision.confidence < 0.7) {
+            decision.action = "flag";
+            decision.reasoning = `[Downgraded: confidence ${decision.confidence.toFixed(2)} < 0.7] ${decision.reasoning}`;
+          }
+          return await logAndUpdatePost(post, decision);
+        } catch (err) {
+          console.error("[mod/engine] Image review failed, flagging:", err);
+        }
+      }
+      // Image download failed or review failed — flag for manual review
       const flagDecision: ModerationDecision = {
-        action: "flag",
-        ruleCited: null,
-        reasoning: "Image could not be downloaded for moderation. Flagged for manual review.",
+        action: "flag", ruleCited: null,
+        reasoning: "Image could not be reviewed by AI. Flagged for manual review.",
         confidence: 0,
       };
-      try {
-        const actionId = nanoid();
-        await db.insert(mod_actions).values({
-          id: actionId,
-          post_id: post.id,
-          agent_id: AI_AGENT_ID,
-          action: flagDecision.action,
-          rule_cited: flagDecision.ruleCited,
-          reasoning: flagDecision.reasoning,
-          created_at: now(),
-          appealed: false,
-          appeal_result: null,
-        });
-        await db.update(posts).set({ status: "moderated", mod_action_id: actionId }).where(eq(posts.id, post.id));
-      } catch (dbErr) {
-        console.error("[mod/engine] Failed to log image-fetch-failure mod action:", dbErr);
-      }
-      return flagDecision;
+      return await logAndUpdatePost(post, flagDecision);
+    } else {
+      // No image-capable provider — flag image posts
+      const flagDecision: ModerationDecision = {
+        action: "flag", ruleCited: null,
+        reasoning: "No image-capable AI available. Image post flagged for manual review.",
+        confidence: 0,
+      };
+      return await logAndUpdatePost(post, flagDecision);
     }
   }
 
-  const userMessage = contentParts;
-
+  // Text-only post — use primary provider (Groq or Gemini)
   let decision: ModerationDecision;
 
   try {
-    const result = await model.generateContent(userMessage);
-    const text = result.response.text().trim();
+    const text = await provider.reviewText(
+      SYSTEM_PROMPT,
+      `Please review this post:\n\n"${post.content}"`
+    );
 
-    // Strip any accidental markdown fences
     const cleaned = text.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
     const parsed = JSON.parse(cleaned);
 
     decision = {
       action: parsed.action as ModerationAction,
       ruleCited: parsed.ruleCited ?? null,
-      reasoning: parsed.reasoning ?? "",
+      reasoning: `[${provider.name}] ${parsed.reasoning ?? ""}`,
       confidence: typeof parsed.confidence === "number" ? parsed.confidence : 0.5,
     };
 
-    // Safety: downgrade low-confidence removals to flags
     if (decision.action === "remove" && decision.confidence < 0.7) {
       decision.action = "flag";
-      decision.reasoning = `[Downgraded from remove: confidence ${decision.confidence.toFixed(2)} < 0.7] ${decision.reasoning}`;
+      decision.reasoning = `[Downgraded: confidence ${decision.confidence.toFixed(2)} < 0.7] ${decision.reasoning}`;
     }
   } catch (err) {
-    // On AI failure, flag for human review rather than blocking
     const errMsg = err instanceof Error ? err.message : String(err);
     console.error("[mod/engine] AI review failed:", errMsg);
     decision = {
@@ -393,53 +495,5 @@ export async function reviewPost(post: Post): Promise<ModerationDecision> {
     };
   }
 
-  // ── Log to mod_actions ───────────────────────────────────────────────────
-  let actionId: string | null = null;
-  try {
-    actionId = nanoid();
-    await db.insert(mod_actions).values({
-      id: actionId,
-      post_id: post.id,
-      agent_id: AI_AGENT_ID,
-      action: decision.action,
-      rule_cited: decision.ruleCited,
-      reasoning: decision.reasoning,
-      created_at: now(),
-      appealed: false,
-      appeal_result: null,
-    });
-  } catch (dbErr) {
-    console.error("[mod/engine] Failed to log mod action:", dbErr);
-    actionId = null;
-  }
-
-  // ── Update post status and confidence via raw libSQL (reliable, bypasses Drizzle schema cache) ──
-  try {
-    const rawClient = getRawClient();
-    if (decision.action === "remove") {
-      if (actionId) {
-        await rawClient.execute({ sql: "UPDATE posts SET status = 'removed', mod_action_id = ?, mod_confidence = ? WHERE id = ?", args: [actionId, decision.confidence, post.id] });
-      } else {
-        await rawClient.execute({ sql: "UPDATE posts SET status = 'removed', mod_confidence = ? WHERE id = ?", args: [decision.confidence, post.id] });
-      }
-    } else if (decision.action === "flag" || decision.action === "warn") {
-      if (actionId) {
-        await rawClient.execute({ sql: "UPDATE posts SET status = 'moderated', mod_action_id = ?, mod_confidence = ? WHERE id = ?", args: [actionId, decision.confidence, post.id] });
-      } else {
-        await rawClient.execute({ sql: "UPDATE posts SET status = 'moderated', mod_confidence = ? WHERE id = ?", args: [decision.confidence, post.id] });
-      }
-    } else {
-      // Approved — set status to "active" (posts start as "pending")
-      if (actionId) {
-        await rawClient.execute({ sql: "UPDATE posts SET status = 'active', mod_action_id = ?, mod_confidence = ? WHERE id = ?", args: [actionId, decision.confidence, post.id] });
-      } else {
-        await rawClient.execute({ sql: "UPDATE posts SET status = 'active', mod_confidence = ? WHERE id = ?", args: [decision.confidence, post.id] });
-      }
-    }
-  } catch (updateErr) {
-    console.error("[mod/engine] Failed to update post status/confidence:", updateErr);
-  }
-
-  console.log('[MOD] Decision for', post.id, ':', decision.action, 'confidence:', decision.confidence);
-  return decision;
+  return await logAndUpdatePost(post, decision);
 }
