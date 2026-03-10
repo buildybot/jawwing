@@ -49,7 +49,6 @@ export const metadata: Metadata = {
     description: "Anonymous local posts from your neighborhood. No sign-up. No tracking. Just your voice.",
     images: ["/logo.png"],
   },
-  themeColor: "#000000",
   other: {
     "apple-mobile-web-app-capable": "yes",
     "apple-mobile-web-app-status-bar-style": "black-translucent",
