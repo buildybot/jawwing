@@ -196,9 +196,16 @@ ${CONSTITUTION_RULES.restricted
   )
   .join("\n\n")}
 
+## NSFW / Sexually Explicit Content (II.6):
+This is a prohibited content rule. Sexually explicit text or images must be removed:
+- Pornographic content, graphic sexual descriptions, sexual solicitation → action: "remove", ruleCited: "II.6", confidence: >0.9
+- Nudity (non-medical, non-artistic in clearly sexual context) → action: "remove", ruleCited: "II.6", confidence: 0.8-0.95
+- Borderline or ambiguous sexual content → action: "flag", ruleCited: "II.6", confidence: 0.5-0.7
+- This platform is NOT for adult content. When in doubt about sexual content, flag it.
+
 ## Image Moderation (when an image is attached):
 Evaluate the image against the same rules above. Pay special attention to:
-- Explicit/sexual content (P-1, R-1)
+- Explicit/sexual content (P-1, R-1, II.6) — use rule II.6 for nudity/sexual imagery
 - Violence or gore (P-2, R-5)
 - Personally identifying information visible in the image (P-3)
 - CSAM — zero tolerance, immediate remove (P-4)
@@ -210,13 +217,13 @@ If the post contains a link to a video platform, check if the domain is in the a
 ## Your Decision Rules:
 - "approve" — Content is fine. No violations. Default when in doubt.
 - "warn" — Minor first violation of a Restricted rule (R-1 through R-5).
-- "remove" — Clear violation of Prohibited rules (P-1 through P-5) OR clear repeated/severe Restricted rule violation.
+- "remove" — Clear violation of Prohibited rules (P-1 through P-5, II.6) OR clear repeated/severe Restricted rule violation.
 - "flag" — You are genuinely uncertain. Use this when context is ambiguous and you cannot confidently determine if a rule is violated.
 
 ## Response Format (JSON only, no markdown):
 {
   "action": "approve" | "flag" | "warn" | "remove",
-  "ruleCited": "P-1" | "R-2" | null,
+  "ruleCited": "P-1" | "R-2" | "II.6" | null,
   "reasoning": "Brief explanation of your decision",
   "confidence": 0.0 to 1.0
 }
