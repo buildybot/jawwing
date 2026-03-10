@@ -273,6 +273,64 @@ export async function getTerritoryFeed(
   return request(`/v1/feed/territory/${id}?${params}`);
 }
 
+// ─── Constitution versioning ──────────────────────────────────────────────────
+
+export interface ConstitutionVersionSummary {
+  id: string;
+  version: string;
+  summary: string;
+  created_at: number;
+  created_by: string;
+  status: "active" | "archived" | "proposed" | "rejected";
+}
+
+export interface ConstitutionVersionFull extends ConstitutionVersionSummary {
+  content: unknown;
+}
+
+export interface ConstitutionAmendment {
+  id: string;
+  proposer_id: string;
+  title: string;
+  description: string;
+  section: string;
+  proposed_text: string;
+  status: "pending_review" | "under_vote" | "accepted" | "rejected";
+  mod_reasoning: string | null;
+  votes_for: number;
+  votes_against: number;
+  vote_deadline: number | null;
+  created_at: number;
+  resolved_at: number | null;
+}
+
+export async function getConstitutionVersions(): Promise<{ versions: ConstitutionVersionSummary[] }> {
+  return request("/v1/constitution/versions");
+}
+
+export async function getConstitutionVersion(id: string): Promise<{ version: ConstitutionVersionFull }> {
+  return request(`/v1/constitution/versions/${id}`);
+}
+
+export async function getConstitutionAmendments(
+  status?: string
+): Promise<{ amendments: ConstitutionAmendment[] }> {
+  const qs = status ? `?status=${encodeURIComponent(status)}` : "";
+  return request(`/v1/constitution/amendments${qs}`);
+}
+
+export async function submitConstitutionAmendment(body: {
+  title: string;
+  description: string;
+  section: string;
+  proposed_text: string;
+}): Promise<{ amendment: ConstitutionAmendment }> {
+  return request("/v1/constitution/amendments", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
 // ─── Formatting helpers ───────────────────────────────────────────────────────
 
 export function formatTimeAgo(unixSec: number): string {

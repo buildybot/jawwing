@@ -219,6 +219,25 @@ export default function PostCard({ post, onLoginRequired }: PostCardProps) {
           >
             ▼
           </button>
+          {showVotePrompt && (
+            <span
+              style={{
+                fontFamily: "var(--font-mono), monospace",
+                fontSize: "0.625rem",
+                letterSpacing: "0.06em",
+                color: "#555555",
+              }}
+            >
+              <a
+                href="/login"
+                style={{ color: "#C0C0C0", textDecoration: "none" }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "#FFFFFF")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "#C0C0C0")}
+              >
+                SIGN UP TO VOTE
+              </a>
+            </span>
+          )}
         </div>
 
         {/* Right side meta */}

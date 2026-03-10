@@ -18,7 +18,7 @@ function LoginPageInner() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const redirectTo = searchParams.get("redirect") ?? "/feed";
+  const redirectTo = searchParams.get("redirect") ?? "/";
 
   // If already logged in, redirect immediately
   useEffect(() => {
@@ -87,7 +87,7 @@ function LoginPageInner() {
             {user.displayName.toUpperCase()}
           </p>
           <button
-            onClick={() => router.push("/feed")}
+            onClick={() => router.push("/")}
             style={{
               ...MONO,
               display: "block",

@@ -43,7 +43,7 @@ export default function PostNotFound() {
           This post no longer exists or has been removed by the AI moderator.
         </p>
         <Link
-          href="/feed"
+          href="/"
           style={{
             ...MONO,
             background: "#FFFFFF",

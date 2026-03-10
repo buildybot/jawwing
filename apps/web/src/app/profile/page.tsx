@@ -107,7 +107,7 @@ function ProfileContent() {
           className="mx-auto flex items-center justify-between px-4 py-3"
         >
           <button
-            onClick={() => router.push("/feed")}
+            onClick={() => router.push("/")}
             style={{
               ...MONO,
               background: "none",
