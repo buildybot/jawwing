@@ -14,6 +14,7 @@ import {
 } from "@/lib/api";
 import { ToastProvider } from "@/components/Toast";
 import ReportButton from "@/components/ReportButton";
+import { useBlockedUsers } from "@/hooks/useBlockedUsers";
 
 const MONO = { fontFamily: "var(--font-mono), monospace" } as const;
 const MAX_CHARS = 300;
@@ -315,6 +316,7 @@ function ReplyItem({
 export default function PostPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const { isBlocked } = useBlockedUsers();
 
   const [post, setPost] = useState<Post | null>(null);
   const [replies, setReplies] = useState<Reply[]>([]);
@@ -444,7 +446,8 @@ export default function PostPage() {
     }
   };
 
-  const replyTree = buildReplyTree(replies);
+  const visibleReplies = replies.filter((r) => !r.user_id || !isBlocked(r.user_id));
+  const replyTree = buildReplyTree(visibleReplies);
 
   return (
     <ToastProvider>

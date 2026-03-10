@@ -720,5 +720,6 @@ export default function FeedPage() {
         </button>
       </div>
     </ToastProvider>
+    </AgeGate>
   );
 }

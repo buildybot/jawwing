@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 
 const STORAGE_KEY = "jawwing_blocked_users";
+const BLOCK_EVENT = "jawwing:blocked_updated";
 
 function loadBlocked(): string[] {
   try {
@@ -17,6 +18,7 @@ function loadBlocked(): string[] {
 function saveBlocked(list: string[]) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+    window.dispatchEvent(new CustomEvent(BLOCK_EVENT));
   } catch { /* noop */ }
 }
 
@@ -25,6 +27,9 @@ export function useBlockedUsers() {
 
   useEffect(() => {
     setBlocked(loadBlocked());
+    const handler = () => setBlocked(loadBlocked());
+    window.addEventListener(BLOCK_EVENT, handler);
+    return () => window.removeEventListener(BLOCK_EVENT, handler);
   }, []);
 
   const blockUser = useCallback((userId: string) => {

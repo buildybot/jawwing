@@ -1,4 +1,5 @@
 import Link from "next/link";
+import BlockedUsersPanel from "@/components/BlockedUsersPanel";
 
 const MONO: React.CSSProperties = {
   fontFamily: "var(--font-mono), 'JetBrains Mono', monospace",
@@ -204,6 +205,63 @@ export default function AboutPage() {
                   </p>
                 </div>
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Blocked Users + QR Code */}
+        <section style={DIVIDER} className="px-6 py-16">
+          <div style={{ maxWidth: "640px" }} className="mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2" style={{ gap: "16px" }}>
+
+              {/* Blocked Users */}
+              <BlockedUsersPanel />
+
+              {/* QR Code — desktop only */}
+              <div
+                className="hidden md:flex"
+                style={{
+                  background: "#0A0A0A",
+                  border: "1px solid #1F1F1F",
+                  padding: "20px",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "16px",
+                  textAlign: "center",
+                }}
+              >
+                <span
+                  style={{
+                    ...MONO,
+                    color: "#FFFFFF",
+                    fontSize: "0.75rem",
+                    fontWeight: 700,
+                    letterSpacing: "0.1em",
+                  }}
+                >
+                  GET THE APP
+                </span>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=https://jawwing.com&bgcolor=0a0a0a&color=ffffff&qzone=1"
+                  alt="QR code for jawwing.com"
+                  width={160}
+                  height={160}
+                  style={{ display: "block", imageRendering: "pixelated" }}
+                />
+                <span
+                  style={{
+                    ...MONO,
+                    color: "#555555",
+                    fontSize: "0.5625rem",
+                    letterSpacing: "0.08em",
+                  }}
+                >
+                  JAWWING.COM
+                </span>
+              </div>
+
             </div>
           </div>
         </section>

@@ -12,7 +12,7 @@ import {
   Pressable,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Header } from '../../components/Header';
+import { useRouter } from 'expo-router';
 import { PostCard } from '../../components/PostCard';
 import { colors, spacing, typography, tracking } from '../../lib/theme';
 import { getPosts, getTerritories, getTerritoryFeed, Post, Territory } from '../../lib/api';
@@ -32,6 +32,7 @@ type TerritoryMode =
 
 export default function FeedScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const [sort, setSort] = useState<SortMode>('hot');
   const [posts, setPosts] = useState<Post[]>([]);
   const [location, setLocation] = useState<LocationInfo | null>(null);
@@ -199,6 +200,7 @@ export default function FeedScreen() {
             <PostCard
               post={item}
               onVoteChange={handleVoteChange}
+              onPress={post => router.push(`/post/${post.id}`)}
               territoryName={
                 territoryMode.type === 'territory'
                   ? territoryMode.territory.name
