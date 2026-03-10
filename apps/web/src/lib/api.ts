@@ -28,6 +28,8 @@ export interface Post {
   id: string;
   content: string;
   score: number;
+  upvotes: number;
+  downvotes: number;
   reply_count: number;
   created_at: number;
   expires_at: number;

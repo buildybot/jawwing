@@ -48,7 +48,23 @@ export async function POST(req: NextRequest, context: RouteContext): Promise<Nex
 
       const scoreDelta = (value as number) - existing.value;
       await db.update(votes).set({ value: value as 1 | -1, created_at: nowTs }).where(eq(votes.id, existing.id));
-      await db.update(posts).set({ score: sql`${posts.score} + ${scoreDelta}` }).where(eq(posts.id, post_id));
+
+      // Update score and adjust up/downvote counters for vote change
+      if (value === 1) {
+        // Changed from downvote to upvote
+        await db.update(posts).set({
+          score: sql`${posts.score} + ${scoreDelta}`,
+          upvotes: sql`${posts.upvotes} + 1`,
+          downvotes: sql`${posts.downvotes} - 1`,
+        }).where(eq(posts.id, post_id));
+      } else {
+        // Changed from upvote to downvote
+        await db.update(posts).set({
+          score: sql`${posts.score} + ${scoreDelta}`,
+          upvotes: sql`${posts.upvotes} - 1`,
+          downvotes: sql`${posts.downvotes} + 1`,
+        }).where(eq(posts.id, post_id));
+      }
 
       const [updated] = await db.select().from(votes).where(eq(votes.id, existing.id)).limit(1);
       return NextResponse.json({ vote: updated, changed: true, scoreDelta });
@@ -58,7 +74,19 @@ export async function POST(req: NextRequest, context: RouteContext): Promise<Nex
         .insert(votes)
         .values({ id, post_id, voter_hash: ipHash, ip_hash: ipHash, value: value as 1 | -1, created_at: nowTs })
         .returning();
-      await db.update(posts).set({ score: sql`${posts.score} + ${value as number}` }).where(eq(posts.id, post_id));
+
+      if (value === 1) {
+        await db.update(posts).set({
+          score: sql`${posts.score} + 1`,
+          upvotes: sql`${posts.upvotes} + 1`,
+        }).where(eq(posts.id, post_id));
+      } else {
+        await db.update(posts).set({
+          score: sql`${posts.score} - 1`,
+          downvotes: sql`${posts.downvotes} + 1`,
+        }).where(eq(posts.id, post_id));
+      }
+
       return NextResponse.json({ vote: created, changed: true }, { status: 201 });
     }
   } catch (err) {

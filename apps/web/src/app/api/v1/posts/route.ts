@@ -219,15 +219,44 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     if (mode === "everywhere") {
       const nowTs = Math.floor(Date.now() / 1000);
       const conditions = and(gt(posts.expires_at, nowTs), eq(posts.status, "active"));
-      const HOT_GRAVITY = 1.8;
+      const HOT_GRAVITY = 1.2;
       let results;
       if (sort === "new") {
         results = await db.select().from(posts).where(conditions).orderBy(desc(posts.created_at)).limit(limit).offset(offset);
       } else if (sort === "top") {
-        results = await db.select().from(posts).where(conditions).orderBy(desc(posts.score)).limit(limit).offset(offset);
+        // TOP: most interacted-with posts (total engagement = upvotes + downvotes)
+        results = await db.select().from(posts).where(conditions).orderBy(desc(sql<number>`CAST(${posts.upvotes} AS INTEGER) + CAST(${posts.downvotes} AS INTEGER)`)).limit(limit).offset(offset);
       } else {
+        // HOT: engagement-aware ranking (Wilson + engagement boost + controversy)
+        const z2 = 1.96 * 1.96;
         results = await db.select().from(posts).where(conditions)
-          .orderBy(desc(sql<number>`CAST(${posts.score} + 1 AS REAL) / EXP(${HOT_GRAVITY} * LOG((CAST(unixepoch() - ${posts.created_at} AS REAL) / 3600.0) + 2.0))`))
+          .orderBy(desc(sql<number>`
+            CASE
+              WHEN (CAST(${posts.upvotes} AS REAL) + CAST(${posts.downvotes} AS REAL)) = 0 THEN
+                CAST(${posts.score} + 1 AS REAL) /
+                EXP(${HOT_GRAVITY} * LOG((CAST(unixepoch() - ${posts.created_at} AS REAL) / 3600.0) + 2.0))
+              ELSE
+                (
+                  (
+                    (CAST(${posts.upvotes} AS REAL) / (CAST(${posts.upvotes} AS REAL) + CAST(${posts.downvotes} AS REAL)))
+                    + ${z2} / (2.0 * (CAST(${posts.upvotes} AS REAL) + CAST(${posts.downvotes} AS REAL)))
+                    - 1.96 * SQRT(
+                        (
+                          (CAST(${posts.upvotes} AS REAL) / (CAST(${posts.upvotes} AS REAL) + CAST(${posts.downvotes} AS REAL)))
+                          * (1.0 - (CAST(${posts.upvotes} AS REAL) / (CAST(${posts.upvotes} AS REAL) + CAST(${posts.downvotes} AS REAL))))
+                          + ${z2} / (4.0 * (CAST(${posts.upvotes} AS REAL) + CAST(${posts.downvotes} AS REAL)))
+                        ) / (CAST(${posts.upvotes} AS REAL) + CAST(${posts.downvotes} AS REAL))
+                      )
+                  ) / (1.0 + ${z2} / (CAST(${posts.upvotes} AS REAL) + CAST(${posts.downvotes} AS REAL)))
+                  + 0.3 * LOG(1.0 + CAST(${posts.upvotes} AS REAL) + CAST(${posts.downvotes} AS REAL))
+                  + 0.2 * (
+                      CAST(MIN(${posts.upvotes}, ${posts.downvotes}) AS REAL) /
+                      CAST(MAX(${posts.upvotes}, ${posts.downvotes}) AS REAL)
+                    )
+                ) /
+                EXP(${HOT_GRAVITY} * LOG((CAST(unixepoch() - ${posts.created_at} AS REAL) / 3600.0) + 2.0))
+            END
+          `))
           .limit(limit).offset(offset);
       }
       const resultsWithMetro = results.map((p) => ({ ...p, metro: getMetroName(p.lat, p.lng) }));

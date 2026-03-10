@@ -11,6 +11,8 @@ export interface Post {
   id: string;
   content: string;
   score: number;
+  upvotes?: number;
+  downvotes?: number;
   reply_count?: number;
   replyCount?: number; // legacy
   timeAgo?: string;
@@ -20,6 +22,7 @@ export interface Post {
   territoryName?: string;
   user_id?: string;
   metro?: string | null;
+  image_url?: string | null;
   video_url?: string | null;
   video_thumbnail?: string | null;
 }
