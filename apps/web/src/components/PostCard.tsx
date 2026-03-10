@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { votePost } from "@/lib/api";
 import { useToast } from "./Toast";
+import ReportButton from "./ReportButton";
 
 export interface Post {
   id: string;
@@ -549,6 +550,11 @@ export default function PostCard({ post, variant = "card" }: PostCardProps) {
             </button>
             <span style={{ ...MONO, color: "#555555", fontSize: "0.625rem" }}>SHARE</span>
           </div>
+
+          {/* Report */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
+            <ReportButton postId={post.id} size="md" />
+          </div>
         </div>
 
         {/* Bottom rule */}
@@ -662,8 +668,9 @@ export default function PostCard({ post, variant = "card" }: PostCardProps) {
           )}
         </Link>
       </div>
-      {/* Share button — separate so it doesn't trigger post navigation */}
-      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "6px" }}>
+      {/* Share + Report row — separate so they don't trigger post navigation */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "6px" }}>
+        <ReportButton postId={post.id} size="sm" />
         <button
           onClick={handleShare}
           style={{ color: "#555555", background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: "0.75rem", lineHeight: 1, ...MONO, letterSpacing: "0.04em" }}

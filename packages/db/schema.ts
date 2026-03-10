@@ -211,6 +211,8 @@ export const reports = sqliteTable(
     post_id: text("post_id")
       .notNull()
       .references(() => posts.id, { onDelete: "cascade" }),
+    // If set, this report targets a specific reply (comment) within the post
+    reply_id: text("reply_id"),
     // IP hash of the reporter — anonymous, no account needed
     reporter_hash: text("reporter_hash").notNull(),
     ip_hash: text("ip_hash"),
@@ -223,6 +225,7 @@ export const reports = sqliteTable(
   },
   (t) => ({
     idxReportsPostId: index("idx_reports_post_id").on(t.post_id),
+    idxReportsReplyId: index("idx_reports_reply_id").on(t.reply_id),
     idxReportsReporterHash: index("idx_reports_reporter_hash").on(t.reporter_hash),
     idxReportsCreatedAt: index("idx_reports_created_at").on(t.created_at),
     idxReportsResolved: index("idx_reports_resolved").on(t.resolved),

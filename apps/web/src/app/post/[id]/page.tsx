@@ -13,6 +13,7 @@ import {
   type Reply,
 } from "@/lib/api";
 import { ToastProvider } from "@/components/Toast";
+import ReportButton from "@/components/ReportButton";
 
 const MONO = { fontFamily: "var(--font-mono), monospace" } as const;
 const MAX_CHARS = 300;
@@ -257,7 +258,7 @@ function ReplyItem({
               ▼
             </button>
           </div>
-          {/* Time + Reply */}
+          {/* Time + Reply + Report */}
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <span style={{ ...MONO, color: "#555555", fontSize: "0.5625rem", letterSpacing: "0.02em" }}>
               {formatTimeAgo(reply.created_at)}
@@ -275,6 +276,7 @@ function ReplyItem({
             >
               REPLY
             </button>
+            <ReportButton postId={reply.post_id} replyId={reply.id} size="sm" />
           </div>
         </div>
       </div>
@@ -548,8 +550,9 @@ export default function PostPage() {
                     ▼
                   </button>
                 </div>
-                <div style={{ ...MONO, color: "#777777", fontSize: "0.6875rem", letterSpacing: "0.02em", display: "flex", gap: "8px" }}>
+                <div style={{ ...MONO, color: "#777777", fontSize: "0.6875rem", letterSpacing: "0.02em", display: "flex", alignItems: "center", gap: "12px" }}>
                   <span>{formatTimeAgo(post.created_at)}</span>
+                  <ReportButton postId={post.id} size="sm" />
                 </div>
               </div>
             </div>

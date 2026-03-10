@@ -40,6 +40,7 @@ export const ReplySchema = z.object({
 
 export const ReportSchema = z.object({
   post_id: z.string().min(1, "post_id is required"),
+  reply_id: z.string().optional(),
   reason: z.string().min(1, "reason is required").max(500, "reason must be 500 characters or fewer"),
 });
 
