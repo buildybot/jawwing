@@ -1,30 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, posts, nanoid, now } from "@jawwing/db";
-import { withAuth, checkRateLimit, type AuthenticatedRequest } from "@jawwing/api/middleware";
+import { checkRateLimit } from "@jawwing/api/middleware";
 import { latLngToH3 } from "@jawwing/api/geo";
 import { buildFeedQuery, type SortMode } from "@jawwing/api/feed";
 import { validate, PostSchema } from "@jawwing/api/validation";
+import {
+  getAnonymousId,
+  getIpHash,
+  hasSessionCookie,
+  buildSessionCookieHeader,
+} from "@jawwing/api/anonymous";
+import { isBanned } from "@jawwing/api/bans";
+import { onPostCreated } from "@jawwing/mod/automod";
+import { CONSTITUTION_RULES } from "@jawwing/mod/engine";
 
-// ─── Anti-Spoofing: In-memory last-known position per user ────────────────────
-//
-// Stores the most recent accepted post location + timestamp for each userId.
-// Used to detect impossibly fast location jumps (teleportation).
-//
-// TODO (future hardening):
-//   - Device attestation (Apple DeviceCheck / Google Play Integrity API)
-//   - VPN / datacenter IP detection to flag proxy-assisted spoofing
-//   - Persist last position in DB for cross-restart / multi-instance safety
-//   - Rate-limit distinct H3 cells per user per hour
+// ─── Anti-Spoofing: In-memory last-known position per IP hash ─────────────────
 
 interface LastPosition {
   lat: number;
   lng: number;
-  ts: number; // unix seconds
+  ts: number;
 }
 
 const lastPositionMap = new Map<string, LastPosition>();
 
-/** Haversine distance in km between two lat/lng points. */
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -37,11 +36,10 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-const TELEPORT_MAX_KM = 100;   // max allowed distance between posts
-const TELEPORT_WINDOW_SEC = 300; // within this many seconds (5 min)
-import { onPostCreated } from "@jawwing/mod/automod";
+const TELEPORT_MAX_KM = 100;
+const TELEPORT_WINDOW_SEC = 300;
 
-// ─── Sanitize content — strip HTML tags ───────────────────────────────────────
+// ─── Sanitize content ─────────────────────────────────────────────────────────
 
 function sanitizeContent(raw: string): string {
   return raw.replace(/<[^>]*>/g, "").trim();
@@ -81,15 +79,32 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
 // ─── POST /api/v1/posts ───────────────────────────────────────────────────────
 
-async function createPost(req: AuthenticatedRequest): Promise<NextResponse> {
+export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
-    const { user } = req;
+    const ipHash = getIpHash(req);
+    const anonymousId = getAnonymousId(req);
+    const needsCookie = !hasSessionCookie(req);
 
-    const rateLimit = checkRateLimit(user.id, user.type, "post");
+    // Ban check
+    if (isBanned(ipHash)) {
+      return NextResponse.json(
+        { error: "Forbidden", code: "BANNED" },
+        { status: 403 }
+      );
+    }
+
+    // Rate limit: 10 posts/hour per IP hash
+    const rateLimit = checkRateLimit(ipHash, "human", "post");
     if (!rateLimit.allowed) {
       return NextResponse.json(
         { error: "Rate limit exceeded", code: "RATE_LIMIT", resetAt: rateLimit.resetAt },
-        { status: 429, headers: { "X-RateLimit-Remaining": "0", "X-RateLimit-Reset": String(Math.floor(rateLimit.resetAt / 1000)) } }
+        {
+          status: 429,
+          headers: {
+            "X-RateLimit-Remaining": "0",
+            "X-RateLimit-Reset": String(Math.floor(rateLimit.resetAt / 1000)),
+          },
+        }
       );
     }
 
@@ -104,9 +119,15 @@ async function createPost(req: AuthenticatedRequest): Promise<NextResponse> {
 
     const { lat, lng } = parsed.data;
 
-    // ── Anti-spoofing checks ──────────────────────────────────────────────────
+    // Require GPS
+    if (lat == null || lng == null || isNaN(lat) || isNaN(lng)) {
+      return NextResponse.json(
+        { error: "GPS location required to post", code: "LOCATION_REQUIRED" },
+        { status: 422 }
+      );
+    }
 
-    // 1. Reject null island (0,0) — almost certainly a missing/failed GPS fix
+    // Reject null island
     if (lat === 0 && lng === 0) {
       return NextResponse.json(
         { error: "Invalid location: null island coordinates rejected", code: "INVALID_LOCATION" },
@@ -114,9 +135,9 @@ async function createPost(req: AuthenticatedRequest): Promise<NextResponse> {
       );
     }
 
-    // 2. Teleportation check — reject if user moved >100km in <5 minutes
+    // Teleportation check
     const nowSec = Math.floor(Date.now() / 1000);
-    const lastPos = lastPositionMap.get(user.id);
+    const lastPos = lastPositionMap.get(ipHash);
     if (lastPos) {
       const elapsed = nowSec - lastPos.ts;
       if (elapsed < TELEPORT_WINDOW_SEC) {
@@ -133,8 +154,6 @@ async function createPost(req: AuthenticatedRequest): Promise<NextResponse> {
       }
     }
 
-    // Sanitize: strip HTML then re-trim (PostSchema already validated length pre-sanitize;
-    // re-check after sanitize to be safe)
     const content = sanitizeContent(parsed.data.content);
     if (content.length === 0) {
       return NextResponse.json({ error: "content cannot be empty after sanitization", code: "VALIDATION_ERROR" }, { status: 400 });
@@ -145,22 +164,60 @@ async function createPost(req: AuthenticatedRequest): Promise<NextResponse> {
     const expires_at = nowTs + 24 * 60 * 60;
     const id = nanoid();
 
+    // ── Video domain check (AV-1) ─────────────────────────────────────────────
+    // Extract any URLs from the post. If a URL points to a video platform domain
+    // that is NOT on the constitution's allowed list, pre-flag the post for mod
+    // review before the async AI pipeline runs.
+    const ALLOWED_VIDEO_DOMAINS = new Set(
+      CONSTITUTION_RULES.allowedVideoSources.allowedDomains.map((d) => d.domain)
+    );
+    // Common video platform hostnames to detect (catches unlisted platforms)
+    const VIDEO_PLATFORM_RE = /^(youtube\.com|youtu\.be|tiktok\.com|vimeo\.com|twitch\.tv|instagram\.com|dailymotion\.com|rumble\.com|odysee\.com|bitchute\.com|streamable\.com|loom\.com|wistia\.com|brightcove\.com|jwplayer\.com|kaltura\.com)$/i;
+    let needsVideoReview = false;
+    const urlMatches = content.match(/https?:\/\/[^\s)>]+/gi);
+    if (urlMatches) {
+      for (const rawUrl of urlMatches) {
+        try {
+          const hostname = new URL(rawUrl).hostname.replace(/^www\./, "").toLowerCase();
+          if (VIDEO_PLATFORM_RE.test(hostname) && !ALLOWED_VIDEO_DOMAINS.has(hostname)) {
+            needsVideoReview = true;
+            break;
+          }
+        } catch {
+          // ignore invalid URLs
+        }
+      }
+    }
+
     const [created] = await db.insert(posts).values({
-      id, user_id: user.id, content, lat, lng,
-      h3_index, score: 0, reply_count: 0, created_at: nowTs, expires_at, status: "active",
+      id,
+      user_id: anonymousId,
+      ip_hash: ipHash,
+      content,
+      lat,
+      lng,
+      h3_index,
+      score: 0,
+      reply_count: 0,
+      created_at: nowTs,
+      expires_at,
+      status: needsVideoReview ? "moderated" : "active",
     }).returning();
 
-    // Update last known position for teleportation check on future posts
-    lastPositionMap.set(user.id, { lat, lng, ts: nowTs });
+    lastPositionMap.set(ipHash, { lat, lng, ts: nowTs });
 
-    // Fire async moderation pipeline — does NOT block post creation
     onPostCreated(created);
 
-    return NextResponse.json({ post: created }, { status: 201 });
+    const response = NextResponse.json({ post: created }, { status: 201 });
+
+    // Set session cookie if new visitor
+    if (needsCookie) {
+      response.headers.set("Set-Cookie", buildSessionCookieHeader(anonymousId));
+    }
+
+    return response;
   } catch (err) {
     console.error("[POST /api/v1/posts]", err);
     return NextResponse.json({ error: "Internal server error", code: "INTERNAL_ERROR" }, { status: 500 });
   }
 }
-
-export const POST = withAuth(createPost as Parameters<typeof withAuth>[0]);

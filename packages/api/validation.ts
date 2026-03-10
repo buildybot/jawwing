@@ -19,6 +19,7 @@ export const PostSchema = z.object({
     .refine((s) => s.trim().length > 0, "content cannot be blank"),
   lat: z.number().min(-90, "lat must be >= -90").max(90, "lat must be <= 90"),
   lng: z.number().min(-180, "lng must be >= -180").max(180, "lng must be <= 180"),
+  image_url: z.string().url("image_url must be a valid URL").optional(),
 });
 
 export const VoteSchema = z.object({

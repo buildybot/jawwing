@@ -55,14 +55,16 @@ export const territories = sqliteTable(
 );
 
 // ─── posts ────────────────────────────────────────────────────────────────────
+// user_id is the anonymous session cookie ID (no FK — not a real user account)
+// ip_hash is SHA-256 of the poster's IP (for rate limiting + bans)
 
 export const posts = sqliteTable(
   "posts",
   {
     id: text("id").primaryKey(),
-    user_id: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
+    // Anonymous session cookie value — NOT a reference to users table
+    user_id: text("user_id"),
+    ip_hash: text("ip_hash"),
     content: text("content").notNull(),
     lat: real("lat").notNull(),
     lng: real("lng").notNull(),
@@ -75,9 +77,9 @@ export const posts = sqliteTable(
       .notNull()
       .default("active"),
     mod_action_id: text("mod_action_id"),
-  image_url: text("image_url"),
-  image_width: integer("image_width"),
-  image_height: integer("image_height"),
+    image_url: text("image_url"),
+    image_width: integer("image_width"),
+    image_height: integer("image_height"),
   },
   (t) => ({
     idxPostsUserId: index("idx_posts_user_id").on(t.user_id),
@@ -86,10 +88,12 @@ export const posts = sqliteTable(
     idxPostsStatus: index("idx_posts_status").on(t.status),
     idxPostsExpiresAt: index("idx_posts_expires_at").on(t.expires_at),
     idxPostsH3Status: index("idx_posts_h3_status").on(t.h3_index, t.status),
+    idxPostsIpHash: index("idx_posts_ip_hash").on(t.ip_hash),
   })
 );
 
 // ─── votes ────────────────────────────────────────────────────────────────────
+// voter_hash is SHA-256 of voter's IP (no FK — anonymous, no account required)
 
 export const votes = sqliteTable(
   "votes",
@@ -98,21 +102,23 @@ export const votes = sqliteTable(
     post_id: text("post_id")
       .notNull()
       .references(() => posts.id, { onDelete: "cascade" }),
-    user_id: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
+    // IP hash of the voter — 1 vote per IP per post
+    voter_hash: text("voter_hash").notNull(),
+    ip_hash: text("ip_hash"),
     value: integer("value").notNull(), // +1 or -1
     created_at: integer("created_at").notNull(),
   },
   (t) => ({
-    uniqVotePerUser: uniqueIndex("uniq_vote_post_user").on(t.post_id, t.user_id),
+    uniqVotePerUser: uniqueIndex("uniq_vote_post_voter").on(t.post_id, t.voter_hash),
     idxVotesPostId: index("idx_votes_post_id").on(t.post_id),
-    idxVotesUserId: index("idx_votes_user_id").on(t.user_id),
+    idxVotesVoterHash: index("idx_votes_voter_hash").on(t.voter_hash),
     idxVotesCreatedAt: index("idx_votes_created_at").on(t.created_at),
   })
 );
 
 // ─── replies ──────────────────────────────────────────────────────────────────
+// user_id is the anonymous session cookie ID (no FK)
+// ip_hash is SHA-256 of the replier's IP
 
 export const replies = sqliteTable(
   "replies",
@@ -121,10 +127,10 @@ export const replies = sqliteTable(
     post_id: text("post_id")
       .notNull()
       .references(() => posts.id, { onDelete: "cascade" }),
-    parent_reply_id: text("parent_reply_id"), // self-ref; no FK to avoid circular
-    user_id: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
+    parent_reply_id: text("parent_reply_id"),
+    // Anonymous session cookie value — NOT a reference to users table
+    user_id: text("user_id"),
+    ip_hash: text("ip_hash"),
     content: text("content").notNull(),
     created_at: integer("created_at").notNull(),
     status: text("status", { enum: ["active", "moderated", "removed"] })
@@ -137,6 +143,7 @@ export const replies = sqliteTable(
     idxRepliesCreatedAt: index("idx_replies_created_at").on(t.created_at),
     idxRepliesStatus: index("idx_replies_status").on(t.status),
     idxRepliesParent: index("idx_replies_parent").on(t.parent_reply_id),
+    idxRepliesIpHash: index("idx_replies_ip_hash").on(t.ip_hash),
   })
 );
 
@@ -195,6 +202,7 @@ export const api_keys = sqliteTable(
 );
 
 // ─── reports ──────────────────────────────────────────────────────────────────
+// reporter_hash is SHA-256 of reporter's IP (no FK — anonymous)
 
 export const reports = sqliteTable(
   "reports",
@@ -203,9 +211,9 @@ export const reports = sqliteTable(
     post_id: text("post_id")
       .notNull()
       .references(() => posts.id, { onDelete: "cascade" }),
-    reporter_id: text("reporter_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
+    // IP hash of the reporter — anonymous, no account needed
+    reporter_hash: text("reporter_hash").notNull(),
+    ip_hash: text("ip_hash"),
     reason: text("reason").notNull(),
     created_at: integer("created_at").notNull(),
     resolved: integer("resolved", { mode: "boolean" }).notNull().default(false),
@@ -215,7 +223,7 @@ export const reports = sqliteTable(
   },
   (t) => ({
     idxReportsPostId: index("idx_reports_post_id").on(t.post_id),
-    idxReportsReporterId: index("idx_reports_reporter_id").on(t.reporter_id),
+    idxReportsReporterHash: index("idx_reports_reporter_hash").on(t.reporter_hash),
     idxReportsCreatedAt: index("idx_reports_created_at").on(t.created_at),
     idxReportsResolved: index("idx_reports_resolved").on(t.resolved),
   })
@@ -242,8 +250,8 @@ export const constitution_versions = sqliteTable(
   "constitution_versions",
   {
     id: text("id").primaryKey(),
-    version: text("version").notNull(), // e.g. "1.0", "1.1", "2.0"
-    content: text("content").notNull(), // full JSON of constitution rules
+    version: text("version").notNull(),
+    content: text("content").notNull(),
     summary: text("summary").notNull(),
     created_at: integer("created_at").notNull(),
     created_by: text("created_by").notNull().default("system"),
@@ -268,20 +276,20 @@ export const constitution_amendments = sqliteTable(
       .references(() => users.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
     description: text("description").notNull(),
-    section: text("section").notNull(), // "prohibited" | "restricted" | "principles" | etc.
+    section: text("section").notNull(),
     proposed_text: text("proposed_text").notNull(),
     status: text("status", {
       enum: ["pending_review", "under_vote", "accepted", "rejected"],
     })
       .notNull()
       .default("pending_review"),
-    mod_review_id: text("mod_review_id"), // nullable
-    mod_reasoning: text("mod_reasoning"), // nullable — AI reasoning
+    mod_review_id: text("mod_review_id"),
+    mod_reasoning: text("mod_reasoning"),
     votes_for: integer("votes_for").notNull().default(0),
     votes_against: integer("votes_against").notNull().default(0),
-    vote_deadline: integer("vote_deadline"), // nullable unix timestamp
+    vote_deadline: integer("vote_deadline"),
     created_at: integer("created_at").notNull(),
-    resolved_at: integer("resolved_at"), // nullable
+    resolved_at: integer("resolved_at"),
   },
   (t) => ({
     idxAmendmentsProposer: index("idx_ca_proposer").on(t.proposer_id),
@@ -290,29 +298,21 @@ export const constitution_amendments = sqliteTable(
   })
 );
 
-// ─── uploads ──────────────────────────────────────────────────────────────────
+// ─── banned_ips ───────────────────────────────────────────────────────────────
 
-export const uploads = sqliteTable(
-  "uploads",
+export const banned_ips = sqliteTable(
+  "banned_ips",
   {
     id: text("id").primaryKey(),
-    url: text("url").notNull(),
-    content_type: text("content_type").notNull(),
-    size: integer("size").notNull(),
-    width: integer("width"),
-    height: integer("height"),
-    ip_hash: text("ip_hash").notNull(),
-    created_at: integer("created_at").notNull(),
-    moderation_status: text("moderation_status", {
-      enum: ["pending", "approved", "rejected"],
-    })
-      .notNull()
-      .default("pending"),
+    ip_hash: text("ip_hash").unique().notNull(),
+    reason: text("reason"),
+    banned_at: integer("banned_at").notNull(),
+    expires_at: integer("expires_at"), // null = permanent
   },
   (t) => ({
-    idxUploadsCreatedAt: index("idx_uploads_created_at").on(t.created_at),
-    idxUploadsIpHash: index("idx_uploads_ip_hash").on(t.ip_hash),
-    idxUploadsModerationStatus: index("idx_uploads_moderation_status").on(t.moderation_status),
+    idxBannedIpsIpHash: uniqueIndex("idx_banned_ips_ip_hash").on(t.ip_hash),
+    idxBannedIpsBannedAt: index("idx_banned_ips_banned_at").on(t.banned_at),
+    idxBannedIpsExpiresAt: index("idx_banned_ips_expires_at").on(t.expires_at),
   })
 );
 
@@ -340,5 +340,5 @@ export type ConstitutionVersion = typeof constitution_versions.$inferSelect;
 export type NewConstitutionVersion = typeof constitution_versions.$inferInsert;
 export type ConstitutionAmendment = typeof constitution_amendments.$inferSelect;
 export type NewConstitutionAmendment = typeof constitution_amendments.$inferInsert;
-export type Upload = typeof uploads.$inferSelect;
-export type NewUpload = typeof uploads.$inferInsert;
+export type BannedIp = typeof banned_ips.$inferSelect;
+export type NewBannedIp = typeof banned_ips.$inferInsert;

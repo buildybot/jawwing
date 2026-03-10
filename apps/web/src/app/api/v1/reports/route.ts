@@ -1,21 +1,21 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db, posts, reports, nanoid, now } from "@jawwing/db";
 import { eq } from "drizzle-orm";
-import { withAuth, type AuthenticatedRequest } from "@jawwing/api/middleware";
 import { onPostReported } from "@jawwing/mod/automod";
 import { validate, ReportSchema } from "@jawwing/api/validation";
+import { getIpHash } from "@jawwing/api/anonymous";
+import { isBanned } from "@jawwing/api/bans";
 
 // ─── POST /api/v1/reports ─────────────────────────────────────────────────────
-// Creates a report on a post and triggers automod if threshold is met.
-// Requires human authentication (JWT session or API key with type=human).
+// Creates a report on a post. No auth required — anonymous by IP hash.
 
-async function handler(req: AuthenticatedRequest): Promise<NextResponse> {
+export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
-    const { user } = req;
+    const ipHash = getIpHash(req);
 
-    if (user.type !== "human") {
+    if (isBanned(ipHash)) {
       return NextResponse.json(
-        { error: "Forbidden: human auth required to submit reports", code: "FORBIDDEN" },
+        { error: "Forbidden", code: "BANNED" },
         { status: 403 }
       );
     }
@@ -34,25 +34,23 @@ async function handler(req: AuthenticatedRequest): Promise<NextResponse> {
 
     const { post_id, reason } = parsed.data;
 
-    // Verify post exists
     const [post] = await db.select().from(posts).where(eq(posts.id, post_id)).limit(1);
     if (!post) {
       return NextResponse.json({ error: "Post not found", code: "NOT_FOUND" }, { status: 404 });
     }
 
-    // Insert the report record
     const reportId = nanoid();
     await db.insert(reports).values({
       id: reportId,
       post_id,
-      reporter_id: user.id,
+      reporter_hash: ipHash,
+      ip_hash: ipHash,
       reason: reason.trim(),
       created_at: now(),
       resolved: false,
     });
 
-    // Trigger automod logic asynchronously (checks threshold, maybe triggers AI review)
-    onPostReported(post_id, user.id, reason.trim()).catch((err) => {
+    onPostReported(post_id, ipHash, reason.trim()).catch((err) => {
       console.error(`[POST /api/v1/reports] onPostReported failed for post ${post_id}:`, err);
     });
 
@@ -62,5 +60,3 @@ async function handler(req: AuthenticatedRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "Internal server error", code: "INTERNAL_ERROR" }, { status: 500 });
   }
 }
-
-export const POST = withAuth(handler as Parameters<typeof withAuth>[0]);

@@ -90,6 +90,22 @@ export const CONSTITUTION_RULES = {
     "Consistency. Same content gets same treatment regardless of who posted it.",
     "Transparency. Every moderation action is logged with rule cited and reasoning.",
   ],
+  allowedVideoSources: {
+    id: "AV-1",
+    name: "Allowed Video Links",
+    description:
+      "Video content may only be linked from platforms with established moderation policies. Users may share links to videos on these platforms. Native video upload is not supported.",
+    allowedDomains: [
+      { domain: "youtube.com", name: "YouTube", reason: "Google-moderated, community guidelines enforced" },
+      { domain: "youtu.be", name: "YouTube (short)", reason: "Same as youtube.com" },
+      { domain: "tiktok.com", name: "TikTok", reason: "ByteDance-moderated, community guidelines enforced" },
+      { domain: "vimeo.com", name: "Vimeo", reason: "Staff-moderated, strict content policies" },
+      { domain: "twitch.tv", name: "Twitch", reason: "Amazon-moderated, community guidelines enforced" },
+      { domain: "instagram.com", name: "Instagram", reason: "Meta-moderated, community guidelines enforced" },
+    ],
+    policy:
+      "Links to video hosting platforms not on this list will be flagged for review. This list can be amended through the standard amendment process.",
+  },
   technology: {
     currentModel: "gemini-2.5-flash",
     modelProvider: "Google",
@@ -164,6 +180,17 @@ ${CONSTITUTION_RULES.restricted
   )
   .join("\n\n")}
 
+## Image Moderation (when an image is attached):
+Evaluate the image against the same rules above. Pay special attention to:
+- Explicit/sexual content (P-1, R-1)
+- Violence or gore (P-2, R-5)
+- Personally identifying information visible in the image (P-3)
+- CSAM — zero tolerance, immediate remove (P-4)
+- If you cannot determine the image content, use "flag"
+
+## Video Link Policy (AV-1):
+If the post contains a link to a video platform, check if the domain is in the allowed list: ${CONSTITUTION_RULES.allowedVideoSources.allowedDomains.map((d) => d.domain).join(", ")}. If the video domain is NOT on this list, use "flag" and cite rule AV-1.
+
 ## Your Decision Rules:
 - "approve" — Content is fine. No violations. Default when in doubt.
 - "warn" — Minor first violation of a Restricted rule (R-1 through R-5).
@@ -199,15 +226,34 @@ const AI_AGENT_ID = process.env.MOD_AGENT_ID ?? "agent-system";
 
 // ─── reviewPost ───────────────────────────────────────────────────────────────
 
+// ─── Download image as base64 ─────────────────────────────────────────────────
+
+async function fetchImageAsBase64(url: string): Promise<{ data: string; mimeType: string } | null> {
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    if (!res.ok) return null;
+    const contentType = res.headers.get("content-type") ?? "image/jpeg";
+    const mimeType = contentType.split(";")[0].trim();
+    const buffer = await res.arrayBuffer();
+    const data = Buffer.from(buffer).toString("base64");
+    return { data, mimeType };
+  } catch {
+    return null;
+  }
+}
+
 export async function reviewPost(post: Post): Promise<ModerationDecision> {
   const genAI = getGenAI();
 
-  // Graceful fallback: if GEMINI_API_KEY is not configured, auto-approve
+  // Graceful fallback: if GEMINI_API_KEY is not configured, auto-approve (or flag if image present)
   if (!genAI) {
+    const fallbackAction = post.image_url ? "flag" : "approve";
     const fallbackDecision: ModerationDecision = {
-      action: "approve",
+      action: fallbackAction,
       ruleCited: null,
-      reasoning: "Moderation service unavailable. Auto-approved.",
+      reasoning: post.image_url
+        ? "Moderation service unavailable. Post with image flagged for manual review."
+        : "Moderation service unavailable. Auto-approved.",
       confidence: 1,
     };
     try {
@@ -233,7 +279,48 @@ export async function reviewPost(post: Post): Promise<ModerationDecision> {
     systemInstruction: SYSTEM_PROMPT,
   });
 
-  const userMessage = `Please review this post:\n\n"${post.content}"`;
+  // Build content parts — text + optional image
+  type ContentPart = { text: string } | { inlineData: { data: string; mimeType: string } };
+  const contentParts: ContentPart[] = [
+    { text: `Please review this post:\n\n"${post.content}"` },
+  ];
+
+  if (post.image_url) {
+    const imageData = await fetchImageAsBase64(post.image_url);
+    if (imageData) {
+      contentParts.push({ inlineData: imageData });
+      contentParts[0] = { text: `Please review this post (it includes an attached image):\n\n"${post.content}"` };
+    } else {
+      // Can't download image — flag for review
+      console.warn(`[mod/engine] Failed to download image for post ${post.id}: ${post.image_url}`);
+      const flagDecision: ModerationDecision = {
+        action: "flag",
+        ruleCited: null,
+        reasoning: "Image could not be downloaded for moderation. Flagged for manual review.",
+        confidence: 0,
+      };
+      try {
+        const actionId = nanoid();
+        await db.insert(mod_actions).values({
+          id: actionId,
+          post_id: post.id,
+          agent_id: AI_AGENT_ID,
+          action: flagDecision.action,
+          rule_cited: flagDecision.ruleCited,
+          reasoning: flagDecision.reasoning,
+          created_at: now(),
+          appealed: false,
+          appeal_result: null,
+        });
+        await db.update(posts).set({ status: "moderated", mod_action_id: actionId }).where(eq(posts.id, post.id));
+      } catch (dbErr) {
+        console.error("[mod/engine] Failed to log image-fetch-failure mod action:", dbErr);
+      }
+      return flagDecision;
+    }
+  }
+
+  const userMessage = contentParts;
 
   let decision: ModerationDecision;
 

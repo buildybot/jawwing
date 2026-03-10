@@ -44,3 +44,33 @@ html {
 .font-mono {
   font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
 }
+
+/* ── TikTok-style snap scroll (mobile) ─────────────────────────────────────── */
+
+@media (max-width: 639px) {
+  /* Hide the desktop <main> content when snap mode is active */
+  .feed-desktop-only {
+    display: none;
+  }
+
+  .feed-scroll-container {
+    scroll-snap-type: y mandatory;
+    overflow-y: scroll;
+    -webkit-overflow-scrolling: touch;
+    /* Prevent native pull-to-refresh from interfering */
+    overscroll-behavior: contain;
+  }
+
+  .feed-snap-item {
+    scroll-snap-align: start;
+    flex-shrink: 0;
+  }
+
+  /* Hide desktop scrollbar on mobile snap container */
+  .feed-scroll-container::-webkit-scrollbar {
+    display: none;
+  }
+  .feed-scroll-container {
+    scrollbar-width: none;
+  }
+}

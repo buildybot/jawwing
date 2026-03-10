@@ -51,6 +51,18 @@ export default function FeedPage() {
   const [showModal, setShowModal] = useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = useState<string | null>(null); // "vote" | "post" | null
 
+  // Mobile detection — snap scroll on <640px
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 639px)");
+    setIsMobile(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+
+  const snapContainerRef = useRef<HTMLDivElement | null>(null);
+
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -93,6 +105,7 @@ export default function FeedPage() {
   });
 
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const mobileLoadMoreRef = useRef<HTMLDivElement | null>(null);
 
   // Get location on mount — 5s timeout, fall back to DC Metro
   useEffect(() => {
@@ -250,7 +263,7 @@ export default function FeedPage() {
     setShowNewBanner(false);
   };
 
-  // Infinite scroll
+  // Infinite scroll (desktop)
   useEffect(() => {
     if (!loadMoreRef.current) return;
     const observer = new IntersectionObserver(
@@ -265,11 +278,29 @@ export default function FeedPage() {
     return () => observer.disconnect();
   }, [hasMore, loadingMore, loading, loadFeed]);
 
+  // Mobile snap: infinite scroll via last item sentinel
+  useEffect(() => {
+    if (!isMobile || !mobileLoadMoreRef.current) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loadingMore && !loading) {
+          loadFeed(false);
+        }
+      },
+      {
+        root: snapContainerRef.current,
+        threshold: 0.1,
+      }
+    );
+    observer.observe(mobileLoadMoreRef.current);
+    return () => observer.disconnect();
+  }, [isMobile, hasMore, loadingMore, loading, loadFeed, posts.length]);
+
   const handleTabChange = (tab: SortTab) => {
     setActiveTab(tab);
   };
 
-  const handleCreatePost = async (content: string) => {
+  const handleCreatePost = async (content: string, imageUrl?: string) => {
     if (!isAuthenticated) {
       setShowLoginPrompt("post");
       throw new Error("Login required");
@@ -277,7 +308,7 @@ export default function FeedPage() {
     if (userLat == null || userLng == null) {
       throw new Error("Location required to post.");
     }
-    await createPost(content, userLat, userLng);
+    await createPost(content, userLat, userLng, imageUrl);
     loadFeed(true);
   };
 
@@ -618,31 +649,32 @@ export default function FeedPage() {
             </div>
           )}
 
-          {/* Posts */}
-          {!loading && !error && posts.length > 0 && (
+          {/* Posts — desktop card list */}
+          {!loading && !error && posts.length > 0 && !isMobile && (
             <div className="flex flex-col" style={{ gap: "2px", paddingTop: "2px" }}>
               {posts.map((post) => (
                 <PostCard
                   key={post.id}
                   post={toCardPost(post, userLat, userLng, territoryName)}
                   onLoginRequired={() => setShowLoginPrompt("vote")}
+                  variant="card"
                 />
               ))}
             </div>
           )}
 
-          {/* Load more sentinel */}
-          <div ref={loadMoreRef} style={{ height: "1px" }} />
+          {/* Load more sentinel (desktop) */}
+          {!isMobile && <div ref={loadMoreRef} style={{ height: "1px" }} />}
 
-          {/* Loading more indicator */}
-          {loadingMore && (
+          {/* Loading more indicator (desktop) */}
+          {!isMobile && loadingMore && (
             <p style={{ ...MONO, color: "#333333", fontSize: "0.625rem", letterSpacing: "0.08em", textAlign: "center", padding: "16px 0" }}>
               LOADING...
             </p>
           )}
 
-          {/* End of feed */}
-          {!loading && !hasMore && posts.length > 0 && (
+          {/* End of feed (desktop) */}
+          {!isMobile && !loading && !hasMore && posts.length > 0 && (
             <p
               style={{
                 ...MONO,
@@ -659,9 +691,97 @@ export default function FeedPage() {
             </p>
           )}
 
-          {/* Bottom padding for FAB */}
-          <div style={{ height: "80px" }} />
+          {/* Bottom padding for FAB (desktop) */}
+          {!isMobile && <div style={{ height: "80px" }} />}
         </main>
+
+        {/* ── Mobile snap scroll feed ───────────────────────────────────────── */}
+        {isMobile && !loading && !error && posts.length > 0 && (
+          <div
+            ref={snapContainerRef}
+            className="feed-scroll-container"
+            style={{
+              position: "fixed",
+              top: `${HEADER_HEIGHT}px`,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              scrollSnapType: "y mandatory",
+              overflowY: "scroll",
+              WebkitOverflowScrolling: "touch",
+              zIndex: 10,
+            } as React.CSSProperties}
+          >
+            {posts.map((post, i) => (
+              <div
+                key={post.id}
+
+                className="feed-snap-item"
+                style={{
+                  scrollSnapAlign: "start",
+                  height: `calc(100vh - ${HEADER_HEIGHT}px)`,
+                  display: "flex",
+                  flexDirection: "column",
+                  overflow: "hidden",
+                }}
+              >
+                <PostCard
+                  post={toCardPost(post, userLat, userLng, territoryName)}
+                  onLoginRequired={() => setShowLoginPrompt("vote")}
+                  variant="fullscreen"
+
+                />
+              </div>
+            ))}
+
+            {/* Mobile load more sentinel */}
+            <div
+              ref={mobileLoadMoreRef}
+              style={{
+                scrollSnapAlign: "start",
+                height: `calc(100vh - ${HEADER_HEIGHT}px)`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "#000000",
+              }}
+            >
+              {loadingMore ? (
+                <span style={{ ...MONO, color: "#333333", fontSize: "0.625rem", letterSpacing: "0.1em" }}>
+                  LOADING...
+                </span>
+              ) : !hasMore ? (
+                <span style={{ ...MONO, color: "#333333", fontSize: "0.625rem", letterSpacing: "0.08em" }}>
+                  {territoryName ? `${territoryName.toUpperCase()} · TERRITORY` : "5 MILE RADIUS · ANONYMOUS"}
+                </span>
+              ) : null}
+            </div>
+          </div>
+        )}
+
+        {/* Mobile loading skeleton (fixed overlay) */}
+        {isMobile && loading && (
+          <div
+            style={{
+              position: "fixed",
+              top: `${HEADER_HEIGHT}px`,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: "#000000",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+              zIndex: 10,
+            }}
+          >
+            <span style={{ ...MONO, color: "#333333", fontSize: "0.625rem", letterSpacing: "0.1em" }}>
+              LOADING...
+            </span>
+          </div>
+        )}
 
         {/* FAB */}
         <button

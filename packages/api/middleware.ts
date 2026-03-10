@@ -111,6 +111,31 @@ export function checkRateLimit(
   return { allowed, remaining, resetAt: entry.resetAt };
 }
 
+// ─── withAgentAuth HOC ───────────────────────────────────────────────────────
+
+/**
+ * Like withAuth, but ONLY accepts agent API keys (jw_ prefix).
+ * Use for mod endpoints that should never be called by anonymous users.
+ */
+export function withAgentAuth(handler: RouteHandler) {
+  return async (
+    req: NextRequest,
+    context: { params: Promise<Record<string, string>> }
+  ): Promise<NextResponse> => {
+    const user = await resolveUser(req);
+
+    if (!user || user.type !== "agent") {
+      return NextResponse.json(
+        { error: "Unauthorized: agent API key required", code: "AGENT_AUTH_REQUIRED" },
+        { status: 401 }
+      );
+    }
+
+    (req as AuthenticatedRequest).user = user;
+    return handler(req as AuthenticatedRequest, context);
+  };
+}
+
 // ─── Email Rate Limits ────────────────────────────────────────────────────────
 
 // send-code: 3 per email per 10 minutes

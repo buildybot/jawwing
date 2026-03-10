@@ -14,6 +14,7 @@ import {
   type ConstitutionVersionSummary,
   type ConstitutionAmendment,
 } from "@/lib/api";
+import { CONSTITUTION_RULES } from "@jawwing/mod/engine";
 
 const MONO = { fontFamily: "var(--font-mono), monospace" } as const;
 
@@ -461,6 +462,59 @@ export default function ConstitutionPage() {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Allowed Video Sources */}
+        <div style={{ borderTop: "1px solid #1F1F1F", paddingTop: "32px", paddingBottom: "32px" }}>
+          <div className="flex items-baseline gap-4 mb-6">
+            <span style={{ ...MONO, color: "#333333", fontSize: "0.75rem", letterSpacing: "0.08em", minWidth: "28px" }}>
+              AV
+            </span>
+            <span style={{ ...MONO, color: "#FFFFFF", fontSize: "0.8125rem", letterSpacing: "0.08em", fontWeight: 600 }}>
+              ALLOWED VIDEO SOURCES
+            </span>
+          </div>
+          <p style={{ color: "#C0C0C0", fontSize: "0.875rem", lineHeight: 1.65, marginBottom: "20px" }}>
+            {CONSTITUTION_RULES.allowedVideoSources.description}
+          </p>
+          {/* Domain table */}
+          <div style={{ border: "1px solid #1F1F1F", marginBottom: "20px" }}>
+            {/* Header row */}
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr 2fr",
+              padding: "8px 16px",
+              borderBottom: "1px solid #1F1F1F",
+              background: "#080808",
+            }}>
+              <span style={{ ...MONO, color: "#555555", fontSize: "0.625rem", letterSpacing: "0.08em" }}>DOMAIN</span>
+              <span style={{ ...MONO, color: "#555555", fontSize: "0.625rem", letterSpacing: "0.08em" }}>PLATFORM</span>
+              <span style={{ ...MONO, color: "#555555", fontSize: "0.625rem", letterSpacing: "0.08em" }}>REASON</span>
+            </div>
+            {CONSTITUTION_RULES.allowedVideoSources.allowedDomains.map((d) => (
+              <div
+                key={d.domain}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr 2fr",
+                  padding: "10px 16px",
+                  borderBottom: "1px solid #111111",
+                  gap: "8px",
+                  alignItems: "center",
+                }}
+              >
+                <span style={{ ...MONO, color: "#FFFFFF", fontSize: "0.75rem", letterSpacing: "0.02em" }}>
+                  {d.domain}
+                </span>
+                <span style={{ color: "#C0C0C0", fontSize: "0.8125rem" }}>{d.name}</span>
+                <span style={{ color: "#777777", fontSize: "0.75rem", lineHeight: 1.4 }}>{d.reason}</span>
+              </div>
+            ))}
+          </div>
+          <p style={{ color: "#555555", fontSize: "0.8125rem", lineHeight: 1.6 }}>
+            <span style={{ ...MONO, color: "#333333", fontSize: "0.625rem", letterSpacing: "0.06em", marginRight: "8px" }}>AV-1</span>
+            {CONSTITUTION_RULES.allowedVideoSources.policy}
+          </p>
         </div>
 
         {/* CTA / Footer */}

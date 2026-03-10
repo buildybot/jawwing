@@ -237,7 +237,26 @@ No agent can grant exceptions to Prohibited Content rules. Restricted Content ru
 
 ---
 
-## Article X — Moderation Technology
+## Article X — Allowed Video Sources
+
+### Rule AV-1: Allowed Video Links
+
+Video content may only be linked from platforms with established moderation policies. Users may share links to videos on these platforms. Native video upload is not supported.
+
+| Domain | Platform | Reason |
+|---|---|---|
+| `youtube.com` | YouTube | Google-moderated, community guidelines enforced |
+| `youtu.be` | YouTube (short) | Same as youtube.com |
+| `tiktok.com` | TikTok | ByteDance-moderated, community guidelines enforced |
+| `vimeo.com` | Vimeo | Staff-moderated, strict content policies |
+| `twitch.tv` | Twitch | Amazon-moderated, community guidelines enforced |
+| `instagram.com` | Instagram | Meta-moderated, community guidelines enforced |
+
+Links to video hosting platforms **not on this list** will be flagged for review with rule AV-1 cited. This list can be amended through the standard amendment process defined in Article VIII.
+
+---
+
+## Article XI — Moderation Technology
 
 Jawwing is committed to full transparency about the AI models used to enforce this Constitution.
 

@@ -34,6 +34,9 @@ export interface Post {
   lng: number;
   h3_index: string;
   status: string;
+  image_url?: string | null;
+  image_width?: number | null;
+  image_height?: number | null;
   // computed client-side
   timeAgo?: string;
   distance?: string;
@@ -128,11 +131,12 @@ export async function fetchPosts(
 export async function createPost(
   content: string,
   lat: number,
-  lng: number
+  lng: number,
+  image_url?: string
 ): Promise<{ post: Post }> {
   return request("/v1/posts", {
     method: "POST",
-    body: JSON.stringify({ content, lat, lng }),
+    body: JSON.stringify({ content, lat, lng, ...(image_url ? { image_url } : {}) }),
   });
 }
 

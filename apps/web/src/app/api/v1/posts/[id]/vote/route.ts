@@ -1,17 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, posts, votes, nanoid, now } from "@jawwing/db";
 import { eq, and, sql } from "drizzle-orm";
-import { withAuth, type AuthenticatedRequest } from "@jawwing/api/middleware";
 import { validate, VoteSchema } from "@jawwing/api/validation";
+import { getIpHash } from "@jawwing/api/anonymous";
+import { isBanned } from "@jawwing/api/bans";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 // ─── POST /api/v1/posts/[id]/vote ────────────────────────────────────────────
 
-async function castVote(req: AuthenticatedRequest, context: RouteContext): Promise<NextResponse> {
+export async function POST(req: NextRequest, context: RouteContext): Promise<NextResponse> {
   try {
-    const { user } = req;
     const { id: post_id } = await context.params;
+    const ipHash = getIpHash(req);
+
+    // Ban check
+    if (isBanned(ipHash)) {
+      return NextResponse.json({ error: "Forbidden", code: "BANNED" }, { status: 403 });
+    }
 
     const [post] = await db.select().from(posts).where(eq(posts.id, post_id)).limit(1);
     if (!post) return NextResponse.json({ error: "Post not found", code: "NOT_FOUND" }, { status: 404 });
@@ -28,7 +34,13 @@ async function castVote(req: AuthenticatedRequest, context: RouteContext): Promi
 
     const { value } = parsed.data;
 
-    const [existing] = await db.select().from(votes).where(and(eq(votes.post_id, post_id), eq(votes.user_id, user.id))).limit(1);
+    // 1 vote per IP per post
+    const [existing] = await db
+      .select()
+      .from(votes)
+      .where(and(eq(votes.post_id, post_id), eq(votes.voter_hash, ipHash)))
+      .limit(1);
+
     const nowTs = now();
 
     if (existing) {
@@ -42,7 +54,10 @@ async function castVote(req: AuthenticatedRequest, context: RouteContext): Promi
       return NextResponse.json({ vote: updated, changed: true, scoreDelta });
     } else {
       const id = nanoid();
-      const [created] = await db.insert(votes).values({ id, post_id, user_id: user.id, value: value as 1 | -1, created_at: nowTs }).returning();
+      const [created] = await db
+        .insert(votes)
+        .values({ id, post_id, voter_hash: ipHash, ip_hash: ipHash, value: value as 1 | -1, created_at: nowTs })
+        .returning();
       await db.update(posts).set({ score: sql`${posts.score} + ${value as number}` }).where(eq(posts.id, post_id));
       return NextResponse.json({ vote: created, changed: true }, { status: 201 });
     }
@@ -51,5 +66,3 @@ async function castVote(req: AuthenticatedRequest, context: RouteContext): Promi
     return NextResponse.json({ error: "Internal server error", code: "INTERNAL_ERROR" }, { status: 500 });
   }
 }
-
-export const POST = withAuth(castVote as Parameters<typeof withAuth>[0]);

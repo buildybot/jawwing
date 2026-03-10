@@ -23,8 +23,6 @@ export interface PostCardProps {
   onLoginRequired?: () => void;
   /** "card" = standard list layout (default). "fullscreen" = TikTok-style snap layout. */
   variant?: "card" | "fullscreen";
-  /** Whether this card is in the viewport (used for autoplay on fullscreen). */
-  active?: boolean;
 }
 
 const MONO = { fontFamily: "var(--font-mono), monospace" } as const;
@@ -33,47 +31,31 @@ const MONO = { fontFamily: "var(--font-mono), monospace" } as const;
 
 const URL_RE = /https?:\/\/[^\s<>"')\]]+/gi;
 const IMAGE_RE = /https?:\/\/[^\s<>"')\]]+\.(?:jpg|jpeg|png|gif|webp)(\?[^\s<>"')\]]*)?/gi;
-const YOUTUBE_RE =
-  /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?(?:[^&\s]*&)*v=([\w-]{11})|youtu\.be\/([\w-]{11}))/i;
-const TIKTOK_RE =
-  /https?:\/\/(?:www\.)?tiktok\.com\/@[\w.]+\/video\/\d+/i;
 
-function matchYouTubeId(content: string): string | null {
-  const m = content.match(YOUTUBE_RE);
-  return m ? m[1] || m[2] : null;
-}
-
-function matchTikTokUrl(content: string): string | null {
-  const m = content.match(TIKTOK_RE);
-  return m ? m[0] : null;
-}
+// Video domains — skip OG preview for these, just show plain link
+const VIDEO_DOMAIN_RE = /(?:youtube\.com|youtu\.be|tiktok\.com|vimeo\.com|twitch\.tv|dailymotion\.com)/i;
 
 function matchImageUrls(content: string): string[] {
   IMAGE_RE.lastIndex = 0;
   return Array.from(new Set(content.match(IMAGE_RE) || []));
 }
 
-/** Returns first URL that is not an image/video embed */
+/** Returns first non-image, non-video URL for OG preview */
 function matchLinkPreviewUrl(content: string): string | null {
   URL_RE.lastIndex = 0;
-  const all = Array.from(new Set(content.match(URL_RE) || []));
   IMAGE_RE.lastIndex = 0;
+  const all = Array.from(new Set(content.match(URL_RE) || []));
   return (
-    all.find(
-      (u) => !IMAGE_RE.test(u) && !YOUTUBE_RE.test(u) && !TIKTOK_RE.test(u)
-    ) ?? null
+    all.find((u) => {
+      IMAGE_RE.lastIndex = 0;
+      return !IMAGE_RE.test(u) && !VIDEO_DOMAIN_RE.test(u);
+    }) ?? null
   );
 }
 
 // ─── Content renderer (text + clickable links) ───────────────────────────────
 
-function ContentWithLinks({
-  content,
-  fontSize,
-}: {
-  content: string;
-  fontSize?: string;
-}) {
+function ContentWithLinks({ content, fontSize }: { content: string; fontSize?: string }) {
   const parts: React.ReactNode[] = [];
   const re = new RegExp(URL_RE.source, "gi");
   let last = 0;
@@ -102,109 +84,6 @@ function ContentWithLinks({
     <p style={{ color: "#FFFFFF", lineHeight: "1.6", fontSize: fontSize ?? "1rem", margin: 0 }}>
       {parts}
     </p>
-  );
-}
-
-// ─── YouTube embed ────────────────────────────────────────────────────────────
-
-function YouTubeEmbed({ videoId, active }: { videoId: string; active?: boolean }) {
-  const [muted, setMuted] = useState(true);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-
-  const buildSrc = (autoplay: boolean, m: boolean) =>
-    `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&mute=${m ? 1 : 0}${autoplay ? "&autoplay=1" : ""}`;
-
-  const [src, setSrc] = useState(buildSrc(false, true));
-
-  useEffect(() => {
-    setSrc(buildSrc(!!active, muted));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active]);
-
-  return (
-    <div
-      style={{
-        position: "relative",
-        width: "100%",
-        paddingBottom: "56.25%",
-        background: "#0A0A0A",
-        marginTop: "10px",
-        border: "1px solid #1F1F1F",
-      }}
-    >
-      <iframe
-        ref={iframeRef}
-        src={src}
-        style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: "none" }}
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        allowFullScreen
-      />
-      <button
-        onClick={() => {
-          const next = !muted;
-          setMuted(next);
-          setSrc(buildSrc(!!active, next));
-        }}
-        style={{
-          ...MONO,
-          position: "absolute",
-          bottom: "8px",
-          right: "8px",
-          background: "rgba(0,0,0,0.75)",
-          border: "1px solid #333333",
-          color: "#FFFFFF",
-          padding: "4px 8px",
-          fontSize: "0.5625rem",
-          letterSpacing: "0.08em",
-          cursor: "pointer",
-          zIndex: 1,
-        }}
-      >
-        {muted ? "UNMUTE" : "MUTE"}
-      </button>
-    </div>
-  );
-}
-
-// ─── TikTok embed ─────────────────────────────────────────────────────────────
-
-function TikTokEmbed({ url }: { url: string }) {
-  const videoId = url.match(/\/video\/(\d+)/)?.[1];
-  if (!videoId) return null;
-
-  useEffect(() => {
-    // Load TikTok embed script if not already loaded
-    if (!document.querySelector('script[src*="tiktok.com/embed"]')) {
-      const s = document.createElement("script");
-      s.src = "https://www.tiktok.com/embed.js";
-      s.async = true;
-      document.body.appendChild(s);
-    }
-  }, []);
-
-  return (
-    <div
-      style={{
-        width: "100%",
-        background: "#0A0A0A",
-        marginTop: "10px",
-        display: "flex",
-        justifyContent: "center",
-        border: "1px solid #1F1F1F",
-        overflow: "hidden",
-      }}
-    >
-      {/* eslint-disable-next-line @typescript-eslint/ban-ts-comment */}
-      {/* @ts-ignore */}
-      <blockquote
-        className="tiktok-embed"
-        cite={url}
-        data-video-id={videoId}
-        style={{ maxWidth: "325px", minWidth: "280px", border: "none" }}
-      >
-        <section />
-      </blockquote>
-    </div>
   );
 }
 
@@ -321,7 +200,7 @@ function LinkPreview({ url }: { url: string }) {
   }
 
   if (!og || og.error || (!og.title && !og.description && !og.image)) {
-    return null; // content already has the link as plain text
+    return null;
   }
 
   let hostname = "";
@@ -451,7 +330,7 @@ function ExpiryIndicator({ expiresAt }: { expiresAt: number }) {
 
 // ─── PostCard ─────────────────────────────────────────────────────────────────
 
-export default function PostCard({ post, onLoginRequired, variant = "card", active }: PostCardProps) {
+export default function PostCard({ post, onLoginRequired, variant = "card" }: PostCardProps) {
   const replyCount = post.reply_count ?? post.replyCount ?? 0;
   const [score, setScore] = useState(post.score);
   const [voted, setVoted] = useState<"up" | "down" | null>(null);
@@ -459,11 +338,8 @@ export default function PostCard({ post, onLoginRequired, variant = "card", acti
   const [showVotePrompt, setShowVotePrompt] = useState(false);
   const toast = useToast();
 
-  const youtubeId = matchYouTubeId(post.content);
-  const tiktokUrl = !youtubeId ? matchTikTokUrl(post.content) : null;
   const imageUrls = matchImageUrls(post.content);
   const linkPreviewUrl = matchLinkPreviewUrl(post.content);
-  const hasMedia = !!(youtubeId || tiktokUrl || imageUrls.length > 0);
 
   const vote = async (dir: "up" | "down") => {
     if (voting) return;
@@ -511,7 +387,7 @@ export default function PostCard({ post, onLoginRequired, variant = "card", acti
     });
   };
 
-  // ── FULLSCREEN variant (TikTok-style) ──────────────────────────────────────
+  // ── FULLSCREEN variant (TikTok-style snap) ────────────────────────────────
   if (variant === "fullscreen") {
     return (
       <article
@@ -532,11 +408,11 @@ export default function PostCard({ post, onLoginRequired, variant = "card", acti
             display: "flex",
             flexDirection: "column",
             justifyContent: "flex-end",
-            padding: "16px 56px 24px 16px",
+            padding: "16px 60px 28px 16px",
             overflow: "hidden",
           }}
         >
-          {/* Territory + distance badge at top */}
+          {/* Territory + distance badges at top */}
           <div
             style={{
               position: "absolute",
@@ -582,30 +458,13 @@ export default function PostCard({ post, onLoginRequired, variant = "card", acti
             {post.expires_at && <ExpiryIndicator expiresAt={post.expires_at} />}
           </div>
 
-          {/* Media */}
-          {youtubeId && (
-            <div style={{ marginBottom: "12px" }}>
-              <YouTubeEmbed videoId={youtubeId} active={active} />
-            </div>
-          )}
-          {tiktokUrl && !youtubeId && (
-            <div style={{ marginBottom: "12px" }}>
-              <TikTokEmbed url={tiktokUrl} />
-            </div>
-          )}
-          {imageUrls.length > 0 && !hasMedia && (
-            <div style={{ marginBottom: "12px" }}>
-              <ImageEmbed src={imageUrls[0]} fullscreen />
-            </div>
-          )}
-          {imageUrls.length > 0 && (youtubeId || tiktokUrl) && (
-            <div style={{ marginBottom: "12px" }}>
-              <ImageEmbed src={imageUrls[0]} fullscreen />
-            </div>
-          )}
+          {/* Images */}
+          {imageUrls.map((src, i) => (
+            <ImageEmbed key={i} src={src} fullscreen />
+          ))}
 
-          {/* Content */}
-          <div style={{ marginBottom: "8px" }}>
+          {/* Content text */}
+          <div style={{ marginTop: "12px", marginBottom: "8px" }}>
             <ContentWithLinks content={post.content} fontSize="1.125rem" />
           </div>
 
@@ -613,14 +472,7 @@ export default function PostCard({ post, onLoginRequired, variant = "card", acti
           {linkPreviewUrl && <LinkPreview url={linkPreviewUrl} />}
 
           {/* Bottom meta */}
-          <div
-            style={{
-              display: "flex",
-              gap: "12px",
-              marginTop: "12px",
-              alignItems: "center",
-            }}
-          >
+          <div style={{ display: "flex", gap: "12px", marginTop: "12px", alignItems: "center" }}>
             {post.timeAgo && (
               <span style={{ ...MONO, color: "#555555", fontSize: "0.625rem", letterSpacing: "0.06em" }}>
                 {post.timeAgo}
@@ -649,7 +501,7 @@ export default function PostCard({ post, onLoginRequired, variant = "card", acti
             gap: "20px",
           }}
         >
-          {/* Vote up */}
+          {/* Vote cluster */}
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
             <button
               onClick={() => vote("up")}
@@ -692,14 +544,7 @@ export default function PostCard({ post, onLoginRequired, variant = "card", acti
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
             <Link
               href={`/post/${post.id}`}
-              style={{
-                color: "#777777",
-                textDecoration: "none",
-                fontSize: "1.125rem",
-                lineHeight: 1,
-                display: "block",
-                padding: "4px",
-              }}
+              style={{ color: "#777777", textDecoration: "none", fontSize: "1.125rem", lineHeight: 1, display: "block", padding: "4px" }}
               aria-label={`${replyCount} replies`}
             >
               ↩
@@ -711,16 +556,7 @@ export default function PostCard({ post, onLoginRequired, variant = "card", acti
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
             <button
               onClick={handleShare}
-              style={{
-                color: "#777777",
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                fontSize: "1.125rem",
-                lineHeight: 1,
-                padding: "4px",
-                transition: "color 150ms",
-              }}
+              style={{ color: "#777777", background: "none", border: "none", cursor: "pointer", fontSize: "1.125rem", lineHeight: 1, padding: "4px", transition: "color 150ms" }}
               aria-label="Share"
             >
               ↗
@@ -729,22 +565,13 @@ export default function PostCard({ post, onLoginRequired, variant = "card", acti
           </div>
         </div>
 
-        {/* Bottom divider */}
-        <div
-          style={{
-            position: "absolute",
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: "1px",
-            background: "#1F1F1F",
-          }}
-        />
+        {/* Bottom rule */}
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "1px", background: "#1F1F1F" }} />
       </article>
     );
   }
 
-  // ── CARD variant (default) ─────────────────────────────────────────────────
+  // ── CARD variant (default desktop) ────────────────────────────────────────
   return (
     <article
       style={{ background: "#0A0A0A", border: "1px solid #1F1F1F" }}
@@ -754,9 +581,7 @@ export default function PostCard({ post, onLoginRequired, variant = "card", acti
         <ContentWithLinks content={post.content} />
       </div>
 
-      {/* Media */}
-      {youtubeId && <YouTubeEmbed videoId={youtubeId} active={active} />}
-      {tiktokUrl && !youtubeId && <TikTokEmbed url={tiktokUrl} />}
+      {/* Images */}
       {imageUrls.map((src, i) => (
         <ImageEmbed key={i} src={src} />
       ))}

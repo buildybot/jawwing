@@ -253,7 +253,7 @@ export default function FeedPage() {
     setActiveTab(tab);
   };
 
-  const handleCreatePost = async (content: string) => {
+  const handleCreatePost = async (content: string, imageUrl?: string) => {
     if (!isAuthenticated()) {
       setShowLoginBanner(true);
       throw new Error("Login required");
@@ -261,7 +261,7 @@ export default function FeedPage() {
     if (userLat == null || userLng == null) {
       throw new Error("Location required to post.");
     }
-    await createPost(content, userLat, userLng);
+    await createPost(content, userLat, userLng, imageUrl);
     loadFeed(true);
   };
 
