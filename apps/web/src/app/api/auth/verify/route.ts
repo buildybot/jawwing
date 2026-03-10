@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyCode } from "@jawwing/api/auth";
 import { validate, VerifySchema } from "@jawwing/api/validation";
-import { checkSmsRateLimit } from "@jawwing/api/middleware";
+import { checkEmailRateLimit } from "@jawwing/api/middleware";
 
 // ─── POST /api/auth/verify ────────────────────────────────────────────────────
 
@@ -19,10 +19,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: parsed.error, code: "VALIDATION_ERROR" }, { status: 400 });
     }
 
-    const { phone, code } = parsed.data;
+    const { email, code } = parsed.data;
 
-    // SMS rate limit: 5 verify attempts per phone per 10 minutes
-    const rateLimit = checkSmsRateLimit(phone, "verify");
+    // Email rate limit: 5 verify attempts per email per 10 minutes
+    const rateLimit = checkEmailRateLimit(email, "verify");
     if (!rateLimit.allowed) {
       return NextResponse.json(
         { error: "Too many verification attempts. Please wait before trying again.", code: "RATE_LIMIT", resetAt: rateLimit.resetAt },
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       );
     }
 
-    const result = await verifyCode(phone, code);
+    const result = await verifyCode(email, code);
 
     return NextResponse.json({ token: result.token, user: result.user });
   } catch (err) {
