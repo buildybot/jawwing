@@ -7,7 +7,7 @@ import { getModActions, type ModAction } from "@/lib/api";
 const ACTION_COLOR = {
   approved: "#FFFFFF",
   removed: "#FF3333",
-  flagged: "#A0A0A0",
+  flagged: "#C0C0C0",
 } as const;
 
 const ACTION_LABEL = {
@@ -53,7 +53,7 @@ export default function TransparencyPage() {
           JAWWING
         </Link>
         <span style={{ color: "#333333", ...MONO }}>/ </span>
-        <span style={{ ...MONO, color: "#555555", fontSize: "0.75rem", letterSpacing: "0.06em" }}>TRANSPARENCY</span>
+        <span style={{ ...MONO, color: "#777777", fontSize: "0.75rem", letterSpacing: "0.06em" }}>TRANSPARENCY</span>
       </nav>
 
       <main style={{ maxWidth: "760px" }} className="mx-auto px-4 py-16">
@@ -62,7 +62,7 @@ export default function TransparencyPage() {
           <div
             style={{
               ...MONO,
-              color: "#555555",
+              color: "#777777",
               fontSize: "0.6875rem",
               letterSpacing: "0.08em",
               border: "1px solid #1F1F1F",
@@ -84,7 +84,7 @@ export default function TransparencyPage() {
           >
             Moderation Transparency
           </h1>
-          <p style={{ color: "#A0A0A0", fontSize: "0.875rem", lineHeight: 1.6 }}>
+          <p style={{ color: "#C0C0C0", fontSize: "0.875rem", lineHeight: 1.6 }}>
             Every moderation action logged in real time. Who made the call, what rule was cited, why.
           </p>
         </div>
@@ -99,7 +99,7 @@ export default function TransparencyPage() {
               { label: "TOTAL", value: stats.total, color: "#FFFFFF" },
               { label: "APPROVED", value: stats.approved, color: "#FFFFFF" },
               { label: "REMOVED", value: stats.removed, color: "#FF3333" },
-              { label: "FLAGGED", value: stats.flagged, color: "#A0A0A0" },
+              { label: "FLAGGED", value: stats.flagged, color: "#C0C0C0" },
             ].map((stat, i) => (
               <div
                 key={stat.label}
@@ -113,7 +113,7 @@ export default function TransparencyPage() {
                 <div style={{ ...MONO, fontSize: "1.5rem", fontWeight: 700, color: stat.color, marginBottom: "4px" }}>
                   {stat.value}
                 </div>
-                <div style={{ ...MONO, color: "#555555", fontSize: "0.625rem", letterSpacing: "0.08em" }}>
+                <div style={{ ...MONO, color: "#777777", fontSize: "0.625rem", letterSpacing: "0.08em" }}>
                   {stat.label}
                 </div>
               </div>
@@ -162,7 +162,7 @@ export default function TransparencyPage() {
                 borderBottom: "1px solid #1F1F1F",
                 fontSize: "0.625rem",
                 letterSpacing: "0.08em",
-                color: "#555555",
+                color: "#777777",
               }}
             >
               <span>POST / REASONING</span>
@@ -198,7 +198,7 @@ export default function TransparencyPage() {
                             ...MONO,
                             fontSize: "0.625rem",
                             letterSpacing: "0.08em",
-                            color: ACTION_COLOR[action.action] ?? "#A0A0A0",
+                            color: ACTION_COLOR[action.action] ?? "#C0C0C0",
                             fontWeight: 600,
                           }}
                         >
@@ -208,7 +208,7 @@ export default function TransparencyPage() {
                       {action.post_excerpt && (
                         <p
                           style={{
-                            color: "#A0A0A0",
+                            color: "#C0C0C0",
                             fontSize: "0.875rem",
                             lineHeight: 1.5,
                             fontStyle: "italic",
@@ -218,18 +218,18 @@ export default function TransparencyPage() {
                           &ldquo;{action.post_excerpt}&rdquo;
                         </p>
                       )}
-                      <p style={{ color: "#555555", fontSize: "0.8125rem", lineHeight: 1.5 }}>
+                      <p style={{ color: "#777777", fontSize: "0.8125rem", lineHeight: 1.5 }}>
                         {action.reasoning}
                       </p>
                     </div>
 
                     {/* Rule */}
-                    <div style={{ ...MONO, color: "#A0A0A0", fontSize: "0.6875rem", letterSpacing: "0.02em", lineHeight: 1.5 }}>
+                    <div style={{ ...MONO, color: "#C0C0C0", fontSize: "0.6875rem", letterSpacing: "0.02em", lineHeight: 1.5 }}>
                       {action.rule_cited}
                     </div>
 
                     {/* Agent + timestamp */}
-                    <div style={{ ...MONO, color: "#555555", fontSize: "0.6875rem", lineHeight: 1.6 }}>
+                    <div style={{ ...MONO, color: "#777777", fontSize: "0.6875rem", lineHeight: 1.6 }}>
                       <div>{action.agent_id}</div>
                       <div style={{ color: "#333333" }}>{formatTs(action.created_at)}</div>
                     </div>
@@ -241,7 +241,7 @@ export default function TransparencyPage() {
                           ...MONO,
                           fontSize: "0.875rem",
                           fontWeight: 600,
-                          color: action.confidence >= 90 ? "#FFFFFF" : action.confidence >= 80 ? "#A0A0A0" : "#555555",
+                          color: action.confidence >= 90 ? "#FFFFFF" : action.confidence >= 80 ? "#C0C0C0" : "#777777",
                         }}
                       >
                         {action.confidence}%
@@ -254,7 +254,7 @@ export default function TransparencyPage() {
                             left: 0,
                             height: "100%",
                             width: `${action.confidence}%`,
-                            background: action.confidence >= 90 ? "#FFFFFF" : action.confidence >= 80 ? "#A0A0A0" : "#555555",
+                            background: action.confidence >= 90 ? "#FFFFFF" : action.confidence >= 80 ? "#C0C0C0" : "#777777",
                           }}
                         />
                       </div>
@@ -271,7 +271,7 @@ export default function TransparencyPage() {
             href="/constitution"
             style={{
               ...MONO,
-              color: "#A0A0A0",
+              color: "#C0C0C0",
               fontSize: "0.75rem",
               letterSpacing: "0.04em",
               textDecoration: "underline",

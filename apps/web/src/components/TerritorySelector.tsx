@@ -88,7 +88,7 @@ export default function TerritorySelector({
           alignItems: "center",
           gap: "6px",
           padding: "4px 0",
-          color: open ? "#FFFFFF" : "#555555",
+          color: open ? "#FFFFFF" : "#777777",
           fontSize: "0.6875rem",
           letterSpacing: "0.06em",
           transition: "color 150ms",
@@ -149,7 +149,7 @@ export default function TerritorySelector({
               style={{
                 ...MONO,
                 padding: "12px 14px",
-                color: "#555555",
+                color: "#777777",
                 fontSize: "0.6875rem",
                 letterSpacing: "0.06em",
               }}
@@ -161,7 +161,7 @@ export default function TerritorySelector({
               style={{
                 ...MONO,
                 padding: "12px 14px",
-                color: "#555555",
+                color: "#777777",
                 fontSize: "0.6875rem",
                 letterSpacing: "0.06em",
               }}
@@ -201,7 +201,7 @@ export default function TerritorySelector({
                   </span>
                   <span
                     style={{
-                      color: "#555555",
+                      color: "#777777",
                       fontSize: "0.625rem",
                       flexShrink: 0,
                       display: "flex",

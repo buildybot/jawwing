@@ -112,7 +112,7 @@ function ProfileContent() {
               ...MONO,
               background: "none",
               border: "none",
-              color: "#555555",
+              color: "#777777",
               fontSize: "0.75rem",
               letterSpacing: "0.06em",
               cursor: "pointer",
@@ -138,7 +138,7 @@ function ProfileContent() {
               ...MONO,
               background: "none",
               border: "none",
-              color: "#555555",
+              color: "#777777",
               fontSize: "0.75rem",
               letterSpacing: "0.06em",
               cursor: "pointer",
@@ -172,7 +172,7 @@ function ProfileContent() {
               <p style={{ ...MONO, color: "#333333", fontSize: "0.5625rem", letterSpacing: "0.1em", marginBottom: "2px" }}>
                 ACCOUNT TYPE
               </p>
-              <p style={{ ...MONO, color: "#A0A0A0", fontSize: "0.75rem", letterSpacing: "0.06em" }}>
+              <p style={{ ...MONO, color: "#C0C0C0", fontSize: "0.75rem", letterSpacing: "0.06em" }}>
                 {(user?.type ?? "HUMAN").toUpperCase()}
               </p>
             </div>
@@ -181,7 +181,7 @@ function ProfileContent() {
                 <p style={{ ...MONO, color: "#333333", fontSize: "0.5625rem", letterSpacing: "0.1em", marginBottom: "2px" }}>
                   JOINED
                 </p>
-                <p style={{ ...MONO, color: "#A0A0A0", fontSize: "0.75rem", letterSpacing: "0.06em" }}>
+                <p style={{ ...MONO, color: "#C0C0C0", fontSize: "0.75rem", letterSpacing: "0.06em" }}>
                   {formatDate(joinedAt)}
                 </p>
               </div>
@@ -191,7 +191,7 @@ function ProfileContent() {
 
         {/* Posts section */}
         <div style={{ padding: "0 16px", marginBottom: "8px" }}>
-          <p style={{ ...MONO, color: "#555555", fontSize: "0.625rem", letterSpacing: "0.1em", marginBottom: "8px" }}>
+          <p style={{ ...MONO, color: "#777777", fontSize: "0.625rem", letterSpacing: "0.1em", marginBottom: "8px" }}>
             YOUR POSTS
           </p>
 
@@ -238,10 +238,10 @@ function ProfileContent() {
                     {post.content.length > 120 ? post.content.slice(0, 120) + "…" : post.content}
                   </p>
                   <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
-                    <span style={{ ...MONO, color: "#555555", fontSize: "0.625rem", letterSpacing: "0.06em" }}>
+                    <span style={{ ...MONO, color: "#777777", fontSize: "0.625rem", letterSpacing: "0.06em" }}>
                       ↑ {post.score}
                     </span>
-                    <span style={{ ...MONO, color: "#555555", fontSize: "0.625rem", letterSpacing: "0.06em" }}>
+                    <span style={{ ...MONO, color: "#777777", fontSize: "0.625rem", letterSpacing: "0.06em" }}>
                       {post.reply_count} REPLIES
                     </span>
                     {post.status !== "active" && (
@@ -259,7 +259,7 @@ function ProfileContent() {
         {/* Mod actions section */}
         {modActions.length > 0 && (
           <div style={{ padding: "16px 16px", marginBottom: "8px" }}>
-            <p style={{ ...MONO, color: "#555555", fontSize: "0.625rem", letterSpacing: "0.1em", marginBottom: "8px" }}>
+            <p style={{ ...MONO, color: "#777777", fontSize: "0.625rem", letterSpacing: "0.1em", marginBottom: "8px" }}>
               MOD ACTIONS ON YOUR POSTS
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
@@ -269,12 +269,12 @@ function ProfileContent() {
                   style={{
                     background: "#0A0A0A",
                     border: "1px solid #1F1F1F",
-                    borderLeft: `2px solid ${action.action === "removed" ? "#FF3333" : action.action === "approved" ? "#FFFFFF" : "#555555"}`,
+                    borderLeft: `2px solid ${action.action === "removed" ? "#FF3333" : action.action === "approved" ? "#FFFFFF" : "#777777"}`,
                     padding: "12px 14px",
                   }}
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
-                    <span style={{ ...MONO, color: "#A0A0A0", fontSize: "0.625rem", letterSpacing: "0.08em" }}>
+                    <span style={{ ...MONO, color: "#C0C0C0", fontSize: "0.625rem", letterSpacing: "0.08em" }}>
                       {action.action.toUpperCase()}
                     </span>
                     <span style={{ ...MONO, color: "#333333", fontSize: "0.625rem", letterSpacing: "0.06em" }}>
@@ -282,11 +282,11 @@ function ProfileContent() {
                     </span>
                   </div>
                   {action.post_excerpt && (
-                    <p style={{ color: "#555555", fontSize: "0.75rem", marginBottom: "6px", fontStyle: "italic" }}>
+                    <p style={{ color: "#777777", fontSize: "0.75rem", marginBottom: "6px", fontStyle: "italic" }}>
                       "{action.post_excerpt}"
                     </p>
                   )}
-                  <p style={{ ...MONO, color: "#555555", fontSize: "0.625rem", letterSpacing: "0.04em" }}>
+                  <p style={{ ...MONO, color: "#777777", fontSize: "0.625rem", letterSpacing: "0.04em" }}>
                     {action.rule_cited}
                   </p>
                 </div>
@@ -353,7 +353,7 @@ function ProfileContent() {
                     ...MONO,
                     flex: 1,
                     background: "transparent",
-                    color: "#555555",
+                    color: "#777777",
                     border: "1px solid #333333",
                     padding: "10px",
                     fontSize: "0.75rem",

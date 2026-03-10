@@ -4,6 +4,41 @@ import { withAuth, checkRateLimit, type AuthenticatedRequest } from "@jawwing/ap
 import { latLngToH3 } from "@jawwing/api/geo";
 import { buildFeedQuery, type SortMode } from "@jawwing/api/feed";
 import { validate, PostSchema } from "@jawwing/api/validation";
+
+// ─── Anti-Spoofing: In-memory last-known position per user ────────────────────
+//
+// Stores the most recent accepted post location + timestamp for each userId.
+// Used to detect impossibly fast location jumps (teleportation).
+//
+// TODO (future hardening):
+//   - Device attestation (Apple DeviceCheck / Google Play Integrity API)
+//   - VPN / datacenter IP detection to flag proxy-assisted spoofing
+//   - Persist last position in DB for cross-restart / multi-instance safety
+//   - Rate-limit distinct H3 cells per user per hour
+
+interface LastPosition {
+  lat: number;
+  lng: number;
+  ts: number; // unix seconds
+}
+
+const lastPositionMap = new Map<string, LastPosition>();
+
+/** Haversine distance in km between two lat/lng points. */
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+const TELEPORT_MAX_KM = 100;   // max allowed distance between posts
+const TELEPORT_WINDOW_SEC = 300; // within this many seconds (5 min)
 import { onPostCreated } from "@jawwing/mod/automod";
 
 // ─── Sanitize content — strip HTML tags ───────────────────────────────────────

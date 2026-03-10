@@ -6,7 +6,7 @@ export const metadata: Metadata = {
 };
 
 const MONO = { fontFamily: "var(--font-mono), monospace" } as const;
-const SECTION_LABEL = { ...MONO, letterSpacing: "0.08em", fontSize: "0.6875rem", fontWeight: 600, color: "#555555" } as const;
+const SECTION_LABEL = { ...MONO, letterSpacing: "0.08em", fontSize: "0.6875rem", fontWeight: 600, color: "#777777" } as const;
 
 export default function TermsPage() {
   return (
@@ -15,7 +15,7 @@ export default function TermsPage() {
         <Link href="/" style={{ ...MONO, letterSpacing: "0.12em", fontWeight: 700, fontSize: "0.875rem", color: "#FFFFFF", textDecoration: "none" }}>
           JAWWING
         </Link>
-        <Link href="/" style={{ ...MONO, color: "#555555", fontSize: "0.6875rem", letterSpacing: "0.06em", textDecoration: "none" }}
+        <Link href="/" style={{ ...MONO, color: "#777777", fontSize: "0.6875rem", letterSpacing: "0.06em", textDecoration: "none" }}
           className="hover:text-white transition-colors">
           ← HOME
         </Link>
@@ -26,7 +26,7 @@ export default function TermsPage() {
         <h1 style={{ fontSize: "2rem", fontWeight: 700, letterSpacing: "-0.02em", color: "#FFFFFF", marginBottom: "8px" }}>
           Terms of Service
         </h1>
-        <p style={{ ...MONO, color: "#555555", fontSize: "0.6875rem", letterSpacing: "0.04em", marginBottom: "48px" }}>
+        <p style={{ ...MONO, color: "#777777", fontSize: "0.6875rem", letterSpacing: "0.04em", marginBottom: "48px" }}>
           LAST UPDATED: MARCH 2026
         </p>
 
@@ -66,16 +66,16 @@ export default function TermsPage() {
         ].map((section) => (
           <div key={section.title} style={{ borderTop: "1px solid #1F1F1F", paddingTop: "24px", marginBottom: "24px" }}>
             <h2 style={{ color: "#FFFFFF", fontWeight: 600, fontSize: "1rem", marginBottom: "10px" }}>{section.title}</h2>
-            <p style={{ color: "#A0A0A0", fontSize: "0.9375rem", lineHeight: 1.7 }}>{section.body}</p>
+            <p style={{ color: "#C0C0C0", fontSize: "0.9375rem", lineHeight: 1.7 }}>{section.body}</p>
           </div>
         ))}
 
         <div style={{ borderTop: "1px solid #1F1F1F", paddingTop: "32px", display: "flex", gap: "24px" }}>
-          <Link href="/privacy" style={{ ...MONO, color: "#555555", fontSize: "0.6875rem", letterSpacing: "0.06em", textDecoration: "none" }}
+          <Link href="/privacy" style={{ ...MONO, color: "#777777", fontSize: "0.6875rem", letterSpacing: "0.06em", textDecoration: "none" }}
             className="hover:text-white transition-colors">
             PRIVACY POLICY →
           </Link>
-          <Link href="/constitution" style={{ ...MONO, color: "#555555", fontSize: "0.6875rem", letterSpacing: "0.06em", textDecoration: "none" }}
+          <Link href="/constitution" style={{ ...MONO, color: "#777777", fontSize: "0.6875rem", letterSpacing: "0.06em", textDecoration: "none" }}
             className="hover:text-white transition-colors">
             CONSTITUTION →
           </Link>

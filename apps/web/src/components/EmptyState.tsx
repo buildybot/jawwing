@@ -27,7 +27,7 @@ export default function EmptyState({ title, subtitle, action }: EmptyStateProps)
       {subtitle && (
         <p
           style={{
-            color: "#555555",
+            color: "#777777",
             fontSize: "0.875rem",
             lineHeight: 1.6,
             marginBottom: action ? "20px" : "0",
@@ -42,7 +42,7 @@ export default function EmptyState({ title, subtitle, action }: EmptyStateProps)
           style={{
             ...MONO,
             background: "transparent",
-            color: "#A0A0A0",
+            color: "#C0C0C0",
             border: "1px solid #333333",
             padding: "8px 20px",
             fontSize: "0.75rem",

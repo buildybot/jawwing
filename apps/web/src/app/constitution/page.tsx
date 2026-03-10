@@ -113,7 +113,7 @@ export default function ConstitutionPage() {
           JAWWING
         </Link>
         <span style={{ color: "#333333", ...MONO }}>/ </span>
-        <span style={{ ...MONO, color: "#555555", fontSize: "0.75rem", letterSpacing: "0.06em" }}>CONSTITUTION</span>
+        <span style={{ ...MONO, color: "#777777", fontSize: "0.75rem", letterSpacing: "0.06em" }}>CONSTITUTION</span>
       </nav>
 
       <main style={{ maxWidth: "640px" }} className="mx-auto px-6 py-16">
@@ -122,7 +122,7 @@ export default function ConstitutionPage() {
           <div
             style={{
               ...MONO,
-              color: "#555555",
+              color: "#777777",
               fontSize: "0.6875rem",
               letterSpacing: "0.08em",
               border: "1px solid #1F1F1F",
@@ -145,7 +145,7 @@ export default function ConstitutionPage() {
           >
             Moderation Constitution
           </h1>
-          <p style={{ color: "#A0A0A0", fontSize: "0.875rem", lineHeight: 1.6 }}>
+          <p style={{ color: "#C0C0C0", fontSize: "0.875rem", lineHeight: 1.6 }}>
             This document governs all moderation on Jawwing. It is public, versioned, and
             subject to community amendment. Every AI moderation action is logged against
             these rules.
@@ -160,7 +160,7 @@ export default function ConstitutionPage() {
             marginBottom: "48px",
           }}
         >
-          <p style={{ color: "#A0A0A0", fontSize: "0.9375rem", lineHeight: 1.7, fontStyle: "italic" }}>
+          <p style={{ color: "#C0C0C0", fontSize: "0.9375rem", lineHeight: 1.7, fontStyle: "italic" }}>
             Jawwing exists to give people a voice in their communities, free from
             identity-based suppression or human moderator bias. These rules are public,
             versioned, and yours to change.
@@ -188,7 +188,7 @@ export default function ConstitutionPage() {
                     <span
                       style={{
                         ...MONO,
-                        color: "#555555",
+                        color: "#777777",
                         fontSize: "0.75rem",
                         letterSpacing: "0.04em",
                         minWidth: "44px",
@@ -197,7 +197,7 @@ export default function ConstitutionPage() {
                     >
                       {item.tag}
                     </span>
-                    <p style={{ color: "#A0A0A0", fontSize: "0.9375rem", lineHeight: 1.65 }}>
+                    <p style={{ color: "#C0C0C0", fontSize: "0.9375rem", lineHeight: 1.65 }}>
                       {item.text}
                     </p>
                   </div>
@@ -220,7 +220,7 @@ export default function ConstitutionPage() {
             gap: "16px",
           }}
         >
-          <p style={{ color: "#555555", fontSize: "0.875rem" }}>
+          <p style={{ color: "#777777", fontSize: "0.875rem" }}>
             Want to propose an amendment?
           </p>
           <Link

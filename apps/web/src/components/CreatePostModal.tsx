@@ -65,7 +65,7 @@ export default function CreatePostModal({ open, onClose, onSubmit }: CreatePostM
           <button
             onClick={onClose}
             disabled={loading}
-            style={{ color: "#555555", cursor: "pointer", background: "none", border: "none", fontSize: "1rem" }}
+            style={{ color: "#777777", cursor: "pointer", background: "none", border: "none", fontSize: "1rem" }}
             className="hover:text-white transition-colors"
           >
             ✕
@@ -93,7 +93,7 @@ export default function CreatePostModal({ open, onClose, onSubmit }: CreatePostM
               paddingBottom: "12px",
               marginBottom: "12px",
             }}
-            className="placeholder:text-[#555555]"
+            className="placeholder:text-[#777777]"
           />
 
           {error && (
@@ -114,7 +114,7 @@ export default function CreatePostModal({ open, onClose, onSubmit }: CreatePostM
             <span
               style={{
                 fontFamily: "var(--font-mono), monospace",
-                color: content.length > MAX * 0.9 ? "#FF3333" : "#555555",
+                color: content.length > MAX * 0.9 ? "#FF3333" : "#777777",
                 fontSize: "0.75rem",
               }}
             >
@@ -126,7 +126,7 @@ export default function CreatePostModal({ open, onClose, onSubmit }: CreatePostM
                 onClick={onClose}
                 disabled={loading}
                 style={{
-                  color: "#555555",
+                  color: "#777777",
                   background: "none",
                   border: "none",
                   cursor: "pointer",
@@ -143,7 +143,7 @@ export default function CreatePostModal({ open, onClose, onSubmit }: CreatePostM
                 disabled={!content.trim() || loading}
                 style={{
                   background: content.trim() && !loading ? "#FFFFFF" : "transparent",
-                  color: content.trim() && !loading ? "#000000" : "#555555",
+                  color: content.trim() && !loading ? "#000000" : "#777777",
                   border: `1px solid ${content.trim() && !loading ? "#FFFFFF" : "#333333"}`,
                   cursor: content.trim() && !loading ? "pointer" : "not-allowed",
                   fontFamily: "var(--font-mono), monospace",
@@ -163,7 +163,7 @@ export default function CreatePostModal({ open, onClose, onSubmit }: CreatePostM
         <p
           style={{
             fontFamily: "var(--font-mono), monospace",
-            color: "#555555",
+            color: "#777777",
             fontSize: "0.6875rem",
             letterSpacing: "0.02em",
             marginTop: "16px",

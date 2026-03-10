@@ -306,7 +306,7 @@ export default function FeedPage() {
               margin: "0 auto",
             }}
           >
-            <span style={{ ...MONO, color: "#A0A0A0", fontSize: "0.75rem", letterSpacing: "0.04em" }}>
+            <span style={{ ...MONO, color: "#C0C0C0", fontSize: "0.75rem", letterSpacing: "0.04em" }}>
               SIGN IN TO POST OR VOTE
             </span>
             <div style={{ display: "flex", gap: "8px" }}>
@@ -331,7 +331,7 @@ export default function FeedPage() {
                 style={{
                   ...MONO,
                   background: "none",
-                  color: "#555555",
+                  color: "#777777",
                   border: "none",
                   padding: "6px",
                   fontSize: "0.875rem",
@@ -350,13 +350,13 @@ export default function FeedPage() {
             style={{
               background: "#0A0A0A",
               border: "1px solid #1F1F1F",
-              borderLeft: "2px solid #555555",
+              borderLeft: "2px solid #777777",
               padding: "10px 16px",
               maxWidth: "480px",
               margin: "0 auto",
             }}
           >
-            <span style={{ ...MONO, color: "#555555", fontSize: "0.6875rem", letterSpacing: "0.06em" }}>
+            <span style={{ ...MONO, color: "#777777", fontSize: "0.6875rem", letterSpacing: "0.06em" }}>
               LOCATION UNAVAILABLE · SHOWING DC METRO
             </span>
           </div>
@@ -374,7 +374,7 @@ export default function FeedPage() {
               margin: "0 auto",
             }}
           >
-            <span style={{ ...MONO, color: "#555555", fontSize: "0.6875rem", letterSpacing: "0.06em" }}>
+            <span style={{ ...MONO, color: "#777777", fontSize: "0.6875rem", letterSpacing: "0.06em" }}>
               YOU CAN ONLY POST WHERE YOU ARE
             </span>
           </div>
@@ -392,7 +392,7 @@ export default function FeedPage() {
               style={{
                 ...MONO,
                 background: "none",
-                color: loading ? "#333333" : "#555555",
+                color: loading ? "#333333" : "#777777",
                 border: "none",
                 fontSize: "1rem",
                 cursor: loading ? "not-allowed" : "pointer",
@@ -401,7 +401,7 @@ export default function FeedPage() {
                 transition: "color 150ms",
                 flexShrink: 0,
               }}
-              className="hover:text-[#A0A0A0]"
+              className="hover:text-[#C0C0C0]"
               aria-label="Refresh feed"
               title="Refresh"
             >
@@ -486,7 +486,7 @@ export default function FeedPage() {
                 style={{
                   ...MONO,
                   background: "transparent",
-                  color: "#A0A0A0",
+                  color: "#C0C0C0",
                   border: "1px solid #333333",
                   padding: "8px 20px",
                   fontSize: "0.75rem",
@@ -505,7 +505,7 @@ export default function FeedPage() {
               <p style={{ ...MONO, color: "#333333", fontSize: "0.75rem", letterSpacing: "0.06em", marginBottom: "8px" }}>
                 NO POSTS YET
               </p>
-              <p style={{ color: "#555555", fontSize: "0.875rem" }}>
+              <p style={{ color: "#777777", fontSize: "0.875rem" }}>
                 {territoryName ? `Nothing in ${territoryName} yet.` : "Be the first to post in your area."}
               </p>
             </div>
@@ -567,7 +567,7 @@ export default function FeedPage() {
             width: "48px",
             height: "48px",
             background: isRemoteTerritory ? "#1F1F1F" : "#FFFFFF",
-            color: isRemoteTerritory ? "#555555" : "#000000",
+            color: isRemoteTerritory ? "#777777" : "#000000",
             border: isRemoteTerritory ? "1px solid #333333" : "none",
             fontSize: "1.5rem",
             lineHeight: 1,
@@ -579,7 +579,7 @@ export default function FeedPage() {
             zIndex: 30,
             transition: "background 150ms, color 150ms",
           } as React.CSSProperties}
-          className={isRemoteTerritory ? "" : "hover:bg-[#A0A0A0]"}
+          className={isRemoteTerritory ? "" : "hover:bg-[#C0C0C0]"}
           aria-label={isRemoteTerritory ? "You can only post where you are" : "Create post"}
           title={isRemoteTerritory ? "You can only post where you are" : undefined}
         >

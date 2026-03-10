@@ -28,7 +28,7 @@ export default function FeedTabs({ active, onChange }: FeedTabsProps) {
             letterSpacing: "0.06em",
             fontSize: "0.8125rem",
             fontWeight: 500,
-            color: active === tab.id ? "#FFFFFF" : "#555555",
+            color: active === tab.id ? "#FFFFFF" : "#777777",
             borderBottom: active === tab.id ? "2px solid #FFFFFF" : "2px solid transparent",
             marginBottom: "-1px",
             paddingBottom: "10px",

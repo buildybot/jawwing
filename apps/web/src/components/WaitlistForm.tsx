@@ -78,7 +78,7 @@ export default function WaitlistForm() {
           fontSize: "0.875rem",
           fontFamily: "var(--font-mono), monospace",
         }}
-        className="placeholder:text-[#555555] focus:border-white transition-colors sm:border-r-0"
+        className="placeholder:text-[#777777] focus:border-white transition-colors sm:border-r-0"
         onFocus={(e) => e.target.style.borderColor = "#FFFFFF"}
         onBlur={(e) => e.target.style.borderColor = "#333333"}
       />

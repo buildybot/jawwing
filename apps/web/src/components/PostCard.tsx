@@ -43,7 +43,7 @@ function AnimatedScore({ value, voted }: { value: number; voted: "up" | "down" |
   return (
     <span
       style={{
-        color: voted === "up" ? "#FFFFFF" : voted === "down" ? "#555555" : "#A0A0A0",
+        color: voted === "up" ? "#FFFFFF" : voted === "down" ? "#777777" : "#C0C0C0",
         fontFamily: "var(--font-mono), monospace",
         fontSize: "0.875rem",
         fontWeight: 500,
@@ -82,7 +82,7 @@ function ExpiryIndicator({ expiresAt }: { expiresAt: number }) {
         fontFamily: "var(--font-mono), monospace",
         fontSize: "0.5625rem",
         letterSpacing: "0.08em",
-        color: "#555555",
+        color: "#777777",
         border: "1px solid #1F1F1F",
         padding: "2px 5px",
       }}
@@ -189,7 +189,7 @@ export default function PostCard({ post, onLoginRequired }: PostCardProps) {
             onClick={() => vote("up")}
             disabled={voting}
             style={{
-              color: voted === "up" ? "#FFFFFF" : "#555555",
+              color: voted === "up" ? "#FFFFFF" : "#777777",
               transition: "color 150ms, transform 150ms",
               background: "none",
               border: "none",
@@ -205,14 +205,14 @@ export default function PostCard({ post, onLoginRequired }: PostCardProps) {
             onClick={() => vote("down")}
             disabled={voting}
             style={{
-              color: voted === "down" ? "#A0A0A0" : "#555555",
+              color: voted === "down" ? "#C0C0C0" : "#777777",
               opacity: voted === "down" ? 1 : 0.6,
               transition: "color 150ms, transform 150ms",
               background: "none",
               border: "none",
               cursor: voting ? "wait" : "pointer",
             }}
-            className={`text-xs hover:opacity-100 hover:text-[#A0A0A0] ${voted === "down" ? "scale-[1.15]" : ""}`}
+            className={`text-xs hover:opacity-100 hover:text-[#C0C0C0] ${voted === "down" ? "scale-[1.15]" : ""}`}
             aria-label="Downvote"
           >
             ▼
@@ -222,7 +222,7 @@ export default function PostCard({ post, onLoginRequired }: PostCardProps) {
         {/* Right side meta */}
         <div
           style={{
-            color: "#555555",
+            color: "#777777",
             fontFamily: "var(--font-mono), monospace",
             letterSpacing: "0.02em",
           }}
@@ -235,7 +235,7 @@ export default function PostCard({ post, onLoginRequired }: PostCardProps) {
           <button
             onClick={handleShare}
             style={{
-              color: "#555555",
+              color: "#777777",
               background: "none",
               border: "none",
               cursor: "pointer",
@@ -243,7 +243,7 @@ export default function PostCard({ post, onLoginRequired }: PostCardProps) {
               fontSize: "0.75rem",
               lineHeight: 1,
             }}
-            className="hover:text-[#A0A0A0] transition-colors"
+            className="hover:text-[#C0C0C0] transition-colors"
             aria-label="Share post"
             title="Copy link"
           >
@@ -252,8 +252,8 @@ export default function PostCard({ post, onLoginRequired }: PostCardProps) {
 
           <Link
             href={`/post/${post.id}`}
-            style={{ color: "#555555", textDecoration: "none" }}
-            className="hover:text-[#A0A0A0] transition-colors"
+            style={{ color: "#777777", textDecoration: "none" }}
+            className="hover:text-[#C0C0C0] transition-colors"
           >
             ↩ {replyCount}
           </Link>

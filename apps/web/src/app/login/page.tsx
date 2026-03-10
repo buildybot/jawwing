@@ -80,7 +80,7 @@ function LoginPageInner() {
               JAWWING
             </span>
           </div>
-          <p style={{ ...MONO, color: "#555555", fontSize: "0.75rem", letterSpacing: "0.08em", marginBottom: "8px" }}>
+          <p style={{ ...MONO, color: "#777777", fontSize: "0.75rem", letterSpacing: "0.08em", marginBottom: "8px" }}>
             SIGNED IN AS
           </p>
           <p style={{ ...MONO, color: "#FFFFFF", fontSize: "1rem", letterSpacing: "0.06em", marginBottom: "32px" }}>
@@ -113,7 +113,7 @@ function LoginPageInner() {
               display: "block",
               width: "100%",
               background: "transparent",
-              color: "#555555",
+              color: "#777777",
               border: "1px solid #333333",
               borderRadius: 0,
               padding: "12px",
@@ -166,7 +166,7 @@ function LoginPageInner() {
                 display: "block",
                 fontSize: "0.625rem",
                 letterSpacing: "0.1em",
-                color: "#555555",
+                color: "#777777",
                 marginBottom: "8px",
               }}
             >
@@ -211,7 +211,7 @@ function LoginPageInner() {
                 width: "100%",
                 marginTop: "16px",
                 background: phone.trim() && !loading ? "#FFFFFF" : "transparent",
-                color: phone.trim() && !loading ? "#000000" : "#555555",
+                color: phone.trim() && !loading ? "#000000" : "#777777",
                 border: `1px solid ${phone.trim() && !loading ? "#FFFFFF" : "#333333"}`,
                 borderRadius: 0,
                 padding: "12px",
@@ -240,11 +240,11 @@ function LoginPageInner() {
           </form>
         ) : (
           <form onSubmit={handleVerify}>
-            <p style={{ ...MONO, color: "#555555", fontSize: "0.75rem", letterSpacing: "0.04em", marginBottom: "24px" }}>
+            <p style={{ ...MONO, color: "#777777", fontSize: "0.75rem", letterSpacing: "0.04em", marginBottom: "24px" }}>
               CODE SENT TO {phone}
             </p>
 
-            <label style={{ ...MONO, display: "block", fontSize: "0.625rem", letterSpacing: "0.1em", color: "#555555", marginBottom: "8px" }}>
+            <label style={{ ...MONO, display: "block", fontSize: "0.625rem", letterSpacing: "0.1em", color: "#777777", marginBottom: "8px" }}>
               6-DIGIT CODE
             </label>
             <input
@@ -291,7 +291,7 @@ function LoginPageInner() {
                 width: "100%",
                 marginTop: "16px",
                 background: code.length === 6 && !loading ? "#FFFFFF" : "transparent",
-                color: code.length === 6 && !loading ? "#000000" : "#555555",
+                color: code.length === 6 && !loading ? "#000000" : "#777777",
                 border: `1px solid ${code.length === 6 && !loading ? "#FFFFFF" : "#333333"}`,
                 borderRadius: 0,
                 padding: "12px",
@@ -314,7 +314,7 @@ function LoginPageInner() {
                 width: "100%",
                 marginTop: "8px",
                 background: "transparent",
-                color: "#555555",
+                color: "#777777",
                 border: "none",
                 padding: "8px",
                 fontSize: "0.75rem",
