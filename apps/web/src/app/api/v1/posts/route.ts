@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { after } from "next/server";
+
+export const runtime = "nodejs"; // Required for moderation (crypto + Gemini SDK)
 import { db, posts, territories, nanoid, now } from "@jawwing/db";
 import { eq, gt, and, desc, sql, inArray } from "drizzle-orm";
 import { checkRateLimit } from "@jawwing/api/middleware";
@@ -478,7 +481,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     lastPositionMap.set(ipHash, { lat, lng, ts: nowTs });
 
-    onPostCreated(created);
+    // Run moderation async AFTER response is sent (Vercel-compatible)
+    after(() => {
+      onPostCreated(created);
+    });
 
     const response = NextResponse.json({ post: sanitizePostForResponse(created) }, { status: 201 });
 

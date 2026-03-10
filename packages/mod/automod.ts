@@ -41,11 +41,12 @@ function hashContent(content: string): string {
  */
 export function onPostCreated(post: Post): void {
   // Fire and forget — moderation is async
-  setImmediate(() => {
+  // Use setTimeout(0) instead of setImmediate for Edge Runtime compatibility
+  setTimeout(() => {
     runAutomod(post).catch((err) => {
       console.error(`[automod] onPostCreated failed for post ${post.id}:`, err);
     });
-  });
+  }, 0);
 }
 
 async function runAutomod(post: Post): Promise<void> {
@@ -176,10 +177,10 @@ export async function onPostReported(
     console.log(
       `[automod] ${reportCount} reports on post ${postId} — triggering immediate review`
     );
-    setImmediate(() => {
+    setTimeout(() => {
       reviewPost(post).catch((err) => {
         console.error(`[automod] Immediate review failed for post ${postId}:`, err);
       });
-    });
+    }, 0);
   }
 }
