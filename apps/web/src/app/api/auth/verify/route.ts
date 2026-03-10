@@ -45,8 +45,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const token = signAccountToken(account.id);
     const cookieHeader = buildAccountCookieHeader(token);
 
-    const response = NextResponse.json({ ok: true, accountId: account.id });
-    // httpOnly JWT for security
+    const isMobile = req.headers.get("X-Mobile") === "1";
+    const response = NextResponse.json({
+      ok: true,
+      accountId: account.id,
+      // Return token in body for mobile clients (can't use httpOnly cookies)
+      ...(isMobile ? { token } : {}),
+    });
+    // httpOnly JWT for security (web)
     response.headers.append("Set-Cookie", cookieHeader);
     // Non-httpOnly flag so client JS can detect login state
     response.headers.append("Set-Cookie", `jw_account_ok=1; Path=/; SameSite=Lax; Max-Age=${60 * 60 * 24 * 365}`);

@@ -1,20 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAccountFromToken, getPostsForAccount } from "@jawwing/api/accounts";
+import { getAccountFromRequest, getPostsForAccount } from "@jawwing/api/accounts";
 
 // ─── GET /api/v1/my/posts ─────────────────────────────────────────────────────
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
   try {
-    const token = req.cookies.get("jw_account")?.value;
-    if (!token) {
-      return NextResponse.json({ error: "Not authenticated", code: "UNAUTHORIZED" }, { status: 401 });
-    }
-
-    const account = await getAccountFromToken(token);
+    const account = await getAccountFromRequest(req);
     if (!account) {
       return NextResponse.json({ error: "Invalid session", code: "UNAUTHORIZED" }, { status: 401 });
     }
-
     const userPosts = await getPostsForAccount(account);
 
     // Strip any private fields — posts are already anonymous, just return them

@@ -184,3 +184,34 @@ export async function updateNotificationPrefs(
     .set({ notification_prefs: JSON.stringify(prefs) })
     .where(eq(accounts.id, accountId));
 }
+
+// ─── Push token ───────────────────────────────────────────────────────────────
+
+export async function storePushToken(accountId: string, pushToken: string): Promise<void> {
+  // Merge push_token into notification_prefs JSON to avoid schema migration
+  const account = await db.query.accounts.findFirst({ where: eq(accounts.id, accountId) });
+  if (!account) return;
+  const prefs = JSON.parse(account.notification_prefs ?? '{"replies":true,"trending":false}');
+  prefs.push_token = pushToken;
+  await db
+    .update(accounts)
+    .set({ notification_prefs: JSON.stringify(prefs) })
+    .where(eq(accounts.id, accountId));
+}
+
+// ─── Mobile auth helper ───────────────────────────────────────────────────────
+// Supports both httpOnly cookie (web) and Authorization: Bearer <token> (mobile)
+
+export async function getAccountFromRequest(req: import("next/server").NextRequest): Promise<import("../db/schema").Account | null> {
+  // 1. Try cookie (web)
+  const cookieToken = req.cookies.get("jw_account")?.value;
+  if (cookieToken) return getAccountFromToken(cookieToken);
+
+  // 2. Try Authorization: Bearer <token> (mobile)
+  const authHeader = req.headers.get("Authorization");
+  if (authHeader?.startsWith("Bearer ")) {
+    const bearerToken = authHeader.slice(7).trim();
+    if (bearerToken) return getAccountFromToken(bearerToken);
+  }
+  return null;
+}

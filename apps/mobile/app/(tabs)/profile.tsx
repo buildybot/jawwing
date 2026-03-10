@@ -1,21 +1,32 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   ScrollView,
+  Linking,
   Alert,
   ActivityIndicator,
+  Switch,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { router } from 'expo-router';
 import { colors, spacing, typography, tracking } from '../../lib/theme';
 import { clearDeviceId } from '../../lib/deviceId';
+import { unblockAll, invalidateBlockedCache } from '../../lib/blocked';
+import { isSignedIn, clearAccountToken, getAccountToken } from '../../lib/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const BLOCKED_USERS_KEY = 'jw_blocked_users';
+const NOTIF_PREF_KEY = 'jw_notif_replies';
+
+const LINKS = [
+  { label: 'COMMUNITY CONSTITUTION', url: 'https://www.jawwing.com/constitution' },
+  { label: 'TERMS OF SERVICE', url: 'https://www.jawwing.com/terms' },
+  { label: 'PRIVACY POLICY', url: 'https://www.jawwing.com/privacy' },
+];
 
 function SectionHeader({ label }: { label: string }) {
   return (
@@ -28,36 +39,50 @@ function SectionHeader({ label }: { label: string }) {
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
   const [clearing, setClearing] = useState(false);
-  const [blockedCount, setBlockedCount] = useState(0);
+  const [unblocking, setUnblocking] = useState(false);
+  const [signedIn, setSignedIn] = useState(false);
+  const [notifEnabled, setNotifEnabled] = useState(true);
+  const [signingOut, setSigningOut] = useState(false);
 
-  useEffect(() => {
-    loadBlockedCount();
+  const checkAuth = useCallback(async () => {
+    const [signed, notifPref] = await Promise.all([
+      isSignedIn(),
+      AsyncStorage.getItem(NOTIF_PREF_KEY),
+    ]);
+    setSignedIn(signed);
+    setNotifEnabled(notifPref !== 'false');
   }, []);
 
-  const loadBlockedCount = async () => {
-    try {
-      const raw = await AsyncStorage.getItem(BLOCKED_USERS_KEY);
-      const list: string[] = raw ? JSON.parse(raw) : [];
-      setBlockedCount(list.length);
-    } catch {
-      setBlockedCount(0);
-    }
+  // Refresh when screen comes into focus (e.g. after signing in)
+  useFocusEffect(
+    useCallback(() => {
+      checkAuth();
+    }, [checkAuth])
+  );
+
+  const handleNotifToggle = async (value: boolean) => {
+    setNotifEnabled(value);
+    await AsyncStorage.setItem(NOTIF_PREF_KEY, value ? 'true' : 'false');
   };
 
-  const handleUnblockAll = () => {
+  const handleSignOut = () => {
     Alert.alert(
-      'UNBLOCK ALL',
-      `Unblock all ${blockedCount} blocked user(s)?`,
+      'SIGN OUT',
+      'You will no longer receive reply notifications.',
       [
         { text: 'CANCEL', style: 'cancel' },
         {
-          text: 'UNBLOCK ALL',
+          text: 'SIGN OUT',
           style: 'destructive',
           onPress: async () => {
-            await AsyncStorage.removeItem(BLOCKED_USERS_KEY);
-            setBlockedCount(0);
+            setSigningOut(true);
+            try {
+              await clearAccountToken();
+              setSignedIn(false);
+            } finally {
+              setSigningOut(false);
+            }
           },
         },
       ]
@@ -67,7 +92,7 @@ export default function SettingsScreen() {
   const handleClearData = () => {
     Alert.alert(
       'CLEAR DATA',
-      'This will reset your anonymous device identity, blocked users, and all preferences. Your posts will remain but you will no longer be associated with them.',
+      'This will reset your anonymous device identity. Your posts will remain but you will no longer be associated with them.',
       [
         { text: 'CANCEL', style: 'cancel' },
         {
@@ -77,9 +102,6 @@ export default function SettingsScreen() {
             setClearing(true);
             try {
               await clearDeviceId();
-              await AsyncStorage.removeItem(BLOCKED_USERS_KEY);
-              await AsyncStorage.clear();
-              setBlockedCount(0);
             } finally {
               setClearing(false);
             }
@@ -87,10 +109,6 @@ export default function SettingsScreen() {
         },
       ]
     );
-  };
-
-  const openWebView = (url: string, title: string) => {
-    router.push(`/webview?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}`);
   };
 
   return (
@@ -103,71 +121,121 @@ export default function SettingsScreen() {
       <View style={styles.divider} />
 
       <ScrollView>
-        {/* About section */}
-        <SectionHeader label="APP" />
-        <TouchableOpacity
-          style={styles.row}
-          onPress={() => router.push('/about')}
-          activeOpacity={0.6}
-        >
-          <Text style={styles.rowLabel}>ABOUT JAWWING</Text>
-          <Ionicons name="arrow-forward-outline" size={14} color={colors.textMuted} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.row}
-          onPress={() => router.push('/constitution')}
-          activeOpacity={0.6}
-        >
-          <Text style={styles.rowLabel}>CONSTITUTION</Text>
-          <Ionicons name="arrow-forward-outline" size={14} color={colors.textMuted} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.row}
-          onPress={() => openWebView('https://jawwing.com/terms', 'TERMS')}
-          activeOpacity={0.6}
-        >
-          <Text style={styles.rowLabel}>TERMS</Text>
-          <Ionicons name="arrow-forward-outline" size={14} color={colors.textMuted} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.row}
-          onPress={() => openWebView('https://jawwing.com/privacy', 'PRIVACY')}
-          activeOpacity={0.6}
-        >
-          <Text style={styles.rowLabel}>PRIVACY</Text>
-          <Ionicons name="arrow-forward-outline" size={14} color={colors.textMuted} />
-        </TouchableOpacity>
-        <View style={styles.divider} />
-
-        {/* Identity */}
-        <SectionHeader label="IDENTITY" />
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>MODE</Text>
-          <Text style={styles.infoValue}>ANONYMOUS · NO ACCOUNT</Text>
+        {/* About */}
+        <View style={styles.aboutBlock}>
+          <Text style={styles.aboutTitle}>ABOUT JAWWING</Text>
+          <Text style={styles.aboutBody}>
+            Anonymous, location-based public discourse. Post what you see, vote on what matters, keep it local.
+          </Text>
         </View>
         <View style={styles.divider} />
 
-        {/* Blocked users */}
-        <SectionHeader label="MODERATION" />
-        <View style={styles.blockedRow}>
-          <View>
-            <Text style={styles.rowLabel}>BLOCKED USERS</Text>
-            <Text style={styles.blockedCount}>{blockedCount} BLOCKED</Text>
-          </View>
-          {blockedCount > 0 && (
+        {/* Account */}
+        <SectionHeader label="ACCOUNT" />
+        {signedIn ? (
+          <>
             <TouchableOpacity
-              style={styles.unblockBtn}
-              onPress={handleUnblockAll}
+              style={styles.row}
+              onPress={() => router.push('/my-posts')}
+              activeOpacity={0.6}
+            >
+              <Text style={styles.rowLabel}>MY POSTS</Text>
+              <Ionicons name="arrow-forward-outline" size={14} color={colors.textMuted} />
+            </TouchableOpacity>
+            <View style={styles.row}>
+              <Text style={styles.rowLabel}>REPLY NOTIFICATIONS</Text>
+              <Switch
+                value={notifEnabled}
+                onValueChange={handleNotifToggle}
+                trackColor={{ false: colors.bgElevated, true: colors.textPrimary }}
+                thumbColor={colors.bg}
+                ios_backgroundColor={colors.bgElevated}
+              />
+            </View>
+            <TouchableOpacity
+              style={styles.row}
+              onPress={handleSignOut}
+              disabled={signingOut}
               activeOpacity={0.7}
             >
-              <Text style={styles.unblockBtnText}>UNBLOCK ALL</Text>
+              {signingOut ? (
+                <ActivityIndicator size="small" color={colors.destructive} />
+              ) : (
+                <Text style={styles.signOutLabel}>SIGN OUT</Text>
+              )}
             </TouchableOpacity>
-          )}
-        </View>
+          </>
+        ) : (
+          <>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>MODE</Text>
+              <Text style={styles.infoValue}>ANONYMOUS · NO ACCOUNT</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.row}
+              onPress={() => router.push('/signin')}
+              activeOpacity={0.6}
+            >
+              <View>
+                <Text style={styles.rowLabel}>SIGN IN</Text>
+                <Text style={styles.rowSub}>Get reply notifications · optional</Text>
+              </View>
+              <Ionicons name="arrow-forward-outline" size={14} color={colors.textMuted} />
+            </TouchableOpacity>
+          </>
+        )}
+        <View style={styles.divider} />
+
+        {/* Links */}
+        <SectionHeader label="LINKS" />
+        {LINKS.map(link => (
+          <TouchableOpacity
+            key={link.url}
+            style={styles.row}
+            onPress={() => Linking.openURL(link.url)}
+            activeOpacity={0.6}
+          >
+            <Text style={styles.rowLabel}>{link.label}</Text>
+            <Ionicons name="arrow-forward-outline" size={14} color={colors.textMuted} />
+          </TouchableOpacity>
+        ))}
         <View style={styles.divider} />
 
         {/* Danger zone */}
         <SectionHeader label="DATA" />
+        <TouchableOpacity
+          style={styles.row}
+          onPress={() => {
+            Alert.alert(
+              'UNBLOCK ALL',
+              'All blocked users will be visible in your feed again.',
+              [
+                { text: 'CANCEL', style: 'cancel' },
+                {
+                  text: 'UNBLOCK ALL',
+                  style: 'destructive',
+                  onPress: async () => {
+                    setUnblocking(true);
+                    try {
+                      await unblockAll();
+                      invalidateBlockedCache();
+                    } finally {
+                      setUnblocking(false);
+                    }
+                  },
+                },
+              ]
+            );
+          }}
+          activeOpacity={0.7}
+          disabled={unblocking}
+        >
+          {unblocking ? (
+            <ActivityIndicator size="small" color={colors.textMuted} />
+          ) : (
+            <Text style={styles.rowLabel}>UNBLOCK ALL USERS</Text>
+          )}
+        </TouchableOpacity>
         <TouchableOpacity
           style={styles.row}
           onPress={handleClearData}
@@ -181,8 +249,6 @@ export default function SettingsScreen() {
           )}
         </TouchableOpacity>
         <View style={styles.divider} />
-
-        <View style={{ height: spacing.xxl }} />
       </ScrollView>
     </View>
   );
@@ -233,6 +299,22 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: colors.border,
   },
+  aboutBlock: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.lg,
+  },
+  aboutTitle: {
+    fontSize: typography.md,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    letterSpacing: tracking.wide,
+    marginBottom: spacing.sm,
+  },
+  aboutBody: {
+    fontSize: typography.sm,
+    color: colors.textSecondary,
+    lineHeight: 22,
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -246,6 +328,12 @@ const styles = StyleSheet.create({
     fontSize: typography.xs,
     color: colors.textSecondary,
     letterSpacing: tracking.wide,
+  },
+  rowSub: {
+    fontSize: typography.xs,
+    color: colors.textMuted,
+    letterSpacing: tracking.wide,
+    marginTop: 2,
   },
   infoRow: {
     flexDirection: 'row',
@@ -266,34 +354,13 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     letterSpacing: tracking.wide,
   },
-  blockedRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 4,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  blockedCount: {
+  clearLabel: {
     fontSize: typography.xs,
-    color: colors.textMuted,
-    letterSpacing: tracking.wide,
-    marginTop: 2,
-  },
-  unblockBtn: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs + 2,
-    borderWidth: 1,
-    borderColor: colors.destructive,
-  },
-  unblockBtnText: {
-    fontSize: typography.xs,
+    fontWeight: '600',
     color: colors.destructive,
     letterSpacing: tracking.wider,
-    fontWeight: '600',
   },
-  clearLabel: {
+  signOutLabel: {
     fontSize: typography.xs,
     fontWeight: '600',
     color: colors.destructive,
