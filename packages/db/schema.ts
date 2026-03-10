@@ -66,6 +66,7 @@ export const accounts = sqliteTable(
     email_encrypted: text("email_encrypted"),
     session_ids: text("session_ids"), // JSON array of linked jw_session IDs
     notification_prefs: text("notification_prefs").default('{"replies":true,"trending":false}'),
+    push_token: text("push_token"),
     created_at: integer("created_at").notNull(),
     last_seen_at: integer("last_seen_at"),
   },
@@ -132,6 +133,7 @@ export const votes = sqliteTable(
     // IP hash of the voter — 1 vote per IP per post
     voter_hash: text("voter_hash").notNull(),
     ip_hash: text("ip_hash"),
+    account_id: text("account_id"),
     value: integer("value").notNull(), // +1 or -1
     created_at: integer("created_at").notNull(),
   },
@@ -372,6 +374,44 @@ export const uploads = sqliteTable(
   })
 );
 
+// ─── saved_posts ──────────────────────────────────────────────────────────────
+// Account-linked bookmarks — private, never exposed in feed
+
+export const saved_posts = sqliteTable(
+  "saved_posts",
+  {
+    id: text("id").primaryKey(),
+    account_id: text("account_id").notNull(),
+    post_id: text("post_id").notNull().references(() => posts.id, { onDelete: "cascade" }),
+    created_at: integer("created_at").notNull(),
+  },
+  (t) => ({
+    uniqSavedAccountPost: uniqueIndex("uniq_saved_account_post").on(t.account_id, t.post_id),
+    idxSavedAccount: index("idx_saved_account").on(t.account_id),
+  })
+);
+
+// ─── notifications ────────────────────────────────────────────────────────────
+// In-app notifications for account holders — private, JWT-gated
+
+export const notifications = sqliteTable(
+  "notifications",
+  {
+    id: text("id").primaryKey(),
+    account_id: text("account_id").notNull(),
+    type: text("type").notNull(), // "reply" | "vote"
+    post_id: text("post_id"),
+    reply_id: text("reply_id"),
+    message: text("message").notNull(),
+    read: integer("read").notNull().default(0),
+    created_at: integer("created_at").notNull(),
+  },
+  (t) => ({
+    idxNotifAccount: index("idx_notif_account").on(t.account_id),
+    idxNotifUnread: index("idx_notif_unread").on(t.account_id, t.read),
+  })
+);
+
 // ─── Type exports ─────────────────────────────────────────────────────────────
 
 export type User = typeof users.$inferSelect;
@@ -402,3 +442,7 @@ export type Upload = typeof uploads.$inferSelect;
 export type NewUpload = typeof uploads.$inferInsert;
 export type Account = typeof accounts.$inferSelect;
 export type NewAccount = typeof accounts.$inferInsert;
+export type SavedPost = typeof saved_posts.$inferSelect;
+export type NewSavedPost = typeof saved_posts.$inferInsert;
+export type Notification = typeof notifications.$inferSelect;
+export type NewNotification = typeof notifications.$inferInsert;

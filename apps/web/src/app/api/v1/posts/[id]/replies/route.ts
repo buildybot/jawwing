@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, posts, replies, nanoid, now } from "@jawwing/db";
+import { db, posts, replies, notifications, nanoid, now } from "@jawwing/db";
 import { eq, and, asc, sql } from "drizzle-orm";
+import { getOptionalAccountId } from "@jawwing/api/optionalAuth";
 import { checkRateLimit } from "@jawwing/api/middleware";
 import {
   getAnonymousId,
@@ -110,6 +111,9 @@ export async function POST(req: NextRequest, context: RouteContext): Promise<Nex
       }
     }
 
+    // ── Optional account for notification linking ────────────────────────────
+    const replierAccountId = await getOptionalAccountId(req);
+
     // ── Insert reply ─────────────────────────────────────────────────────────
     const id = nanoid();
     const [created] = await db.insert(replies).values({
@@ -127,8 +131,22 @@ export async function POST(req: NextRequest, context: RouteContext): Promise<Nex
       .set({ reply_count: sql`${posts.reply_count} + 1` })
       .where(eq(posts.id, post_id));
 
-    // Notify post author (fire and forget)
+    // Notify post author (fire and forget) — email notification
     notifyPostReply(post_id, trimmed).catch(() => {/* best-effort */});
+
+    // In-app notification: if post has an account_id different from replier, create notification
+    if (post.account_id && post.account_id !== replierAccountId) {
+      db.insert(notifications).values({
+        id: nanoid(),
+        account_id: post.account_id,
+        type: "reply",
+        post_id,
+        reply_id: id,
+        message: "Someone replied to your post",
+        read: 0,
+        created_at: nowTs,
+      }).catch((err) => console.error("[reply notif]", err));
+    }
 
     // Moderate reply via AI (fire and forget)
     // Note: reviewPost logs mod_actions against posts.id (FK constraint), so for replies

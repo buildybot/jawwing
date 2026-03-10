@@ -337,12 +337,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const anonymousId = getAnonymousId(req);
     const needsCookie = !hasSessionCookie(req);
 
-    // Optional: link post to email account if logged in
+    // Optional: link post to email account if logged in (cookie OR Bearer token)
     let accountId: string | null = null;
-    const accountToken = req.cookies.get("jw_account")?.value;
-    if (accountToken) {
-      const account = await getAccountFromToken(accountToken);
-      if (account) accountId = account.id;
+    {
+      const { getOptionalAccountId } = await import("@jawwing/api/optionalAuth");
+      accountId = await getOptionalAccountId(req);
     }
 
     // Ban check

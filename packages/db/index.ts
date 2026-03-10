@@ -44,6 +44,8 @@ export {
   constitution_amendments,
   uploads,
   accounts,
+  saved_posts,
+  notifications,
 } from "./schema";
 
 // ─── Re-export types ──────────────────────────────────────────────────────────
@@ -75,6 +77,10 @@ export type {
   NewUpload,
   Account,
   NewAccount,
+  SavedPost,
+  NewSavedPost,
+  Notification,
+  NewNotification,
 } from "./schema";
 
 // ─── Re-export schema (for drizzle-kit / migrations) ─────────────────────────
