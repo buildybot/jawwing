@@ -16,6 +16,7 @@ interface PostCardProps {
   post: Post;
   onPress?: (post: Post) => void;
   onVoteChange?: (postId: string, newScore: number, newVote: 1 | -1 | null) => void;
+  territoryName?: string;
 }
 
 function formatTimeAgo(dateStr: string): string {

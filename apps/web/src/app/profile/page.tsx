@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
-import { getModActions, type Post, type ModAction } from "@/lib/api";
-import { getToken } from "@/lib/api";
+import { getModActions, getToken, type Post, type ModAction } from "@/lib/api";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 const MONO = { fontFamily: "var(--font-mono), monospace" } as const;
