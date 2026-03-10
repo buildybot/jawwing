@@ -22,9 +22,10 @@ export const PostSchema = z.object({
 });
 
 export const VoteSchema = z.object({
-  value: z.union([z.literal(1), z.literal(-1)], {
-    errorMap: () => ({ message: "value must be 1 or -1" }),
-  }),
+  value: z.union([z.literal(1), z.literal(-1)]).refine(
+    (v) => v === 1 || v === -1,
+    { message: "value must be 1 or -1" }
+  ),
 });
 
 export const ReplySchema = z.object({
@@ -58,6 +59,6 @@ export function validate<T>(
   if (result.success) {
     return { success: true, data: result.data, error: null };
   }
-  const error = result.error.errors.map((e) => e.message).join("; ");
+  const error = result.error.issues.map((e: { message: string }) => e.message).join("; ");
   return { success: false, data: null, error };
 }

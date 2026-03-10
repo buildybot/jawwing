@@ -9,7 +9,9 @@
     "./geo": "./geo.ts",
     "./feed": "./feed.ts",
     "./middleware": "./middleware.ts",
-    "./auth": "./auth.ts"
+    "./auth": "./auth.ts",
+    "./cors": "./cors.ts",
+    "./validation": "./validation.ts"
   },
   "scripts": {
     "build": "tsc",
@@ -19,7 +21,8 @@
     "h3-js": "^4.1.0",
     "jsonwebtoken": "^9.0.0",
     "nanoid": "^5.0.0",
-    "twilio": "^5.0.0"
+    "twilio": "^5.0.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/jsonwebtoken": "^9.0.0",

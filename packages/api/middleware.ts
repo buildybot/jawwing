@@ -46,8 +46,6 @@ async function resolveUser(req: NextRequest): Promise<AuthUser | null> {
 
     // Otherwise treat as JWT session token
     const payload = validateSession(token);
-    // We only get id + type from JWT payload; fetch from DB for full user if needed
-    // For now, return partial — can enrich later
     return {
       id: payload.sub,
       type: payload.type,
@@ -84,7 +82,7 @@ export function withAuth(handler: RouteHandler) {
   };
 }
 
-// ─── Rate Limit ───────────────────────────────────────────────────────────────
+// ─── Rate Limit Store ─────────────────────────────────────────────────────────
 
 // In-memory rate limiter (swap for Redis/Upstash in production)
 const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
@@ -97,6 +95,44 @@ export function checkRateLimit(
   const limit = userType === "agent" ? 50 : 10; // posts/hour
   const windowMs = 60 * 60 * 1000; // 1 hour
   const key = `${userId}:${action}`;
+  const now = Date.now();
+
+  let entry = rateLimitStore.get(key);
+
+  if (!entry || entry.resetAt < now) {
+    entry = { count: 0, resetAt: now + windowMs };
+    rateLimitStore.set(key, entry);
+  }
+
+  entry.count++;
+  const remaining = Math.max(0, limit - entry.count);
+  const allowed = entry.count <= limit;
+
+  return { allowed, remaining, resetAt: entry.resetAt };
+}
+
+// ─── SMS Rate Limits ──────────────────────────────────────────────────────────
+
+// send-code: 3 per phone per 10 minutes
+const SMS_SEND_LIMIT = 3;
+const SMS_SEND_WINDOW_MS = 10 * 60 * 1000;
+
+// verify: 5 per phone per 10 minutes
+const SMS_VERIFY_LIMIT = 5;
+const SMS_VERIFY_WINDOW_MS = 10 * 60 * 1000;
+
+/**
+ * Check SMS-specific rate limits.
+ * @param phone  E.164 phone number used as the key
+ * @param action "send-code" | "verify"
+ */
+export function checkSmsRateLimit(
+  phone: string,
+  action: "send-code" | "verify" = "send-code"
+): { allowed: boolean; remaining: number; resetAt: number } {
+  const limit = action === "send-code" ? SMS_SEND_LIMIT : SMS_VERIFY_LIMIT;
+  const windowMs = action === "send-code" ? SMS_SEND_WINDOW_MS : SMS_VERIFY_WINDOW_MS;
+  const key = `sms:${action}:${phone}`;
   const now = Date.now();
 
   let entry = rateLimitStore.get(key);

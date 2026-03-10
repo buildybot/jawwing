@@ -1,18 +1,31 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { sendCode, verifyCode } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 
 const MONO = { fontFamily: "var(--font-mono), monospace" } as const;
 
-export default function LoginPage() {
+function LoginPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { isAuthenticated, isLoading, login, logout, user } = useAuth();
+
   const [step, setStep] = useState<"phone" | "code">("phone");
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const redirectTo = searchParams.get("redirect") ?? "/feed";
+
+  // If already logged in, redirect immediately
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      router.replace(redirectTo);
+    }
+  }, [isAuthenticated, isLoading, redirectTo, router]);
 
   async function handleSendCode(e: React.FormEvent) {
     e.preventDefault();
@@ -33,13 +46,88 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
     try {
-      await verifyCode(phone.trim(), code.trim());
-      router.push("/feed");
+      const result = await verifyCode(phone.trim(), code.trim());
+      login(result.token, {
+        id: result.user.id,
+        displayName: result.user.display_name ?? result.user.id,
+        type: result.user.type ?? "human",
+      });
+      router.replace(redirectTo);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Invalid code.");
     } finally {
       setLoading(false);
     }
+  }
+
+  // Show "already logged in" state
+  if (!isLoading && isAuthenticated && user) {
+    return (
+      <div
+        style={{
+          background: "#000000",
+          minHeight: "100vh",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "24px",
+        }}
+      >
+        <div style={{ width: "100%", maxWidth: "360px", textAlign: "center" }}>
+          <div style={{ marginBottom: "48px" }}>
+            <span style={{ ...MONO, fontSize: "1.25rem", fontWeight: 700, letterSpacing: "0.18em", color: "#FFFFFF" }}>
+              JAWWING
+            </span>
+          </div>
+          <p style={{ ...MONO, color: "#555555", fontSize: "0.75rem", letterSpacing: "0.08em", marginBottom: "8px" }}>
+            SIGNED IN AS
+          </p>
+          <p style={{ ...MONO, color: "#FFFFFF", fontSize: "1rem", letterSpacing: "0.06em", marginBottom: "32px" }}>
+            {user.displayName.toUpperCase()}
+          </p>
+          <button
+            onClick={() => router.push("/feed")}
+            style={{
+              ...MONO,
+              display: "block",
+              width: "100%",
+              background: "#FFFFFF",
+              color: "#000000",
+              border: "1px solid #FFFFFF",
+              borderRadius: 0,
+              padding: "12px",
+              fontSize: "0.8125rem",
+              fontWeight: 600,
+              letterSpacing: "0.08em",
+              cursor: "pointer",
+              marginBottom: "12px",
+            }}
+          >
+            GO TO FEED
+          </button>
+          <button
+            onClick={logout}
+            style={{
+              ...MONO,
+              display: "block",
+              width: "100%",
+              background: "transparent",
+              color: "#555555",
+              border: "1px solid #333333",
+              borderRadius: 0,
+              padding: "12px",
+              fontSize: "0.8125rem",
+              fontWeight: 600,
+              letterSpacing: "0.08em",
+              cursor: "pointer",
+            }}
+          >
+            SIGN OUT
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -109,15 +197,7 @@ export default function LoginPage() {
             />
 
             {error && (
-              <p
-                style={{
-                  ...MONO,
-                  color: "#FF3333",
-                  fontSize: "0.75rem",
-                  marginTop: "8px",
-                  letterSpacing: "0.02em",
-                }}
-              >
+              <p style={{ ...MONO, color: "#FF3333", fontSize: "0.75rem", marginTop: "8px", letterSpacing: "0.02em" }}>
                 {error}
               </p>
             )}
@@ -160,28 +240,11 @@ export default function LoginPage() {
           </form>
         ) : (
           <form onSubmit={handleVerify}>
-            <p
-              style={{
-                ...MONO,
-                color: "#555555",
-                fontSize: "0.75rem",
-                letterSpacing: "0.04em",
-                marginBottom: "24px",
-              }}
-            >
+            <p style={{ ...MONO, color: "#555555", fontSize: "0.75rem", letterSpacing: "0.04em", marginBottom: "24px" }}>
               CODE SENT TO {phone}
             </p>
 
-            <label
-              style={{
-                ...MONO,
-                display: "block",
-                fontSize: "0.625rem",
-                letterSpacing: "0.1em",
-                color: "#555555",
-                marginBottom: "8px",
-              }}
-            >
+            <label style={{ ...MONO, display: "block", fontSize: "0.625rem", letterSpacing: "0.1em", color: "#555555", marginBottom: "8px" }}>
               6-DIGIT CODE
             </label>
             <input
@@ -214,15 +277,7 @@ export default function LoginPage() {
             />
 
             {error && (
-              <p
-                style={{
-                  ...MONO,
-                  color: "#FF3333",
-                  fontSize: "0.75rem",
-                  marginTop: "8px",
-                  letterSpacing: "0.02em",
-                }}
-              >
+              <p style={{ ...MONO, color: "#FF3333", fontSize: "0.75rem", marginTop: "8px", letterSpacing: "0.02em" }}>
                 {error}
               </p>
             )}
@@ -273,5 +328,19 @@ export default function LoginPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ background: "#000000", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <span style={{ fontFamily: "monospace", color: "#333333", fontSize: "0.75rem", letterSpacing: "0.1em" }}>
+          LOADING...
+        </span>
+      </div>
+    }>
+      <LoginPageInner />
+    </Suspense>
   );
 }

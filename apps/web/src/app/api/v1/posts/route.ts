@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, posts, nanoid, now } from "@jawwing/db";
 import { withAuth, checkRateLimit, type AuthenticatedRequest } from "@jawwing/api/middleware";
-import { latLngToH3, getHexesForRadius } from "@jawwing/api/geo";
+import { latLngToH3 } from "@jawwing/api/geo";
 import { buildFeedQuery, type SortMode } from "@jawwing/api/feed";
+import { validate, PostSchema } from "@jawwing/api/validation";
+
+// ─── Sanitize content — strip HTML tags ───────────────────────────────────────
+
+function sanitizeContent(raw: string): string {
+  return raw.replace(/<[^>]*>/g, "").trim();
+}
 
 // ─── GET /api/v1/posts ────────────────────────────────────────────────────────
 
@@ -50,32 +57,30 @@ async function createPost(req: AuthenticatedRequest): Promise<NextResponse> {
       );
     }
 
-    let body: { content?: unknown; lat?: unknown; lng?: unknown };
+    let body: unknown;
     try { body = await req.json(); }
     catch { return NextResponse.json({ error: "Invalid JSON body", code: "INVALID_BODY" }, { status: 400 }); }
 
-    const { content, lat, lng } = body;
-
-    if (!content || typeof content !== "string") {
-      return NextResponse.json({ error: "content is required", code: "VALIDATION_ERROR" }, { status: 400 });
+    const parsed = validate(PostSchema, body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error, code: "VALIDATION_ERROR" }, { status: 400 });
     }
-    const trimmed = content.trim();
-    if (trimmed.length === 0) return NextResponse.json({ error: "content cannot be empty", code: "VALIDATION_ERROR" }, { status: 400 });
-    if (trimmed.length > 300) return NextResponse.json({ error: "content must be 300 characters or fewer", code: "VALIDATION_ERROR" }, { status: 400 });
 
-    const latNum = typeof lat === "string" ? parseFloat(lat) : Number(lat);
-    const lngNum = typeof lng === "string" ? parseFloat(lng) : Number(lng);
+    const { lat, lng } = parsed.data;
+    // Sanitize: strip HTML then re-trim (PostSchema already validated length pre-sanitize;
+    // re-check after sanitize to be safe)
+    const content = sanitizeContent(parsed.data.content);
+    if (content.length === 0) {
+      return NextResponse.json({ error: "content cannot be empty after sanitization", code: "VALIDATION_ERROR" }, { status: 400 });
+    }
 
-    if (isNaN(latNum) || isNaN(lngNum)) return NextResponse.json({ error: "lat and lng are required", code: "VALIDATION_ERROR" }, { status: 400 });
-    if (latNum < -90 || latNum > 90 || lngNum < -180 || lngNum > 180) return NextResponse.json({ error: "Invalid coordinates", code: "VALIDATION_ERROR" }, { status: 400 });
-
-    const h3_index = latLngToH3(latNum, lngNum);
+    const h3_index = latLngToH3(lat, lng);
     const nowTs = now();
     const expires_at = nowTs + 24 * 60 * 60;
     const id = nanoid();
 
     const [created] = await db.insert(posts).values({
-      id, user_id: user.id, content: trimmed, lat: latNum, lng: lngNum,
+      id, user_id: user.id, content, lat, lng,
       h3_index, score: 0, reply_count: 0, created_at: nowTs, expires_at, status: "active",
     }).returning();
 

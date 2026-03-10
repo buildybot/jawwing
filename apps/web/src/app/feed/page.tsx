@@ -6,14 +6,20 @@ import Header from "@/components/Header";
 import FeedTabs, { SortTab } from "@/components/FeedTabs";
 import PostCard, { Post as PostCardPost } from "@/components/PostCard";
 import CreatePostModal from "@/components/CreatePostModal";
-import { fetchPosts, createPost, isAuthenticated, type Post } from "@/lib/api";
+import { fetchPosts, createPost, isAuthenticated, getTerritoryFeed, type Post } from "@/lib/api";
 import { requestLocation, reverseGeocode } from "@/lib/location";
 import { formatTimeAgo, formatDistance } from "@/lib/api";
+import { type TerritorySelection } from "@/components/TerritorySelector";
 
 const MONO = { fontFamily: "var(--font-mono), monospace" } as const;
 const LIMIT = 20;
 
-function toCardPost(post: Post, userLat?: number, userLng?: number): PostCardPost {
+function toCardPost(
+  post: Post,
+  userLat?: number,
+  userLng?: number,
+  territoryName?: string
+): PostCardPost {
   return {
     id: post.id,
     content: post.content,
@@ -24,6 +30,7 @@ function toCardPost(post: Post, userLat?: number, userLng?: number): PostCardPos
       userLat != null && userLng != null
         ? formatDistance(userLat, userLng, post.lat, post.lng)
         : undefined,
+    territoryName,
   };
 }
 
@@ -45,6 +52,11 @@ export default function FeedPage() {
   const [locationLabel, setLocationLabel] = useState("Getting location...");
   const [locationError, setLocationError] = useState(false);
 
+  // Territory selection — default to "near me"
+  const [selectedTerritory, setSelectedTerritory] = useState<TerritorySelection>({
+    type: "near_me",
+  });
+
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   // Get location on mount
@@ -62,15 +74,23 @@ export default function FeedPage() {
       });
   }, []);
 
+  // Check if user is browsing a remote territory (not physically near it)
+  // We disable posting when territory mode is active (GPS-lock)
+  const isRemoteTerritory =
+    selectedTerritory.type === "territory";
+
   // Load feed
   const loadFeed = useCallback(
     async (reset = false) => {
-      if (locationError && !userLat) {
-        setError("Location required to load feed.");
-        setLoading(false);
-        return;
+      if (selectedTerritory.type === "near_me") {
+        // Near me mode requires location
+        if (locationError && !userLat) {
+          setError("Location required to load feed.");
+          setLoading(false);
+          return;
+        }
+        if (userLat == null || userLng == null) return;
       }
-      if (userLat == null || userLng == null) return;
 
       if (reset) {
         setLoading(true);
@@ -83,14 +103,34 @@ export default function FeedPage() {
 
       try {
         const currentOffset = reset ? 0 : offset;
-        const data = await fetchPosts(userLat, userLng, activeTab as "hot" | "new" | "top", LIMIT, currentOffset);
-        if (reset) {
-          setPosts(data.posts);
+
+        let fetchedPosts: Post[];
+        if (selectedTerritory.type === "territory") {
+          const data = await getTerritoryFeed(
+            selectedTerritory.territory.id,
+            activeTab as "hot" | "new" | "top",
+            LIMIT,
+            currentOffset
+          );
+          fetchedPosts = data.posts;
         } else {
-          setPosts((prev) => [...prev, ...data.posts]);
+          const data = await fetchPosts(
+            userLat!,
+            userLng!,
+            activeTab as "hot" | "new" | "top",
+            LIMIT,
+            currentOffset
+          );
+          fetchedPosts = data.posts;
         }
-        setOffset(currentOffset + data.posts.length);
-        setHasMore(data.posts.length === LIMIT);
+
+        if (reset) {
+          setPosts(fetchedPosts);
+        } else {
+          setPosts((prev) => [...prev, ...fetchedPosts]);
+        }
+        setOffset(currentOffset + fetchedPosts.length);
+        setHasMore(fetchedPosts.length === LIMIT);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load posts.");
       } finally {
@@ -98,16 +138,18 @@ export default function FeedPage() {
         setLoadingMore(false);
       }
     },
-    [userLat, userLng, activeTab, offset, locationError]
+    [userLat, userLng, activeTab, offset, locationError, selectedTerritory]
   );
 
-  // Reload when location or tab changes
+  // Reload when location, tab, or territory changes
   useEffect(() => {
-    if (userLat != null && userLng != null) {
+    if (selectedTerritory.type === "territory") {
+      loadFeed(true);
+    } else if (userLat != null && userLng != null) {
       loadFeed(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userLat, userLng, activeTab]);
+  }, [userLat, userLng, activeTab, selectedTerritory]);
 
   // Infinite scroll
   useEffect(() => {
@@ -137,7 +179,6 @@ export default function FeedPage() {
       throw new Error("Location required to post.");
     }
     await createPost(content, userLat, userLng);
-    // Reload from top
     loadFeed(true);
   };
 
@@ -146,12 +187,27 @@ export default function FeedPage() {
       setShowLoginBanner(true);
       return;
     }
+    if (isRemoteTerritory) {
+      // GPS-lock: show message, don't open modal
+      return;
+    }
     setShowModal(true);
   };
 
+  const territoryName =
+    selectedTerritory.type === "territory"
+      ? selectedTerritory.territory.name
+      : undefined;
+
   return (
     <div style={{ background: "#000000", minHeight: "100vh" }}>
-      <Header location={locationLabel} />
+      <Header
+        location={locationLabel}
+        userLat={userLat}
+        userLng={userLng}
+        selectedTerritory={selectedTerritory}
+        onTerritoryChange={setSelectedTerritory}
+      />
 
       {/* Login banner */}
       {showLoginBanner && (
@@ -207,8 +263,46 @@ export default function FeedPage() {
         </div>
       )}
 
+      {/* GPS-lock banner */}
+      {isRemoteTerritory && (
+        <div
+          style={{
+            background: "#0A0A0A",
+            border: "1px solid #1F1F1F",
+            borderLeft: "2px solid #333333",
+            padding: "10px 16px",
+            maxWidth: "480px",
+            margin: "0 auto",
+          }}
+        >
+          <span style={{ ...MONO, color: "#555555", fontSize: "0.6875rem", letterSpacing: "0.06em" }}>
+            YOU CAN ONLY POST WHERE YOU ARE
+          </span>
+        </div>
+      )}
+
       <main style={{ maxWidth: "480px" }} className="mx-auto">
         <FeedTabs active={activeTab} onChange={handleTabChange} />
+
+        {/* Territory header */}
+        {territoryName && (
+          <div
+            style={{
+              ...MONO,
+              padding: "8px 16px",
+              borderBottom: "1px solid #1F1F1F",
+              color: "#333333",
+              fontSize: "0.6875rem",
+              letterSpacing: "0.08em",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <span>{territoryName.toUpperCase()}</span>
+            <span style={{ color: "#1F1F1F" }}>TERRITORY</span>
+          </div>
+        )}
 
         {/* Loading skeleton */}
         {loading && (
@@ -262,7 +356,7 @@ export default function FeedPage() {
               NO POSTS YET
             </p>
             <p style={{ color: "#555555", fontSize: "0.875rem" }}>
-              Be the first to post in your area.
+              {territoryName ? `Nothing in ${territoryName} yet.` : "Be the first to post in your area."}
             </p>
           </div>
         )}
@@ -273,7 +367,7 @@ export default function FeedPage() {
             {posts.map((post) => (
               <PostCard
                 key={post.id}
-                post={toCardPost(post, userLat, userLng)}
+                post={toCardPost(post, userLat, userLng, territoryName)}
                 onLoginRequired={() => setShowLoginBanner(true)}
               />
             ))}
@@ -302,7 +396,9 @@ export default function FeedPage() {
               padding: "40px 0 80px",
             }}
           >
-            5 MILE RADIUS · ANONYMOUS
+            {territoryName
+              ? `${territoryName.toUpperCase()} · TERRITORY`
+              : "5 MILE RADIUS · ANONYMOUS"}
           </p>
         )}
 
@@ -329,30 +425,33 @@ export default function FeedPage() {
         )}
       </main>
 
-      {/* FAB */}
+      {/* FAB — disabled when browsing remote territory */}
       <button
         onClick={handleFabClick}
+        disabled={isRemoteTerritory}
         style={{
           position: "fixed",
           bottom: "24px",
           right: "24px",
           width: "48px",
           height: "48px",
-          background: "#FFFFFF",
-          color: "#000000",
-          border: "none",
+          background: isRemoteTerritory ? "#1F1F1F" : "#FFFFFF",
+          color: isRemoteTerritory ? "#555555" : "#000000",
+          border: isRemoteTerritory ? "1px solid #333333" : "none",
           fontSize: "1.5rem",
           lineHeight: 1,
-          cursor: "pointer",
+          cursor: isRemoteTerritory ? "not-allowed" : "pointer",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           fontWeight: 300,
           zIndex: 30,
           transition: "background 150ms, color 150ms",
-        }}
-        className="hover:bg-[#A0A0A0]"
-        aria-label="Create post"
+          title: isRemoteTerritory ? "You can only post where you are" : undefined,
+        } as React.CSSProperties}
+        className={isRemoteTerritory ? "" : "hover:bg-[#A0A0A0]"}
+        aria-label={isRemoteTerritory ? "You can only post where you are" : "Create post"}
+        title={isRemoteTerritory ? "You can only post where you are" : undefined}
       >
         +
       </button>

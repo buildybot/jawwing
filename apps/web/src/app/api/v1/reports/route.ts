@@ -3,6 +3,7 @@ import { db, posts, reports, nanoid, now } from "@jawwing/db";
 import { eq } from "drizzle-orm";
 import { withAuth, type AuthenticatedRequest } from "@jawwing/api/middleware";
 import { onPostReported } from "@jawwing/mod/automod";
+import { validate, ReportSchema } from "@jawwing/api/validation";
 
 // ─── POST /api/v1/reports ─────────────────────────────────────────────────────
 // Creates a report on a post and triggers automod if threshold is met.
@@ -19,21 +20,19 @@ async function handler(req: AuthenticatedRequest): Promise<NextResponse> {
       );
     }
 
-    let body: { post_id?: unknown; reason?: unknown };
+    let body: unknown;
     try {
       body = await req.json();
     } catch {
       return NextResponse.json({ error: "Invalid JSON body", code: "INVALID_BODY" }, { status: 400 });
     }
 
-    const { post_id, reason } = body;
+    const parsed = validate(ReportSchema, body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error, code: "VALIDATION_ERROR" }, { status: 400 });
+    }
 
-    if (!post_id || typeof post_id !== "string") {
-      return NextResponse.json({ error: "post_id is required", code: "VALIDATION_ERROR" }, { status: 400 });
-    }
-    if (!reason || typeof reason !== "string" || reason.trim().length === 0) {
-      return NextResponse.json({ error: "reason is required", code: "VALIDATION_ERROR" }, { status: 400 });
-    }
+    const { post_id, reason } = parsed.data;
 
     // Verify post exists
     const [post] = await db.select().from(posts).where(eq(posts.id, post_id)).limit(1);

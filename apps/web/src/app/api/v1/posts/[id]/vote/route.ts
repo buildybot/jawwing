@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, posts, votes, nanoid, now } from "@jawwing/db";
 import { eq, and, sql } from "drizzle-orm";
 import { withAuth, type AuthenticatedRequest } from "@jawwing/api/middleware";
+import { validate, VoteSchema } from "@jawwing/api/validation";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -16,12 +17,16 @@ async function castVote(req: AuthenticatedRequest, context: RouteContext): Promi
     if (!post) return NextResponse.json({ error: "Post not found", code: "NOT_FOUND" }, { status: 404 });
     if (post.status !== "active") return NextResponse.json({ error: "Cannot vote on inactive post", code: "POST_INACTIVE" }, { status: 422 });
 
-    let body: { value?: unknown };
+    let body: unknown;
     try { body = await req.json(); }
     catch { return NextResponse.json({ error: "Invalid JSON body", code: "INVALID_BODY" }, { status: 400 }); }
 
-    const { value } = body;
-    if (value !== 1 && value !== -1) return NextResponse.json({ error: "value must be 1 or -1", code: "VALIDATION_ERROR" }, { status: 400 });
+    const parsed = validate(VoteSchema, body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error, code: "VALIDATION_ERROR" }, { status: 400 });
+    }
+
+    const { value } = parsed.data;
 
     const [existing] = await db.select().from(votes).where(and(eq(votes.post_id, post_id), eq(votes.user_id, user.id))).limit(1);
     const nowTs = now();

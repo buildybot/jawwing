@@ -83,6 +83,17 @@ async function request<T>(
 
   const res = await fetch(`${BASE}${path}`, { ...options, headers });
 
+  if (res.status === 401) {
+    // Clear stored auth and redirect to login
+    clearToken();
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("jawwing_user");
+      const redirect = encodeURIComponent(window.location.pathname);
+      window.location.href = `/login?redirect=${redirect}`;
+    }
+    throw new Error("Session expired. Please log in again.");
+  }
+
   if (!res.ok) {
     let errMsg = `HTTP ${res.status}`;
     try {
@@ -152,12 +163,28 @@ export async function getReplies(
 
 export async function createReply(
   postId: string,
-  content: string
+  content: string,
+  parentReplyId?: string
 ): Promise<{ reply: Reply }> {
   return request(`/v1/posts/${postId}/replies`, {
     method: "POST",
-    body: JSON.stringify({ content }),
+    body: JSON.stringify({ content, parent_reply_id: parentReplyId ?? null }),
   });
+}
+
+export async function fetchNewPosts(
+  lat: number,
+  lng: number,
+  since: number,
+  radius = 5000
+): Promise<{ posts: Post[]; meta: { since: number; count: number } }> {
+  const params = new URLSearchParams({
+    lat: String(lat),
+    lng: String(lng),
+    since: String(since),
+    radius: String(radius),
+  });
+  return request(`/v1/posts/new?${params}`);
 }
 
 // ─── Moderation ───────────────────────────────────────────────────────────────
@@ -182,6 +209,18 @@ export async function getConstitution(): Promise<{ constitution: ConstitutionRul
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
+export async function apiLogout(): Promise<void> {
+  try {
+    await fetch(`${BASE}/auth/logout`, { method: "POST" });
+  } catch {
+    // best-effort
+  }
+  clearToken();
+  if (typeof window !== "undefined") {
+    localStorage.removeItem("jawwing_user");
+  }
+}
+
 export async function sendCode(phone: string): Promise<{ message: string }> {
   return request("/auth/send-code", {
     method: "POST",
@@ -192,8 +231,8 @@ export async function sendCode(phone: string): Promise<{ message: string }> {
 export async function verifyCode(
   phone: string,
   code: string
-): Promise<{ token: string; user: { id: string } }> {
-  const result = await request<{ token: string; user: { id: string } }>(
+): Promise<{ token: string; user: { id: string; display_name: string; type: "human" | "agent" } }> {
+  const result = await request<{ token: string; user: { id: string; display_name: string; type: "human" | "agent" } }>(
     "/auth/verify",
     {
       method: "POST",
@@ -202,6 +241,36 @@ export async function verifyCode(
   );
   setToken(result.token);
   return result;
+}
+
+// ─── Territories ──────────────────────────────────────────────────────────────
+
+export interface Territory {
+  id: string;
+  name: string;
+  h3_indexes: string[];
+  assigned_agent_id: string | null;
+  created_at: number;
+  post_count: number;
+  active_24h: number;
+}
+
+export async function getTerritories(): Promise<{ territories: Territory[] }> {
+  return request("/v1/territories");
+}
+
+export async function getTerritoryFeed(
+  id: string,
+  sort: "hot" | "new" | "top" = "hot",
+  limit = 20,
+  offset = 0
+): Promise<{
+  territory: { id: string; name: string };
+  posts: Post[];
+  meta: { limit: number; offset: number; count: number };
+}> {
+  const params = new URLSearchParams({ sort, limit: String(limit), offset: String(offset) });
+  return request(`/v1/feed/territory/${id}?${params}`);
 }
 
 // ─── Formatting helpers ───────────────────────────────────────────────────────

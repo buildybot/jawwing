@@ -140,3 +140,39 @@ export async function getMyPosts(): Promise<Post[]> {
 export async function getProfile(): Promise<{ displayName: string; userId: string }> {
   return request<{ displayName: string; userId: string }>('/users/me');
 }
+
+// ─── Territories ──────────────────────────────────────────────────────────────
+
+export interface Territory {
+  id: string;
+  name: string;
+  h3_indexes: string[];
+  assigned_agent_id: string | null;
+  created_at: number;
+  post_count: number;
+  active_24h: number;
+}
+
+export async function getTerritories(): Promise<Territory[]> {
+  const data = await request<{ territories: Territory[] }>('/v1/territories');
+  return data.territories;
+}
+
+export interface GetTerritoryFeedParams {
+  sort?: 'hot' | 'new' | 'top';
+  limit?: number;
+  offset?: number;
+}
+
+export async function getTerritoryFeed(
+  id: string,
+  params: GetTerritoryFeedParams = {}
+): Promise<{ territory: { id: string; name: string }; posts: Post[] }> {
+  const q = new URLSearchParams();
+  if (params.sort) q.set('sort', params.sort);
+  if (params.limit != null) q.set('limit', String(params.limit));
+  if (params.offset != null) q.set('offset', String(params.offset));
+  return request<{ territory: { id: string; name: string }; posts: Post[] }>(
+    `/v1/feed/territory/${id}?${q.toString()}`
+  );
+}

@@ -1,24 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendVerificationCode } from "@jawwing/api/auth";
+import { validate, PhoneSchema } from "@jawwing/api/validation";
+import { checkSmsRateLimit } from "@jawwing/api/middleware";
 
 // ─── POST /api/auth/send-code ─────────────────────────────────────────────────
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
-    let body: { phone?: unknown };
+    let body: unknown;
     try {
       body = await req.json();
     } catch {
       return NextResponse.json({ error: "Invalid JSON body", code: "INVALID_BODY" }, { status: 400 });
     }
 
-    const { phone } = body;
-
-    if (!phone || typeof phone !== "string" || phone.trim().length === 0) {
-      return NextResponse.json({ error: "phone is required", code: "VALIDATION_ERROR" }, { status: 400 });
+    const parsed = validate(PhoneSchema, body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error, code: "VALIDATION_ERROR" }, { status: 400 });
     }
 
-    await sendVerificationCode(phone.trim());
+    const { phone } = parsed.data;
+
+    // SMS rate limit: 3 attempts per phone per 10 minutes
+    const rateLimit = checkSmsRateLimit(phone, "send-code");
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: "Too many code requests. Please wait before trying again.", code: "RATE_LIMIT", resetAt: rateLimit.resetAt },
+        { status: 429, headers: { "X-RateLimit-Remaining": "0", "X-RateLimit-Reset": String(Math.floor(rateLimit.resetAt / 1000)) } }
+      );
+    }
+
+    await sendVerificationCode(phone);
 
     return NextResponse.json({ ok: true, message: "Verification code sent" });
   } catch (err) {

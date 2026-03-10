@@ -20,6 +20,13 @@ export const metadata: Metadata = {
   description:
     "Location-based anonymous social platform. No human mods. AI-moderated by a public constitution.",
   metadataBase: new URL("https://jawwing.com"),
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
   openGraph: {
     title: "JAWWING",
     description: "Speak freely. Stay anonymous.",

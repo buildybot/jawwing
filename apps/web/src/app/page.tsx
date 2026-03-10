@@ -127,6 +127,24 @@ export default function HomePage() {
           >
             NO SPAM · NO ACCOUNT REQUIRED
           </p>
+
+          <Link
+            href="/login"
+            style={{
+              fontFamily: "var(--font-mono), monospace",
+              color: "#333333",
+              fontSize: "0.6875rem",
+              letterSpacing: "0.06em",
+              textDecoration: "none",
+              marginTop: "24px",
+              borderBottom: "1px solid #1F1F1F",
+              paddingBottom: "2px",
+              transition: "color 150ms, border-color 150ms",
+            }}
+            className="hover:text-[#A0A0A0] hover:border-[#555555]"
+          >
+            ALREADY HAVE ACCESS? LOG IN →
+          </Link>
         </section>
 
         {/* How it works */}
