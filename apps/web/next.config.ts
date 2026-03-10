@@ -1,7 +1,10 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["@jawwing/db", "@jawwing/api", "@jawwing/mod"],
+  turbopack: {
+    root: path.resolve(__dirname, "../.."),
+  },
 };
 
 export default nextConfig;
