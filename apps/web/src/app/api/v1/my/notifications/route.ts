@@ -1,16 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAccountFromToken, updateNotificationPrefs } from "@jawwing/api/accounts";
+import { getAccountFromRequest, updateNotificationPrefs } from "@jawwing/api/accounts";
 
 // ─── POST /api/v1/my/notifications ───────────────────────────────────────────
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
-    const token = req.cookies.get("jw_account")?.value;
-    if (!token) {
-      return NextResponse.json({ error: "Not authenticated", code: "UNAUTHORIZED" }, { status: 401 });
-    }
-
-    const account = await getAccountFromToken(token);
+    const account = await getAccountFromRequest(req);
     if (!account) {
       return NextResponse.json({ error: "Invalid session", code: "UNAUTHORIZED" }, { status: 401 });
     }

@@ -127,19 +127,24 @@ export default function FeedPage() {
   const touchStartYRef = useRef(0);
   const PTR_THRESHOLD = 72;
 
-  // Load cached feed on first mount so returning users see content immediately
+  // Load saved scope on mount (cache is just a brief placeholder, never blocks fresh fetch)
   useEffect(() => {
     try {
+      const savedScope = localStorage.getItem(FEED_SCOPE_KEY) as FeedScope | null;
+      if (savedScope && ["local", "metro", "country"].includes(savedScope)) {
+        setFeedScope(savedScope);
+      }
+      // Show cached posts ONLY as a brief flash while real data loads (max 3 seconds)
       const cached = localStorage.getItem(FEED_CACHE_KEY);
       if (cached) {
         const parsed = JSON.parse(cached) as Post[];
         if (Array.isArray(parsed) && parsed.length > 0) {
           setPosts(parsed);
+          // Clear stale cache after 3 seconds — real data should have arrived by then
+          setTimeout(() => {
+            try { localStorage.removeItem(FEED_CACHE_KEY); } catch { /* noop */ }
+          }, 3000);
         }
-      }
-      const savedScope = localStorage.getItem(FEED_SCOPE_KEY) as FeedScope | null;
-      if (savedScope && ["local", "metro", "country"].includes(savedScope)) {
-        setFeedScope(savedScope);
       }
     } catch { /* noop */ }
     setScopeReady(true);
@@ -313,7 +318,9 @@ export default function FeedPage() {
         setHasMore(fetchedPosts.length === LIMIT);
       } catch (err) {
         const isOffline = !navigator.onLine || (err instanceof TypeError && err.message.toLowerCase().includes("fetch"));
-        setError(isOffline ? "CAN'T CONNECT · CHECK YOUR CONNECTION" : (err instanceof Error ? err.message : "Failed to load posts."));
+        setError(isOffline ? "CAN'T CONNECT · CHECK YOUR CONNECTION" : "COULDN'T LOAD POSTS · TAP TO RETRY");
+        // Clear stale cache on error so next reload fetches fresh
+        try { localStorage.removeItem(FEED_CACHE_KEY); } catch { /* noop */ }
       } finally {
         setLoading(false);
         setLoadingMore(false);

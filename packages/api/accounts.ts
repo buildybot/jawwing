@@ -202,7 +202,13 @@ export async function storePushToken(accountId: string, pushToken: string): Prom
 // ─── Mobile auth helper ───────────────────────────────────────────────────────
 // Supports both httpOnly cookie (web) and Authorization: Bearer <token> (mobile)
 
-export async function getAccountFromRequest(req: import("next/server").NextRequest): Promise<import("../db/schema").Account | null> {
+// Minimal interface matching both NextRequest and standard Request
+interface RequestLike {
+  cookies: { get(name: string): { value: string } | undefined };
+  headers: { get(name: string): string | null };
+}
+
+export async function getAccountFromRequest(req: RequestLike): Promise<Account | null> {
   // 1. Try cookie (web)
   const cookieToken = req.cookies.get("jw_account")?.value;
   if (cookieToken) return getAccountFromToken(cookieToken);
