@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { after } from "next/server";
+// after() from next/server doesn't reliably execute on Vercel — run moderation inline
 
 export const runtime = "nodejs"; // Required for moderation (crypto + Gemini SDK)
 import { db, posts, territories, nanoid, now } from "@jawwing/db";
@@ -481,10 +481,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     lastPositionMap.set(ipHash, { lat, lng, ts: nowTs });
 
-    // Run moderation async AFTER response is sent (Vercel-compatible)
-    after(() => {
-      onPostCreated(created);
-    });
+    // Run moderation inline — Gemini Flash is ~200ms, acceptable latency
+    // Can't use after()/setImmediate() reliably on Vercel serverless
+    try {
+      await Promise.resolve(onPostCreated(created));
+    } catch (modErr) {
+      console.error("[MOD] Moderation error (non-blocking):", modErr);
+    }
 
     const response = NextResponse.json({ post: sanitizePostForResponse(created) }, { status: 201 });
 

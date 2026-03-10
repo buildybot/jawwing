@@ -40,13 +40,17 @@ function hashContent(content: string): string {
  * Returns immediately — does not block post creation.
  */
 export function onPostCreated(post: Post): void {
-  // Fire and forget — moderation is async
-  // Use setTimeout(0) instead of setImmediate for Edge Runtime compatibility
+  // Fire and forget — for contexts where await isn't possible
   setTimeout(() => {
     runAutomod(post).catch((err) => {
       console.error(`[automod] onPostCreated failed for post ${post.id}:`, err);
     });
   }, 0);
+}
+
+/** Awaitable version for Vercel serverless (where setTimeout doesn't survive response) */
+export async function moderatePost(post: Post): Promise<void> {
+  return runAutomod(post);
 }
 
 async function runAutomod(post: Post): Promise<void> {

@@ -359,8 +359,9 @@ export async function reviewPost(post: Post): Promise<ModerationDecision> {
   }
 
   // ── Log to mod_actions ───────────────────────────────────────────────────
+  let actionId: string | null = null;
   try {
-    const actionId = nanoid();
+    actionId = nanoid();
     await db.insert(mod_actions).values({
       id: actionId,
       post_id: post.id,
@@ -372,17 +373,30 @@ export async function reviewPost(post: Post): Promise<ModerationDecision> {
       appealed: false,
       appeal_result: null,
     });
+  } catch (dbErr) {
+    console.error("[mod/engine] Failed to log mod action:", dbErr);
+    actionId = null;
+  }
 
-    // Update post status and store confidence score (raw SQL for reliability)
+  // ── Update post status and confidence (always, even if mod_action insert failed) ──
+  try {
     if (decision.action === "remove") {
-      await db.execute(sql`UPDATE posts SET status = 'removed', mod_action_id = ${actionId}, mod_confidence = ${decision.confidence} WHERE id = ${post.id}`);
+      if (actionId) {
+        await db.execute(sql`UPDATE posts SET status = 'removed', mod_action_id = ${actionId}, mod_confidence = ${decision.confidence} WHERE id = ${post.id}`);
+      } else {
+        await db.execute(sql`UPDATE posts SET status = 'removed', mod_confidence = ${decision.confidence} WHERE id = ${post.id}`);
+      }
     } else if (decision.action === "flag" || decision.action === "warn") {
-      await db.execute(sql`UPDATE posts SET status = 'moderated', mod_action_id = ${actionId}, mod_confidence = ${decision.confidence} WHERE id = ${post.id}`);
+      if (actionId) {
+        await db.execute(sql`UPDATE posts SET status = 'moderated', mod_action_id = ${actionId}, mod_confidence = ${decision.confidence} WHERE id = ${post.id}`);
+      } else {
+        await db.execute(sql`UPDATE posts SET status = 'moderated', mod_confidence = ${decision.confidence} WHERE id = ${post.id}`);
+      }
     } else {
       await db.execute(sql`UPDATE posts SET mod_confidence = ${decision.confidence} WHERE id = ${post.id}`);
     }
-  } catch (dbErr) {
-    console.error("[mod/engine] Failed to log mod action:", dbErr);
+  } catch (updateErr) {
+    console.error("[mod/engine] Failed to update post status/confidence:", updateErr);
   }
 
   console.log('[MOD] Decision for', post.id, ':', decision.action, 'confidence:', decision.confidence);
