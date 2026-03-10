@@ -349,11 +349,12 @@ export async function reviewPost(post: Post): Promise<ModerationDecision> {
     }
   } catch (err) {
     // On AI failure, flag for human review rather than blocking
-    console.error("[mod/engine] AI review failed:", err);
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error("[mod/engine] AI review failed:", errMsg);
     decision = {
       action: "flag",
       ruleCited: null,
-      reasoning: "AI review failed. Flagged for secondary review.",
+      reasoning: `AI review failed: ${errMsg.slice(0, 200)}. Flagged for secondary review.`,
       confidence: 0,
     };
   }
