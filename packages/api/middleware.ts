@@ -12,6 +12,7 @@ export interface AuthUser {
 
 export interface AuthenticatedRequest extends NextRequest {
   user: AuthUser;
+  json(): Promise<unknown>;
 }
 
 type RouteHandler = (
