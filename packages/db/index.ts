@@ -43,6 +43,7 @@ export {
   constitution_versions,
   constitution_amendments,
   uploads,
+  accounts,
 } from "./schema";
 
 // ─── Re-export types ──────────────────────────────────────────────────────────
@@ -72,6 +73,8 @@ export type {
   NewConstitutionAmendment,
   Upload,
   NewUpload,
+  Account,
+  NewAccount,
 } from "./schema";
 
 // ─── Re-export schema (for drizzle-kit / migrations) ─────────────────────────

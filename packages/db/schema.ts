@@ -54,6 +54,27 @@ export const territories = sqliteTable(
   })
 );
 
+// ─── accounts ─────────────────────────────────────────────────────────────────
+// Optional email accounts — completely separate from the agents/users table
+// Email is NEVER stored in plaintext; hash used for dedup, encrypted for notifications
+
+export const accounts = sqliteTable(
+  "accounts",
+  {
+    id: text("id").primaryKey(),
+    email_hash: text("email_hash").notNull().unique(),
+    email_encrypted: text("email_encrypted"),
+    session_ids: text("session_ids"), // JSON array of linked jw_session IDs
+    notification_prefs: text("notification_prefs").default('{"replies":true,"trending":false}'),
+    created_at: integer("created_at").notNull(),
+    last_seen_at: integer("last_seen_at"),
+  },
+  (t) => ({
+    idxAccountsEmailHash: uniqueIndex("idx_accounts_email_hash").on(t.email_hash),
+    idxAccountsCreatedAt: index("idx_accounts_created_at").on(t.created_at),
+  })
+);
+
 // ─── posts ────────────────────────────────────────────────────────────────────
 // user_id is the anonymous session cookie ID (no FK — not a real user account)
 // ip_hash is SHA-256 of the poster's IP (for rate limiting + bans)
@@ -64,6 +85,8 @@ export const posts = sqliteTable(
     id: text("id").primaryKey(),
     // Anonymous session cookie value — NOT a reference to users table
     user_id: text("user_id"),
+    // Optional: links post to an email account (for history/notifications only)
+    account_id: text("account_id"),
     ip_hash: text("ip_hash"),
     content: text("content").notNull(),
     lat: real("lat").notNull(),
@@ -373,3 +396,5 @@ export type BannedIp = typeof banned_ips.$inferSelect;
 export type NewBannedIp = typeof banned_ips.$inferInsert;
 export type Upload = typeof uploads.$inferSelect;
 export type NewUpload = typeof uploads.$inferInsert;
+export type Account = typeof accounts.$inferSelect;
+export type NewAccount = typeof accounts.$inferInsert;

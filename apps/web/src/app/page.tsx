@@ -119,6 +119,7 @@ export default function FeedPage() {
   const [offset, setOffset] = useState(0);
   // Whether server returned 0 posts on the initial scope before fallback
   const [expandedScope, setExpandedScope] = useState(false);
+  const [expandedLabel, setExpandedLabel] = useState("");
 
   // Pull-to-refresh state
   const [ptrState, setPtrState] = useState<"idle" | "pulling" | "ready" | "refreshing">("idle");
@@ -219,6 +220,7 @@ export default function FeedPage() {
         setNewPosts([]);
         setShowNewBanner(false);
         setExpandedScope(false);
+        setExpandedLabel("");
       } else {
         setLoadingMore(true);
       }
@@ -261,13 +263,35 @@ export default function FeedPage() {
           );
           fetchedPosts = data.posts;
 
-          // Fallback: if LOCAL returned 0 posts on reset, try METRO
-          if (reset && feedScope === "local" && fetchedPosts.length === 0) {
-            setExpandedScope(true);
-            const fallback = await fetchPosts(
-              userLat, userLng, activeTab as "hot" | "new" | "top", LIMIT, 0, "territory"
-            );
-            fetchedPosts = fallback.posts;
+          // Auto-expand: if fewer than 10 posts, progressively widen radius
+          const MIN_POSTS = 10;
+          if (reset && fetchedPosts.length < MIN_POSTS) {
+            const expansionSteps: Array<{ mode: "radius" | "territory" | "everywhere"; radius?: number; label: string }> = [];
+            
+            if (feedScope === "local") {
+              expansionSteps.push(
+                { mode: "radius", radius: 10000, label: "10KM" },
+                { mode: "radius", radius: 20000, label: "20KM" },
+                { mode: "territory", label: "DC METRO" },
+                { mode: "everywhere", label: "EVERYWHERE" },
+              );
+            } else if (feedScope === "metro") {
+              expansionSteps.push(
+                { mode: "everywhere", label: "EVERYWHERE" },
+              );
+            }
+            // Keep expanding until we have enough posts or run out of steps
+            for (const step of expansionSteps) {
+              if (fetchedPosts.length >= MIN_POSTS) break;
+              const fallback = await fetchPosts(
+                userLat, userLng, activeTab as "hot" | "new" | "top", LIMIT, 0, step.mode, step.radius
+              );
+              if (fallback.posts.length > fetchedPosts.length) {
+                fetchedPosts = fallback.posts;
+                setExpandedScope(true);
+                setExpandedLabel(step.label);
+              }
+            }
           }
         }
 
@@ -570,7 +594,7 @@ export default function FeedPage() {
               })}
               {expandedScope && (
                 <span style={{ ...MONO, color: "#555555", fontSize: "0.5625rem", letterSpacing: "0.06em", alignSelf: "center", marginLeft: "4px" }}>
-                  NO POSTS NEARBY · SHOWING DC METRO
+                  NO POSTS NEARBY · SHOWING {expandedLabel || "DC METRO"}
                 </span>
               )}
             </div>
