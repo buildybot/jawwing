@@ -355,19 +355,25 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // Rate limit: 10 posts/hour per IP hash
-    const rateLimit = checkRateLimit(ipHash, "human", "post");
-    if (!rateLimit.allowed) {
-      return NextResponse.json(
-        { error: "Rate limit exceeded", code: "RATE_LIMIT", resetAt: rateLimit.resetAt },
-        {
-          status: 429,
-          headers: {
-            "X-RateLimit-Remaining": "0",
-            "X-RateLimit-Reset": String(Math.floor(rateLimit.resetAt / 1000)),
-          },
-        }
-      );
+    // Admin key bypass: skip rate limiting if valid x-admin-key header is present
+    const adminKey = req.headers.get("x-admin-key");
+    const isAdminRequest = adminKey && process.env.ADMIN_API_KEY && adminKey === process.env.ADMIN_API_KEY;
+
+    if (!isAdminRequest) {
+      // Rate limit: 10 posts/hour per IP hash
+      const rateLimit = checkRateLimit(ipHash, "human", "post");
+      if (!rateLimit.allowed) {
+        return NextResponse.json(
+          { error: "Rate limit exceeded", code: "RATE_LIMIT", resetAt: rateLimit.resetAt },
+          {
+            status: 429,
+            headers: {
+              "X-RateLimit-Remaining": "0",
+              "X-RateLimit-Reset": String(Math.floor(rateLimit.resetAt / 1000)),
+            },
+          }
+        );
+      }
     }
 
     let body: unknown;

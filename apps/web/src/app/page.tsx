@@ -702,7 +702,7 @@ export default function FeedPage() {
                   Posts expire in 24 hours. What happens here, stays here.
                 </p>
                 <Link
-                  href="/about"
+                  href="/settings"
                   style={{ ...MONO, color: "#AAAAAA", fontSize: "0.6875rem", letterSpacing: "0.06em", textDecoration: "none" }}
                   className="hover:text-white transition-colors"
                 >
@@ -882,40 +882,6 @@ export default function FeedPage() {
             margin: "40px 0 0",
             padding: "32px 16px 24px",
           }}>
-            {/* Navigation links */}
-            <div style={{
-              display: "flex",
-              gap: "16px",
-              flexWrap: "wrap",
-              marginBottom: "32px",
-            }}>
-              {[
-                { href: "/constitution", label: "CONSTITUTION" },
-                { href: "/transparency", label: "TRANSPARENCY" },
-                { href: "/terms", label: "TERMS" },
-                { href: "/privacy", label: "PRIVACY" },
-                { href: "/about", label: "ABOUT" },
-              ].map(link => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  style={{
-                    ...MONO,
-                    color: "#555555",
-                    fontSize: "0.625rem",
-                    letterSpacing: "0.1em",
-                    textDecoration: "none",
-                    padding: "6px 0",
-                    borderBottom: "1px solid transparent",
-                    transition: "color 150ms, border-color 150ms",
-                  }}
-                  className="hover:text-[#AAAAAA] hover:border-[#333]"
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </div>
-
             {/* Algorithm explainer */}
             <div style={{ marginBottom: "28px" }}>
               <h3 style={{

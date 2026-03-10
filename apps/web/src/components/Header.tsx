@@ -25,7 +25,6 @@ export default function Header({
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   useEffect(() => {
-    // Check non-httpOnly flag cookie for account login state
     setIsLoggedIn(document.cookie.includes("jw_account_ok=1"));
   }, []);
 
@@ -40,7 +39,7 @@ export default function Header({
         width: "100%",
       }}
     >
-      {/* Main row — full width, content centered */}
+      {/* Single row — wordmark left, city center, icons right */}
       <div className="feed-container mx-auto flex items-center justify-between px-4 py-3">
         {/* Wordmark */}
         <Link
@@ -71,7 +70,7 @@ export default function Header({
             <span
               style={{
                 ...MONO,
-                color: "#777777",
+                color: "#888888",
                 fontSize: "0.6875rem",
                 letterSpacing: "0.06em",
               }}
@@ -81,7 +80,7 @@ export default function Header({
           )}
         </div>
 
-        {/* Right: info + account */}
+        {/* Right: settings gear + account */}
         <div className="flex items-center gap-3" style={{ flexShrink: 0 }}>
           {isLoggedIn ? (
             <Link
@@ -89,12 +88,12 @@ export default function Header({
               title="Your posts"
               style={{
                 ...MONO,
-                color: "#555555",
+                color: "#888888",
                 fontSize: "0.6875rem",
                 letterSpacing: "0.06em",
                 textDecoration: "none",
               }}
-              className="hover:text-[#999999] transition-colors"
+              className="hover:text-[#AAAAAA] transition-colors"
             >
               •
             </Link>
@@ -103,57 +102,31 @@ export default function Header({
               href="/signin"
               style={{
                 ...MONO,
-                color: "#333333",
+                color: "#888888",
                 fontSize: "0.5625rem",
                 letterSpacing: "0.08em",
                 textDecoration: "none",
               }}
-              className="hover:text-[#777777] transition-colors"
+              className="hover:text-[#AAAAAA] transition-colors"
             >
               SIGN IN
             </Link>
           )}
           <Link
-            href="/about"
+            href="/settings"
+            title="Settings"
             style={{
               ...MONO,
-              color: "#333333",
-              fontSize: "0.6875rem",
-              letterSpacing: "0.06em",
+              color: "#888888",
+              fontSize: "0.875rem",
               textDecoration: "none",
+              lineHeight: 1,
             }}
-            className="hover:text-[#777777] transition-colors"
+            className="hover:text-[#AAAAAA] transition-colors"
           >
-            ?
+            ⚙
           </Link>
         </div>
-      </div>
-
-      {/* Sub-nav */}
-      <div
-        className="feed-container mx-auto flex items-center gap-5 px-4 py-1"
-        style={{ borderTop: "1px solid #0F0F0F" }}
-      >
-        {[
-          { href: "/about", label: "ABOUT" },
-          { href: "/constitution", label: "CONSTITUTION" },
-          { href: "/transparency", label: "TRANSPARENCY" },
-        ].map(({ href, label }) => (
-          <Link
-            key={href}
-            href={href}
-            style={{
-              ...MONO,
-              fontSize: "0.5625rem",
-              letterSpacing: "0.08em",
-              color: "#333333",
-              textDecoration: "none",
-            }}
-            className="hover:text-[#777777] transition-colors"
-          >
-            {label}
-          </Link>
-        ))}
       </div>
     </header>
   );
