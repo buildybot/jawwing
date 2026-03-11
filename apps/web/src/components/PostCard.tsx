@@ -428,10 +428,9 @@ function ModBadge({ postId, modConfidence }: { postId: string; modConfidence: nu
   let label: string;
 
   if (modConfidence == null) {
-    // Active posts with no confidence = admin-seeded or bypassed moderation
-    icon = "✓";
-    color = "#22C55E";
-    label = "APPROVED";
+    icon = "—";
+    color = "#888888";
+    label = "NO REVIEW";
   } else if (isFailedReview) {
     icon = "⚠";
     color = "#EAB308";
@@ -543,9 +542,9 @@ function ModBadge({ postId, modConfidence }: { postId: string; modConfidence: nu
         >
           {modConfidence == null ? (
             <>
-              <p style={{ color: "#22C55E", fontSize: "0.625rem", letterSpacing: "0.1em", marginBottom: "6px" }}>✓ APPROVED</p>
+              <p style={{ color: "#888888", fontSize: "0.625rem", letterSpacing: "0.1em", marginBottom: "6px" }}>— NO AI REVIEW</p>
               <p style={{ color: "#555", fontSize: "0.5625rem", letterSpacing: "0.06em", lineHeight: 1.5 }}>
-                THIS POST WAS APPROVED.
+                THIS POST WAS NOT REVIEWED BY AI MODERATION (ADMIN POST).
               </p>
             </>
           ) : (

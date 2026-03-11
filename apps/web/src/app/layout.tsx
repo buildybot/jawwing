@@ -58,6 +58,7 @@ export const metadata: Metadata = {
 };
 
 import NavShell from "@/components/NavShell";
+import { Analytics } from "@vercel/analytics/next";
 
 export default function RootLayout({
   children,
@@ -72,6 +73,7 @@ export default function RootLayout({
       >
         <NavShell />
         {children}
+        <Analytics />
       </body>
     </html>
   );
