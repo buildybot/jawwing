@@ -127,7 +127,7 @@ function ActivityChart({ data }: { data: ActivityPoint[] }) {
   return (
     <div style={{ marginTop: 24 }}>
       <div style={{ color: "#888", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 12 }}>
-        Activity — Last 48h
+        Activity — Last 5d
       </div>
       <div style={{ display: "flex", alignItems: "flex-end", gap: 2, height: 80, border: "1px solid #1F1F1F", padding: "8px 8px 0" }}>
         {data.map((d, i) => {
@@ -141,7 +141,7 @@ function ActivityChart({ data }: { data: ActivityPoint[] }) {
         })}
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, color: "#555", fontSize: 9 }}>
-        <span>48h ago</span><span>now</span>
+        <span>5d ago</span><span>now</span>
       </div>
     </div>
   );

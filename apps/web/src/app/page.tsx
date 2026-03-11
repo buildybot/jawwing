@@ -701,7 +701,7 @@ export default function FeedPage() {
                   Anonymous posts from people near you. No accounts. No names. Just 300 characters and an opinion.
                 </p>
                 <p style={{ color: "#AAAAAA", fontSize: "0.8125rem", lineHeight: 1.5, marginBottom: "14px" }}>
-                  Posts expire in 48 hours. What happens here, stays here.
+                  Posts expire in 5 days. What happens here, stays here.
                 </p>
                 <Link
                   href="/settings"
@@ -956,7 +956,7 @@ export default function FeedPage() {
                   </h4>
                   <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                     <p style={{ color: "#555555", fontSize: "0.75rem", lineHeight: 1.5, margin: 0 }}>
-                      All posts expire after 48 hours. You can only post from your current GPS location, but you can browse and vote from anywhere. Content is moderated by AI agents following our public Constitution. No humans moderate this app.
+                      All posts expire after 5 days. You can only post from your current GPS location, but you can browse and vote from anywhere. Content is moderated by AI agents following our public Constitution. No humans moderate this app.
                     </p>
                   </div>
                 </div>

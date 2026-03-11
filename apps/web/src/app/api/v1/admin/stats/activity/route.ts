@@ -14,7 +14,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   if (!admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const now = Math.floor(Date.now() / 1000);
-  const start48h = now - 48 * 3600;
+  const start48h = now - 120 * 3600;
 
   try {
     const c = getClient();

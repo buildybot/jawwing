@@ -11,7 +11,7 @@ const SECTION_LABEL = { ...MONO, letterSpacing: "0.08em", fontSize: "0.6875rem",
 const sections = [
   {
     title: "1. The Short Version",
-    body: `We collect as little as possible. Your IP address is one-way hashed. We never store it in plaintext and cannot reverse it. Location is captured at post time only and is not linked to any persistent identity. Posts expire from public feeds after 48 hours but may be retained so you can view your post history. We never sell your data. AI moderates all content.`,
+    body: `We collect as little as possible. Your IP address is one-way hashed. We never store it in plaintext and cannot reverse it. Location is captured at post time only and is not linked to any persistent identity. Posts expire from public feeds after 5 days but may be retained so you can view your post history. We never sell your data. AI moderates all content.`,
   },
   {
     title: "2. Who This Applies To",
@@ -27,7 +27,7 @@ IP address: Stored as a one-way cryptographic hash only, never plaintext. Used f
 
 GPS coordinates: Stored with the post record at the moment you post. Not linked to your IP hash or any persistent profile. Not tracked over time. Slightly fuzzed for privacy (rounded to approximately 1km precision).
 
-Post content (text): Stored with the post record. Publicly visible in feeds for up to 48 hours.
+Post content (text): Stored with the post record. Publicly visible in feeds for up to 5 days.
 
 Uploaded images: Stored on Vercel Blob CDN. Publicly visible as part of your post.
 
@@ -99,7 +99,7 @@ Our moderation rules are published in our Constitution at jawwing.com/constituti
   },
   {
     title: "11. Post Expiry and Data Retention",
-    body: `Posts expire from public feeds after 48 hours. After expiry, posts are no longer visible in the feed or discoverable by other users.
+    body: `Posts expire from public feeds after 5 days. After expiry, posts are no longer visible in the feed or discoverable by other users.
 
 However, posts are not necessarily permanently deleted from our database at expiry. Jawwing retains post data so that account holders can view their post history, including past performance (scores, replies). This allows you to see your best-performing posts and your posting history over time.
 
@@ -107,7 +107,7 @@ Jawwing reserves the right to decide when and whether to permanently delete expi
 
 Full retention summary:
 
-Post content (text): Visible in feeds for up to 48 hours. Retained in database for account holder history. Permanent deletion at Jawwing's discretion.
+Post content (text): Visible in feeds for up to 5 days. Retained in database for account holder history. Permanent deletion at Jawwing's discretion.
 
 Post images: Publicly visible while post is in feeds. May be deleted from CDN after post expires from feeds. Permanent deletion timing at Jawwing's discretion.
 
@@ -190,7 +190,7 @@ export default function PrivacyPage() {
           EFFECTIVE: MARCH 10, 2026 · LAST UPDATED: MARCH 10, 2026
         </p>
         <p style={{ color: "#C0C0C0", fontSize: "0.9375rem", lineHeight: 1.7, marginBottom: "48px" }}>
-          Your privacy matters. This policy explains exactly what data Jawwing collects, how it&apos;s stored, how long we keep it, and your rights. We collect as little as possible, we hash what we must store, posts expire from feeds after 48 hours, and we never sell your data.
+          Your privacy matters. This policy explains exactly what data Jawwing collects, how it&apos;s stored, how long we keep it, and your rights. We collect as little as possible, we hash what we must store, posts expire from feeds after 5 days, and we never sell your data.
         </p>
 
         {sections.map((section) => (
