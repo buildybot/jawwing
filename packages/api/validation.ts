@@ -19,7 +19,25 @@ export const PostSchema = z.object({
     .refine((s) => s.trim().length > 0, "content cannot be blank"),
   lat: z.number().min(-90, "lat must be >= -90").max(90, "lat must be <= 90"),
   lng: z.number().min(-180, "lng must be >= -180").max(180, "lng must be <= 180"),
-  image_url: z.string().url("image_url must be a valid URL").optional(),
+  image_url: z
+    .string()
+    .url("image_url must be a valid URL")
+    .refine(
+      (url) => {
+        try {
+          const { hostname } = new URL(url);
+          // Only allow Vercel Blob storage and known image CDNs
+          return (
+            hostname.endsWith(".public.blob.vercel-storage.com") ||
+            hostname === "public.blob.vercel-storage.com"
+          );
+        } catch {
+          return false;
+        }
+      },
+      { message: "image_url must be a Vercel Blob storage URL" }
+    )
+    .optional(),
 });
 
 export const VoteSchema = z.object({

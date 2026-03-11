@@ -3,6 +3,51 @@ import { createClient } from "@libsql/client";
 import { db, mod_actions, posts, mod_strikes, nanoid, now } from "@jawwing/db";
 import { eq } from "drizzle-orm";
 import type { Post } from "@jawwing/db";
+import dns from "dns/promises";
+
+// ─── SSRF guard (inline, no external dep) ────────────────────────────────────
+
+function isPrivateIPv4(ip: string): boolean {
+  const parts = ip.split(".").map(Number);
+  if (parts.length !== 4 || parts.some((p) => isNaN(p) || p < 0 || p > 255)) return true;
+  const [a, b, c] = parts;
+  return (
+    a === 127 || a === 10 ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 168) ||
+    (a === 169 && b === 254) ||
+    (a === 100 && b >= 64 && b <= 127) ||
+    a === 0 || a >= 240
+  );
+}
+
+function isPrivateIPv6(ip: string): boolean {
+  const addr = ip.replace(/^\[|\]$/g, "").toLowerCase();
+  return (addr === "::1" || addr.startsWith("fc") || addr.startsWith("fd") || addr.startsWith("fe80") || addr === "::");
+}
+
+function isPrivateIP(ip: string): boolean {
+  return ip.includes(":") ? isPrivateIPv6(ip) : isPrivateIPv4(ip);
+}
+
+async function isSafeImageUrl(rawUrl: string): Promise<boolean> {
+  let parsed: URL;
+  try { parsed = new URL(rawUrl); } catch { return false; }
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false;
+  const hostname = parsed.hostname;
+  if (!hostname) return false;
+  if (isPrivateIP(hostname)) return false;
+  try {
+    const addresses: string[] = [];
+    try { addresses.push(...await dns.resolve4(hostname)); } catch { /* no A record */ }
+    try { addresses.push(...await dns.resolve6(hostname)); } catch { /* no AAAA record */ }
+    if (addresses.length === 0) return false;
+    for (const addr of addresses) {
+      if (isPrivateIP(addr)) return false;
+    }
+  } catch { return false; }
+  return true;
+}
 
 // Raw libSQL client for operations that bypass Drizzle ORM (e.g. new columns)
 function getRawClient() {
@@ -450,6 +495,12 @@ const AI_AGENT_ID = process.env.MOD_AGENT_ID ?? "agent-system";
 
 async function fetchImageAsBase64(url: string): Promise<{ data: string; mimeType: string } | null> {
   try {
+    // SSRF protection — block internal/private network addresses
+    const safe = await isSafeImageUrl(url);
+    if (!safe) {
+      console.error(`[mod/engine] Blocked SSRF attempt for URL: ${url.slice(0, 100)}`);
+      return null;
+    }
     const res = await fetch(url, {
       signal: AbortSignal.timeout(10000),
       headers: {

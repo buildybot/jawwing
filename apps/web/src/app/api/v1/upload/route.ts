@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { put } from "@vercel/blob";
 import { db, uploads, nanoid, now } from "@jawwing/db";
-import crypto from "crypto";
+import { getIpHash } from "@jawwing/api/anonymous";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -24,14 +24,6 @@ function checkUploadRateLimit(ipHash: string): boolean {
   if (entry.count >= RATE_LIMIT_MAX) return false;
   entry.count++;
   return true;
-}
-
-function getIpHash(req: NextRequest): string {
-  const ip =
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    req.headers.get("x-real-ip") ??
-    "unknown";
-  return crypto.createHash("sha256").update(ip).digest("hex").slice(0, 16);
 }
 
 // ─── POST /api/v1/upload ──────────────────────────────────────────────────────
