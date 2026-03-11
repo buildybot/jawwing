@@ -54,3 +54,4 @@ coverage/
 *.mobileprovision
 *.orig.*
 .vercel
+.env.vercel
