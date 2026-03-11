@@ -173,7 +173,7 @@ export default function FeedPage() {
       // Show cached posts ONLY as a brief flash while real data loads (max 3 seconds)
       const cached = localStorage.getItem(FEED_CACHE_KEY);
       if (cached) {
-        const parsed = JSON.parse(cached) as Post[];
+        const parsed = (JSON.parse(cached) as Post[]).filter((p) => p.status === "active");
         if (Array.isArray(parsed) && parsed.length > 0) {
           setPosts(parsed);
           // Clear stale cache after 3 seconds — real data should have arrived by then
@@ -190,6 +190,8 @@ export default function FeedPage() {
   const [welcomeDismissed, setWelcomeDismissed] = useState(true);
   useEffect(() => {
     try {
+      const isLoggedIn = document.cookie.includes("jw_account_ok=1");
+      if (isLoggedIn) { setWelcomeDismissed(true); return; }
       const dismissed = localStorage.getItem(WELCOME_DISMISSED_KEY);
       if (!dismissed) setWelcomeDismissed(false);
     } catch { /* noop */ }
@@ -700,7 +702,7 @@ export default function FeedPage() {
                   Anonymous posts from people near you. No accounts. No names. Just 300 characters and an opinion.
                 </p>
                 <p style={{ color: "#AAAAAA", fontSize: "0.8125rem", lineHeight: 1.5, marginBottom: "14px" }}>
-                  Posts expire in 24 hours. What happens here, stays here.
+                  Posts expire in 48 hours. What happens here, stays here.
                 </p>
                 <Link
                   href="/settings"

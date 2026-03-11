@@ -1088,58 +1088,38 @@ function PostCard({ post, variant = "card", feedScope }: PostCardProps) {
             </>
           )}
         </Link>
-      </div>
-      {/* Share + Report + Block row */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "6px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+
+        {/* Report / Share / Block — inline on same row */}
+        <div style={{ display: "flex", alignItems: "center", gap: "6px", marginLeft: "auto", paddingLeft: "8px", flexShrink: 0 }}>
           <ReportButton postId={post.id} size="sm" />
+          <button
+            onClick={handleShare}
+            style={{
+              color: copyLabel === "COPIED ✓" ? "#FFFFFF" : "#888888",
+              background: "none", border: "none", cursor: "pointer", padding: "2px 4px",
+              fontSize: "0.6875rem", lineHeight: 1, ...MONO, letterSpacing: "0.04em", transition: "color 150ms",
+            }}
+            className="hover:text-[#A0A0A0]"
+            aria-label="Share post"
+            title="Copy link"
+          >
+            ↗
+          </button>
           {(post.author_id || post.user_id) && (
             <button
               onClick={handleBlock}
               title="Block this user"
               aria-label="Block user"
               style={{
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                color: "#888888",
-                fontSize: "0.7rem",
-                lineHeight: 1,
-                padding: "2px 4px",
-                display: "flex",
-                alignItems: "center",
-                gap: "3px",
-                ...MONO,
-                letterSpacing: "0.04em",
-                transition: "color 150ms",
+                background: "none", border: "none", cursor: "pointer", color: "#888888",
+                fontSize: "0.6875rem", lineHeight: 1, padding: "2px 4px", ...MONO, transition: "color 150ms",
               }}
               className="hover:text-[#A0A0A0]"
             >
-              <span>🚫</span>
-              <span style={{ fontSize: "0.5625rem" }}>BLOCK</span>
+              🚫
             </button>
           )}
         </div>
-        <button
-          onClick={handleShare}
-          style={{
-            color: copyLabel === "COPIED ✓" ? "#FFFFFF" : "#888888",
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            padding: 0,
-            fontSize: "0.75rem",
-            lineHeight: 1,
-            ...MONO,
-            letterSpacing: "0.04em",
-            transition: "color 150ms",
-          }}
-          className="hover:text-[#A0A0A0]"
-          aria-label="Share post"
-          title="Copy link"
-        >
-          ↗ {copyLabel}
-        </button>
       </div>
     </article>
   );
