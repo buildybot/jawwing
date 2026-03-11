@@ -85,8 +85,8 @@ export default function Header({
           {isLoggedIn ? (
             <>
               <Link
-                href="/my-posts"
-                title="Your posts"
+                href="/settings"
+                title="Your posts & settings"
                 style={{
                   ...MONO,
                   color: "#FFFFFF",
