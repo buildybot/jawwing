@@ -552,36 +552,10 @@ export async function reviewPost(post: Post): Promise<ModerationDecision> {
 
   const provider = getProvider();
 
-  // No AI provider available — fallback
+  // No AI provider available — throw so the post stays in queue for retry
   if (!provider) {
-    console.warn('[MOD] WARNING: No AI provider (GROQ_API_KEY or GEMINI_API_KEY) - auto-approving text, flagging images');
-    const fallbackAction = post.image_url ? "flag" : "approve";
-    const fallbackDecision: ModerationDecision = {
-      action: fallbackAction,
-      ruleCited: null,
-      reasoning: post.image_url
-        ? "No moderation AI available. Post with image held for manual review."
-        : "No moderation AI available. Auto-approved.",
-      confidence: fallbackAction === "approve" ? 1 : 0,
-    };
-    try {
-      await db.insert(mod_actions).values({
-        id: nanoid(), post_id: post.id, agent_id: AI_AGENT_ID,
-        action: fallbackDecision.action, rule_cited: fallbackDecision.ruleCited,
-        reasoning: fallbackDecision.reasoning, created_at: now(),
-        appealed: false, appeal_result: null,
-      });
-    } catch (dbErr) {
-      console.error("[mod/engine] Failed to log fallback mod action:", dbErr);
-    }
-    try {
-      const rawClient = getRawClient();
-      const newStatus = fallbackAction === "approve" ? "active" : "moderated";
-      await rawClient.execute({ sql: `UPDATE posts SET status = '${newStatus}', mod_confidence = ? WHERE id = ?`, args: [fallbackDecision.confidence, post.id] });
-    } catch (e) {
-      console.error("[mod/engine] Failed to update post status in fallback:", e);
-    }
-    return fallbackDecision;
+    console.error('[MOD] No AI provider available (ANTHROPIC_API_KEY, GROQ_API_KEY, or GEMINI_API_KEY required)');
+    throw new Error("No moderation AI provider configured. Post stays in queue.");
   }
 
   console.log(`[MOD] Using provider: ${provider.name}`);

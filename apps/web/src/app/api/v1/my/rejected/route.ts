@@ -35,7 +35,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       .where(
         and(
           or(...conditions),
-          or(eq(posts.status, "removed"), eq(posts.status, "moderated"))
+          or(eq(posts.status, "removed"), eq(posts.status, "moderated"), eq(posts.status, "mod_failed"))
         )
       )
       .orderBy(desc(posts.created_at))

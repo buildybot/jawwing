@@ -539,18 +539,31 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       const [updated] = await db.select().from(posts).where(eq(posts.id, id)).limit(1);
       if (updated) Object.assign(created, updated);
     } catch (modErr) {
-      console.error("[MOD] Moderation error — auto-approving with flag:", modErr);
-      // Fallback: approve the post but mark that moderation failed
-      // This prevents posts from being stuck in "pending" when the AI is down
-      await db.update(posts).set({
-        status: "active",
-        mod_confidence: 0,
-      }).where(eq(posts.id, id));
-      created.status = "active";
-      created.mod_confidence = 0;
+      console.error("[MOD] Moderation error — post stays in queue for retry:", modErr);
+      // Post stays as "pending" — the cron queue processor will retry
+      // Increment mod_retries so we can track failures
+      try {
+        const rawClient = (await import("@libsql/client")).createClient({
+          url: process.env.TURSO_DATABASE_URL!,
+          authToken: process.env.TURSO_AUTH_TOKEN,
+        });
+        await rawClient.execute({
+          sql: "UPDATE posts SET mod_retries = COALESCE(mod_retries, 0) + 1 WHERE id = ?",
+          args: [id],
+        });
+      } catch { /* best effort */ }
+      // Still pending — tell the client the post is being reviewed
+      created.status = "pending";
     }
 
-    const response = NextResponse.json({ post: sanitizePostForResponse(created) }, { status: 201 });
+    // Include review status in response so client can show appropriate messaging
+    const responseData: Record<string, unknown> = { post: sanitizePostForResponse(created) };
+    if (created.status === "pending") {
+      responseData.queued = true;
+      responseData.message = "Your post is being reviewed by our AI moderator. It will appear in the feed once approved.";
+    }
+
+    const response = NextResponse.json(responseData, { status: 201 });
 
     // Set session cookie if new visitor
     if (needsCookie) {
