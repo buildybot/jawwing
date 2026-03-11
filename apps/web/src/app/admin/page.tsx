@@ -75,7 +75,38 @@ interface ActivityPoint {
   replies: number;
 }
 
-type Tab = "dashboard" | "users" | "posts" | "reports";
+type Tab = "dashboard" | "pipeline" | "users" | "posts" | "reports";
+
+interface PipelinePost {
+  id: string;
+  content: string;
+  status: string;
+  mod_confidence: number | null;
+  created_at: number;
+  lat: number;
+  lng: number;
+  image_url: string | null;
+  video_url: string | null;
+  user_id: string;
+  mod_reasoning: string | null;
+  mod_action: string | null;
+  rule_cited: string | null;
+}
+
+interface PipelineData {
+  pipeline: PipelinePost[];
+  stats: Record<string, number>;
+  recent_actions: Array<{
+    id: string;
+    post_id: string;
+    action: string;
+    reasoning: string;
+    rule_cited: string | null;
+    created_at: number;
+    post_excerpt: string;
+    post_status: string;
+  }>;
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -168,6 +199,9 @@ export default function AdminPage() {
   const [postStatus, setPostStatus] = useState("");
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
 
+  // Pipeline
+  const [pipelineData, setPipelineData] = useState<PipelineData | null>(null);
+
   // Reports
   const [reports, setReports] = useState<Report[]>([]);
 
@@ -208,6 +242,12 @@ export default function AdminPage() {
       .then(d => setPosts(d.posts ?? []));
   }, [postSearch, postStatus]);
 
+  const loadPipeline = useCallback(() => {
+    adminFetch("/api/v1/admin/pipeline")
+      .then(r => r.json())
+      .then(d => setPipelineData(d));
+  }, []);
+
   const loadReports = useCallback(() => {
     adminFetch("/api/v1/admin/reports")
       .then(r => r.json())
@@ -217,10 +257,11 @@ export default function AdminPage() {
   useEffect(() => {
     if (authState !== "ok") return;
     if (tab === "dashboard") loadActivity();
+    if (tab === "pipeline") loadPipeline();
     if (tab === "users") loadUsers();
     if (tab === "posts") loadPosts();
     if (tab === "reports") loadReports();
-  }, [tab, authState, loadActivity, loadUsers, loadPosts, loadReports]);
+  }, [tab, authState, loadActivity, loadPipeline, loadUsers, loadPosts, loadReports]);
 
   const banUser = async (userId: string, ban: boolean) => {
     await adminFetch(`/api/v1/admin/users/${userId}/ban`, { method: ban ? "POST" : "DELETE" });
@@ -350,7 +391,7 @@ export default function AdminPage() {
             ADMIN
           </div>
         </div>
-        {(["dashboard", "users", "posts", "reports"] as Tab[]).map(t => (
+        {(["dashboard", "pipeline", "users", "posts", "reports"] as Tab[]).map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -470,6 +511,172 @@ export default function AdminPage() {
                     <div style={{ color: "#FFF", fontSize: 12, width: 30, textAlign: "right" }}>{Number(h.post_count)}</div>
                   </div>
                 ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* PIPELINE TAB */}
+        {tab === "pipeline" && (
+          <>
+            <h1 style={{ color: "#FFF", fontSize: 18, fontWeight: 700, letterSpacing: 3, textTransform: "uppercase", margin: "0 0 24px" }}>
+              AI Moderation Pipeline
+            </h1>
+
+            {/* Pipeline stats */}
+            {pipelineData && (
+              <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 32 }}>
+                <StatCard label="Pending" value={pipelineData.stats.pending ?? 0} sub="Awaiting review" />
+                <StatCard label="Flagged" value={pipelineData.stats.flagged ?? 0} sub="Low confidence" />
+                <StatCard label="Mod Failed" value={pipelineData.stats.mod_failed ?? 0} sub="3x retry failed" />
+                <StatCard
+                  label="Queue Status"
+                  value={(pipelineData.stats.pending ?? 0) + (pipelineData.stats.flagged ?? 0) + (pipelineData.stats.mod_failed ?? 0) === 0 ? "✓" : "⚠"}
+                  sub={(pipelineData.stats.pending ?? 0) + (pipelineData.stats.flagged ?? 0) + (pipelineData.stats.mod_failed ?? 0) === 0 ? "All clear" : "Needs attention"}
+                />
+              </div>
+            )}
+
+            {/* Posts awaiting action */}
+            {pipelineData && pipelineData.pipeline.length > 0 && (
+              <div style={{ marginBottom: 40 }}>
+                <div style={{ color: "#888", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 16 }}>
+                  Posts Awaiting Action ({pipelineData.pipeline.length})
+                </div>
+                <table style={tableStyle}>
+                  <thead>
+                    <tr>
+                      <th style={thStyle}>Status</th>
+                      <th style={thStyle}>Content</th>
+                      <th style={thStyle}>AI Reasoning</th>
+                      <th style={thStyle}>Conf</th>
+                      <th style={thStyle}>Rule</th>
+                      <th style={thStyle}>Time</th>
+                      <th style={thStyle}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pipelineData.pipeline.map(p => (
+                      <tr key={p.id}>
+                        <td style={{
+                          ...tdStyle,
+                          color: p.status === "pending" ? "#EAB308" : p.status === "flagged" ? "#F97316" : "#EF4444",
+                          fontSize: 10,
+                          letterSpacing: 1,
+                          textTransform: "uppercase",
+                          fontWeight: 700,
+                          whiteSpace: "nowrap",
+                        }}>
+                          {p.status === "pending" ? "⏳ PENDING" : p.status === "flagged" ? "⚠ FLAGGED" : "✗ FAILED"}
+                        </td>
+                        <td style={{ ...tdStyle, maxWidth: 220 }}>
+                          {(p.content ?? "").slice(0, 100)}{(p.content ?? "").length > 100 ? "…" : ""}
+                          {p.image_url && <span style={{ color: "#555", fontSize: 9 }}> [IMG]</span>}
+                          {p.video_url && <span style={{ color: "#555", fontSize: 9 }}> [VID]</span>}
+                        </td>
+                        <td style={{ ...tdStyle, maxWidth: 260, color: "#888", fontSize: 11 }}>
+                          {p.mod_reasoning
+                            ? (p.mod_reasoning.replace(/^\[.*?\]\s*/, "").slice(0, 150) + (p.mod_reasoning.length > 150 ? "…" : ""))
+                            : <span style={{ color: "#333" }}>No review yet</span>
+                          }
+                        </td>
+                        <td style={{
+                          ...tdStyle,
+                          color: p.mod_confidence === null ? "#333" : p.mod_confidence >= 0.8 ? "#22C55E" : p.mod_confidence >= 0.5 ? "#EAB308" : "#EF4444",
+                          fontWeight: 700,
+                          whiteSpace: "nowrap",
+                        }}>
+                          {p.mod_confidence != null ? `${Math.round(p.mod_confidence * 100)}%` : "—"}
+                        </td>
+                        <td style={{ ...tdStyle, color: "#666", fontSize: 10, whiteSpace: "nowrap" }}>
+                          {p.rule_cited || "—"}
+                        </td>
+                        <td style={{ ...tdStyle, whiteSpace: "nowrap" }}>{fmtShort(p.created_at)}</td>
+                        <td style={{ ...tdStyle, whiteSpace: "nowrap" }}>
+                          <button style={btnStyle("success")} onClick={async () => {
+                            await adminFetch(`/api/v1/admin/posts/${p.id}/restore`, { method: "POST" });
+                            loadPipeline();
+                          }}>Approve</button>
+                          {" "}
+                          <button style={btnStyle("danger")} onClick={async () => {
+                            await adminFetch(`/api/v1/admin/posts/${p.id}/remove`, { method: "POST" });
+                            loadPipeline();
+                          }}>Remove</button>
+                          {" "}
+                          <button style={btnStyle()} onClick={async () => {
+                            await adminFetch("/api/v1/admin/pipeline/remod", {
+                              method: "POST",
+                              body: JSON.stringify({ post_id: p.id }),
+                            });
+                            loadPipeline();
+                          }}>Re-mod</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {pipelineData && pipelineData.pipeline.length === 0 && (
+              <div style={{ padding: "60px 0", textAlign: "center" }}>
+                <div style={{ fontSize: 48, marginBottom: 12 }}>✓</div>
+                <div style={{ color: "#22C55E", fontSize: 14, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>
+                  PIPELINE CLEAR
+                </div>
+                <div style={{ color: "#555", fontSize: 12 }}>
+                  All posts have been reviewed by the AI moderator.
+                </div>
+              </div>
+            )}
+
+            {/* Recent mod actions log */}
+            {pipelineData && pipelineData.recent_actions.length > 0 && (
+              <div>
+                <div style={{ color: "#888", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 16 }}>
+                  Recent AI Decisions (Last 50)
+                </div>
+                <table style={tableStyle}>
+                  <thead>
+                    <tr>
+                      <th style={thStyle}>Decision</th>
+                      <th style={thStyle}>Post</th>
+                      <th style={thStyle}>Reasoning</th>
+                      <th style={thStyle}>Rule</th>
+                      <th style={thStyle}>Time</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pipelineData.recent_actions.map(a => (
+                      <tr key={a.id}>
+                        <td style={{
+                          ...tdStyle,
+                          color: a.action === "approve" ? "#22C55E" : a.action === "remove" ? "#EF4444" : "#EAB308",
+                          fontSize: 10,
+                          letterSpacing: 1,
+                          textTransform: "uppercase",
+                          fontWeight: 700,
+                          whiteSpace: "nowrap",
+                        }}>
+                          {a.action === "approve" ? "✓ APPROVED" : a.action === "remove" ? "✗ REMOVED" : "⚠ " + a.action.toUpperCase()}
+                        </td>
+                        <td style={{ ...tdStyle, maxWidth: 220, fontSize: 11 }}>
+                          {(a.post_excerpt ?? "").slice(0, 80)}{(a.post_excerpt ?? "").length > 80 ? "…" : ""}
+                          {a.post_status && a.post_status !== "active" && (
+                            <span style={{ color: "#F66", fontSize: 9, marginLeft: 6 }}>[{a.post_status}]</span>
+                          )}
+                        </td>
+                        <td style={{ ...tdStyle, maxWidth: 300, color: "#888", fontSize: 11 }}>
+                          {(a.reasoning ?? "").replace(/^\[.*?\]\s*/, "").slice(0, 120)}{(a.reasoning ?? "").length > 120 ? "…" : ""}
+                        </td>
+                        <td style={{ ...tdStyle, color: "#666", fontSize: 10, whiteSpace: "nowrap" }}>
+                          {a.rule_cited || "—"}
+                        </td>
+                        <td style={{ ...tdStyle, whiteSpace: "nowrap" }}>{fmtShort(a.created_at)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </>
