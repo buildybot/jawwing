@@ -396,11 +396,18 @@ export default function AdminPage() {
               Dashboard
             </h1>
             <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 40 }}>
-              <StatCard label="Total Users" value={dashboard.stats.total_accounts} sub={`+${dashboard.stats.accounts_today} today`} />
-              <StatCard label="Active 24h" value={dashboard.stats.accounts_active_24h} />
-              <StatCard label="Posts Today" value={dashboard.stats.posts_today} sub={`${dashboard.stats.total_posts} total`} />
-              <StatCard label="Votes Today" value={dashboard.stats.votes_today} />
-              <StatCard label="Replies Today" value={dashboard.stats.replies_today} />
+              {dashboard?.stats ? (
+                <>
+                  <StatCard label="Total Users" value={dashboard.stats.total_accounts} sub={`+${dashboard.stats.accounts_today} today`} />
+                  <StatCard label="Active 24h" value={dashboard.stats.accounts_active_24h} />
+                  <StatCard label="Posts Today" value={dashboard.stats.posts_today} sub={`${dashboard.stats.total_posts} total`} />
+                  <StatCard label="Pending" value={dashboard.stats.pending_posts ?? 0} />
+                  <StatCard label="Votes Today" value={dashboard.stats.votes_today} />
+                  <StatCard label="Replies Today" value={dashboard.stats.replies_today} />
+                </>
+              ) : (
+                <div style={{ color: "#555", fontSize: 12 }}>LOADING STATS...</div>
+              )}
             </div>
 
             {activity.length > 0 && <ActivityChart data={activity} />}
@@ -419,7 +426,7 @@ export default function AdminPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {dashboard.trending_posts.map(p => (
+                  {dashboard?.trending_posts?.map(p => (
                     <tr key={p.id} onClick={() => { setTab("posts"); setSelectedPost(p as unknown as Post); }} style={{ cursor: "pointer" }}>
                       <td style={tdStyle}>{p.content}</td>
                       <td style={{ ...tdStyle, color: p.score > 0 ? "#6F6" : p.score < 0 ? "#F66" : "#CCC" }}>{p.score > 0 ? "+" : ""}{p.score}</td>
@@ -431,12 +438,12 @@ export default function AdminPage() {
               </table>
             </div>
 
-            {dashboard.trending_h3.length > 0 && (
+            {dashboard?.trending_h3?.length > 0 && (
               <div style={{ marginTop: 40 }}>
                 <div style={{ color: "#888", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 16 }}>
                   Hot Zones — Last 24h
                 </div>
-                {dashboard.trending_h3.map((h, i) => (
+                {dashboard?.trending_h3?.map((h, i) => (
                   <div key={i} style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 8 }}>
                     <div style={{ color: "#555", fontSize: 11, width: 200, fontFamily: "monospace" }}>{String(h.h3_index)}</div>
                     <div style={{ flex: 1, background: "#1F1F1F", height: 8 }}>
