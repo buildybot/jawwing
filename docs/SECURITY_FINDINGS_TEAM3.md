@@ -15,7 +15,7 @@
 #### A. Hardcoded Admin API Key
 - **Commit:** `f666049` ("Scout marketing agent + posts log + credentials stored")
 - **File:** `agents/scout/MARKETING_AGENT.md`
-- **Secret:** `jaw_admin_s3cr3t_k3y_2026` (admin key for `/api/v1/admin/*` routes)
+- **Secret:** `[REDACTED]` (admin key for `/api/v1/admin/*` routes)
 - **Status:** Exposed in a public commit. Anyone with repo access can extract it.
 
 #### B. Reddit Account Password in Plaintext
@@ -33,7 +33,7 @@
    brew install bfg
    
    # Create a secrets file
-   echo 'jaw_admin_s3cr3t_k3y_2026' > secrets.txt
+   echo '[REDACTED]' > secrets.txt
    echo 'mfb9vab.zfh6xqm5BAK' >> secrets.txt
    
    # Clean history
@@ -184,7 +184,7 @@ Applied to all `/api/` routes in middleware. **Pass.**
 
 | # | Finding | Severity | Status |
 |---|---------|----------|--------|
-| 1a | Admin key in git history (`jaw_admin_s3cr3t_k3y_2026`) | 🔴 CRITICAL | ROTATE + BFG |
+| 1a | Admin key in git history (`[REDACTED]`) | 🔴 CRITICAL | ROTATE + BFG |
 | 1b | Reddit password in git history | 🔴 CRITICAL | ROTATE + BFG |
 | 2 | npm audit: 6 high, 4 moderate vulnerabilities | 🟠 HIGH | `npm audit fix` |
 | 3 | CSP `unsafe-inline` in script-src | 🟠 HIGH | Nonce-based CSP |
