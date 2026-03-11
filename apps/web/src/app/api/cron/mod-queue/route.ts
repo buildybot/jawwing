@@ -20,7 +20,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const adminKey = req.headers.get("x-admin-key");
 
   // Allow cron secret OR admin key
-  if ((!cronSecret || authHeader !== `Bearer ${cronSecret}`) && adminKey !== process.env.ADMIN_API_KEY) {
+  if ((!cronSecret || authHeader !== `Bearer ${cronSecret}`) && (!adminKey || adminKey.trim() !== process.env.ADMIN_API_KEY?.trim())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

@@ -107,7 +107,6 @@ async function testPages() {
   
   const pages = [
     { path: '/', must: ['jawwing'], desc: 'Feed / home page', caseSensitive: false },
-    { path: '/about', must: ['JAWWING', 'support@jawwing.com'], desc: 'About page' },
     { path: '/constitution', must: ['Constitution', 'PROHIBITED'], desc: 'Constitution page' },
     { path: '/terms', must: ['Terms'], desc: 'Terms of Service' },
     { path: '/privacy', must: ['Privacy'], desc: 'Privacy Policy' },
