@@ -14,8 +14,8 @@ interface RequestLike {
  * Uses constant-time comparison to prevent timing attacks.
  */
 export function isAdmin(req: RequestLike): boolean {
-  const key = req.headers.get("x-admin-key") ?? "";
-  const expected = process.env.ADMIN_API_KEY ?? "";
+  const key = (req.headers.get("x-admin-key") ?? "").trim();
+  const expected = (process.env.ADMIN_API_KEY ?? "").trim();
   if (!expected || key.length !== expected.length) return false;
   return crypto.timingSafeEqual(Buffer.from(key), Buffer.from(expected));
 }
