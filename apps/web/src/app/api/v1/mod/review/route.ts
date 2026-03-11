@@ -75,7 +75,7 @@ async function handler(req: AuthenticatedRequest): Promise<NextResponse> {
     } else if (action === "approve") {
       await db.update(posts).set({ status: "active", mod_action_id: null }).where(eq(posts.id, post_id));
     } else if (action === "flag" || action === "warn") {
-      await db.update(posts).set({ status: "moderated", mod_action_id: actionId }).where(eq(posts.id, post_id));
+      await db.update(posts).set({ status: "flagged", mod_action_id: actionId }).where(eq(posts.id, post_id));
     }
 
     return NextResponse.json({ ok: true, id: actionId }, { status: 201 });

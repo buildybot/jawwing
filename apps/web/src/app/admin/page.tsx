@@ -580,7 +580,7 @@ export default function AdminPage() {
               >
                 <option value="">All Status</option>
                 <option value="active">Active</option>
-                <option value="moderated">Moderated</option>
+                <option value="flagged">Flagged</option>
                 <option value="removed">Removed</option>
               </select>
               <button style={btnStyle()} onClick={loadPosts}>Filter</button>

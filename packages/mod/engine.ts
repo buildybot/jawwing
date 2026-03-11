@@ -469,7 +469,7 @@ async function logAndUpdatePost(post: Post, decision: ModerationDecision): Promi
 
   try {
     const rawClient = getRawClient();
-    const statusMap: Record<string, string> = { remove: "removed", flag: "moderated", warn: "moderated", approve: "active" };
+    const statusMap: Record<string, string> = { remove: "removed", flag: "flagged", warn: "flagged", approve: "active" };
     const newStatus = statusMap[decision.action] ?? "active";
     if (actionId) {
       await rawClient.execute({ sql: `UPDATE posts SET status = ?, mod_action_id = ?, mod_confidence = ? WHERE id = ?`, args: [newStatus, actionId, decision.confidence, post.id] });

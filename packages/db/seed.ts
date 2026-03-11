@@ -456,7 +456,7 @@ async function seed() {
 
   // Apply status changes from mod actions
   await db.update(posts).set({ status: "removed" }).where(eq(posts.id, POST_DEFS[20].id));
-  await db.update(posts).set({ status: "moderated" }).where(eq(posts.id, POST_DEFS[8].id));
+  await db.update(posts).set({ status: "flagged" }).where(eq(posts.id, POST_DEFS[8].id));
 
   console.log("✅ Mod actions created (2 approvals, 1 flag, 1 warning, 1 removal)");
 

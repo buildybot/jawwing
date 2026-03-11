@@ -32,7 +32,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
                FROM posts WHERE 1=1`;
     const args: (string | number)[] = [];
 
-    if (status && ["active", "moderated", "removed", "pending", "expired", "mod_failed"].includes(status)) {
+    if (status && ["active", "flagged", "removed", "pending", "expired", "mod_failed"].includes(status)) {
       sql += " AND status = ?";
       args.push(status);
     }

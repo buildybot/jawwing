@@ -120,7 +120,7 @@ async function logSpamFlag(post: Post, hash: string, count: number): Promise<voi
 
   await db
     .update(posts)
-    .set({ status: "moderated" })
+    .set({ status: "flagged" })
     .where(eq(posts.id, post.id));
 }
 
@@ -140,7 +140,7 @@ async function logRateLimitFlag(post: Post, postCount: number): Promise<void> {
 
   await db
     .update(posts)
-    .set({ status: "moderated" })
+    .set({ status: "flagged" })
     .where(eq(posts.id, post.id));
 }
 

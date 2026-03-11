@@ -22,12 +22,12 @@ async function handler(req: AuthenticatedRequest): Promise<NextResponse> {
     const limit = Math.min(parseInt(searchParams.get("limit") ?? "20", 10), 100);
     const offset = parseInt(searchParams.get("offset") ?? "0", 10);
 
-    // Posts with status "moderated" (flagged for review) in the agent's territory.
+    // Posts with status "flagged" (flagged for review) in the agent's territory.
     // If agent has no territory assigned, return all flagged posts.
     let query = db
       .select()
       .from(posts)
-      .where(eq(posts.status, "moderated"))
+      .where(eq(posts.status, "flagged"))
       .limit(limit)
       .offset(offset);
 

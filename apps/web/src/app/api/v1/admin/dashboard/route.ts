@@ -32,7 +32,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       db.select({ count: sql<number>`count(*)` }).from(accounts).where(gte(accounts.last_seen_at, last24h)),
       db.select({ count: sql<number>`count(*)` }).from(posts).where(eq(posts.status, "active")),
       db.select({ count: sql<number>`count(*)` }).from(posts).where(eq(posts.status, "pending")),
-      db.select({ count: sql<number>`count(*)` }).from(posts).where(eq(posts.status, "moderated")),
+      db.select({ count: sql<number>`count(*)` }).from(posts).where(eq(posts.status, "flagged")),
       db.select({ count: sql<number>`count(*)` }).from(posts).where(eq(posts.status, "removed")),
       db.select({ count: sql<number>`count(*)` }).from(posts).where(eq(posts.status, "mod_failed" as "pending")),
       db.select({ count: sql<number>`count(*)` }).from(posts).where(gte(posts.created_at, todayStart)),
