@@ -75,7 +75,19 @@ interface ActivityPoint {
   replies: number;
 }
 
-type Tab = "dashboard" | "pipeline" | "users" | "posts" | "reports";
+type Tab = "dashboard" | "analytics" | "pipeline" | "users" | "posts" | "reports";
+
+interface AnalyticsData {
+  posts_by_metro: Array<{ metro: string; count: number }>;
+  content_mix: { images: number; links: number; videos: number; text_only: number };
+  engagement: { total_votes: number; total_replies: number; total_posts: number; avg_votes_per_post: number; avg_replies_per_post: number };
+  growth: {
+    posts_per_day: Array<{ day: string; count: number }>;
+    votes_per_day: Array<{ day: string; count: number }>;
+  };
+  unique_users: { unique_posters: number; unique_voters: number };
+  moderation: { approval_rate: number; avg_confidence: number; removed_count: number };
+}
 
 interface PipelinePost {
   id: string;
@@ -199,8 +211,12 @@ export default function AdminPage() {
   const [postStatus, setPostStatus] = useState("");
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
 
+  // Analytics
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
+
   // Pipeline
   const [pipelineData, setPipelineData] = useState<PipelineData | null>(null);
+  const [bulkLoading, setBulkLoading] = useState<string | null>(null);
 
   // Reports
   const [reports, setReports] = useState<Report[]>([]);
@@ -242,6 +258,12 @@ export default function AdminPage() {
       .then(d => setPosts(d.posts ?? []));
   }, [postSearch, postStatus]);
 
+  const loadAnalytics = useCallback(() => {
+    adminFetch("/api/v1/admin/analytics")
+      .then(r => r.json())
+      .then(d => setAnalyticsData(d));
+  }, []);
+
   const loadPipeline = useCallback(() => {
     adminFetch("/api/v1/admin/pipeline")
       .then(r => r.json())
@@ -257,11 +279,12 @@ export default function AdminPage() {
   useEffect(() => {
     if (authState !== "ok") return;
     if (tab === "dashboard") loadActivity();
+    if (tab === "analytics") loadAnalytics();
     if (tab === "pipeline") loadPipeline();
     if (tab === "users") loadUsers();
     if (tab === "posts") loadPosts();
     if (tab === "reports") loadReports();
-  }, [tab, authState, loadActivity, loadPipeline, loadUsers, loadPosts, loadReports]);
+  }, [tab, authState, loadActivity, loadAnalytics, loadPipeline, loadUsers, loadPosts, loadReports]);
 
   const banUser = async (userId: string, ban: boolean) => {
     await adminFetch(`/api/v1/admin/users/${userId}/ban`, { method: ban ? "POST" : "DELETE" });
@@ -391,7 +414,7 @@ export default function AdminPage() {
             ADMIN
           </div>
         </div>
-        {(["dashboard", "pipeline", "users", "posts", "reports"] as Tab[]).map(t => (
+        {(["dashboard", "analytics", "pipeline", "users", "posts", "reports"] as Tab[]).map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -513,6 +536,186 @@ export default function AdminPage() {
                 ))}
               </div>
             )}
+
+            {/* Quick Actions */}
+            <div style={{ marginTop: 48, borderTop: "1px solid #1F1F1F", paddingTop: 32 }}>
+              <div style={{ color: "#888", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 20 }}>
+                QUICK ACTIONS
+              </div>
+              <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-start" }}>
+                <div style={{ border: "1px solid #1F1F1F", padding: 20, background: "#0A0A0A", minWidth: 220 }}>
+                  <div style={{ color: "#888", fontSize: 10, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>
+                    Seeder
+                  </div>
+                  <div style={{ color: "#666", fontSize: 11, marginBottom: 16 }}>
+                    Inject synthetic seed posts into the pipeline.
+                  </div>
+                  <button
+                    style={btnStyle()}
+                    onClick={() => {
+                      if (window.confirm("Trigger seeder? This will queue synthetic posts for moderation.")) {
+                        adminFetch("/api/v1/admin/pipeline/seed", { method: "POST" })
+                          .then(r => r.json())
+                          .then(() => alert("Seeder triggered."))
+                          .catch(() => alert("Seeder endpoint not yet wired — UI only."));
+                      }
+                    }}
+                  >
+                    TRIGGER SEEDER
+                  </button>
+                </div>
+
+                {/* DB Stats */}
+                {dashboard?.stats && (
+                  <div style={{ border: "1px solid #1F1F1F", padding: 20, background: "#0A0A0A", flex: 1, minWidth: 280 }}>
+                    <div style={{ color: "#888", fontSize: 10, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>
+                      DB Stats
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+                        <span style={{ color: "#666" }}>Total Posts</span>
+                        <span style={{ color: "#FFF", fontWeight: 700 }}>{dashboard.stats.total_posts}</span>
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+                        <span style={{ color: "#666" }}>Active</span>
+                        <span style={{ color: "#6F6", fontWeight: 700 }}>{(dashboard.stats as unknown as Record<string, number>).active_posts ?? "—"}</span>
+                      </div>
+                      {dashboard?.moderation && (
+                        <>
+                          <div style={{ height: 1, background: "#1F1F1F", margin: "4px 0" }} />
+                          {[
+                            ["Pending", dashboard.moderation.awaiting_moderation, "#EAB308"],
+                            ["Flagged", dashboard.moderation.flagged_for_review, "#F97316"],
+                            ["Removed", dashboard.moderation.removed, "#EF4444"],
+                            ["Mod Failed", dashboard.moderation.mod_failed, "#EF4444"],
+                          ].map(([label, val, color]) => (
+                            <div key={label as string} style={{ display: "flex", justifyContent: "space-between", fontSize: 11 }}>
+                              <span style={{ color: "#555" }}>{label as string}</span>
+                              <span style={{ color: color as string }}>{val as number}</span>
+                            </div>
+                          ))}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ANALYTICS TAB */}
+        {tab === "analytics" && (
+          <>
+            <h1 style={{ color: "#FFF", fontSize: 18, fontWeight: 700, letterSpacing: 3, textTransform: "uppercase", margin: "0 0 32px" }}>
+              Analytics
+            </h1>
+
+            {!analyticsData && (
+              <div style={{ color: "#555", fontSize: 12 }}>LOADING ANALYTICS...</div>
+            )}
+
+            {analyticsData && (
+              <>
+                {/* Posts by Metro */}
+                <div style={{ marginBottom: 40 }}>
+                  <div style={{ color: "#888", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 16 }}>
+                    POSTS BY METRO
+                  </div>
+                  {analyticsData.posts_by_metro.map((m, i) => {
+                    const max = analyticsData.posts_by_metro[0]?.count ?? 1;
+                    return (
+                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 8 }}>
+                        <div style={{ color: "#888", fontSize: 11, width: 140, fontFamily: "monospace", flexShrink: 0 }}>{m.metro}</div>
+                        <div style={{ flex: 1, background: "#1F1F1F", height: 8 }}>
+                          <div style={{ width: `${Math.round((m.count / max) * 100)}%`, height: "100%", background: "#FFF" }} />
+                        </div>
+                        <div style={{ color: "#FFF", fontSize: 12, width: 36, textAlign: "right", flexShrink: 0 }}>{m.count}</div>
+                      </div>
+                    );
+                  })}
+                  {analyticsData.posts_by_metro.length === 0 && (
+                    <div style={{ color: "#444", fontSize: 12 }}>No geo data yet.</div>
+                  )}
+                </div>
+
+                {/* Content Mix */}
+                <div style={{ marginBottom: 40 }}>
+                  <div style={{ color: "#888", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 16 }}>
+                    CONTENT MIX
+                  </div>
+                  <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+                    <StatCard label="Images" value={analyticsData.content_mix.images} />
+                    <StatCard label="Links" value={analyticsData.content_mix.links} />
+                    <StatCard label="Videos" value={analyticsData.content_mix.videos} />
+                    <StatCard label="Text Only" value={analyticsData.content_mix.text_only} />
+                  </div>
+                </div>
+
+                {/* Engagement */}
+                <div style={{ marginBottom: 40 }}>
+                  <div style={{ color: "#888", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 16 }}>
+                    ENGAGEMENT
+                  </div>
+                  <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+                    <StatCard label="Total Votes" value={analyticsData.engagement.total_votes} />
+                    <StatCard label="Total Replies" value={analyticsData.engagement.total_replies} />
+                    <StatCard label="Avg Votes / Post" value={analyticsData.engagement.avg_votes_per_post} />
+                    <StatCard label="Avg Replies / Post" value={analyticsData.engagement.avg_replies_per_post} />
+                  </div>
+                </div>
+
+                {/* Growth — Posts/day bar chart */}
+                <div style={{ marginBottom: 40 }}>
+                  <div style={{ color: "#888", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 16 }}>
+                    GROWTH — POSTS / DAY (LAST 7D)
+                  </div>
+                  {analyticsData.growth.posts_per_day.length > 0 ? (() => {
+                    const maxVal = Math.max(...analyticsData.growth.posts_per_day.map(d => d.count), 1);
+                    return (
+                      <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 80, border: "1px solid #1F1F1F", padding: "8px 8px 0" }}>
+                        {analyticsData.growth.posts_per_day.map((d, i) => {
+                          const h = Math.round((d.count / maxVal) * 64);
+                          const label = d.day.slice(5); // MM-DD
+                          return (
+                            <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 0 }} title={`${d.day}: ${d.count} posts`}>
+                              <div style={{ color: "#555", fontSize: 8, marginBottom: 2 }}>{d.count}</div>
+                              <div style={{ width: "100%", background: "#FFF", height: h || 1, opacity: 0.8 }} />
+                              <div style={{ color: "#444", fontSize: 8, marginTop: 4 }}>{label}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })() : (
+                    <div style={{ color: "#444", fontSize: 12 }}>No growth data yet.</div>
+                  )}
+                </div>
+
+                {/* Unique Users */}
+                <div style={{ marginBottom: 40 }}>
+                  <div style={{ color: "#888", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 16 }}>
+                    UNIQUE USERS
+                  </div>
+                  <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+                    <StatCard label="Unique Posters" value={analyticsData.unique_users.unique_posters} sub="By IP hash" />
+                    <StatCard label="Unique Voters" value={analyticsData.unique_users.unique_voters} sub="By voter hash" />
+                  </div>
+                </div>
+
+                {/* Moderation */}
+                <div style={{ marginBottom: 40 }}>
+                  <div style={{ color: "#888", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 16 }}>
+                    MODERATION
+                  </div>
+                  <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+                    <StatCard label="Approval Rate" value={`${analyticsData.moderation.approval_rate}%`} />
+                    <StatCard label="Avg Confidence" value={`${analyticsData.moderation.avg_confidence}%`} />
+                    <StatCard label="Posts Removed" value={analyticsData.moderation.removed_count} />
+                  </div>
+                </div>
+              </>
+            )}
           </>
         )}
 
@@ -522,6 +725,64 @@ export default function AdminPage() {
             <h1 style={{ color: "#FFF", fontSize: 18, fontWeight: 700, letterSpacing: 3, textTransform: "uppercase", margin: "0 0 24px" }}>
               AI Moderation Pipeline
             </h1>
+
+            {/* Bulk Actions */}
+            <div style={{ display: "flex", gap: 12, marginBottom: 24, flexWrap: "wrap" }}>
+              <button
+                style={{
+                  ...btnStyle("success"),
+                  padding: "8px 16px",
+                  fontSize: 11,
+                  letterSpacing: 1.5,
+                  opacity: bulkLoading ? 0.6 : 1,
+                }}
+                disabled={!!bulkLoading}
+                onClick={async () => {
+                  if (!window.confirm("Approve ALL flagged posts and set them to active?")) return;
+                  setBulkLoading("approve_flagged");
+                  try {
+                    const r = await adminFetch("/api/v1/admin/pipeline/bulk", {
+                      method: "POST",
+                      body: JSON.stringify({ action: "approve_flagged" }),
+                    });
+                    const d = await r.json();
+                    alert(`Done. ${d.rows_affected ?? 0} posts approved.`);
+                    loadPipeline();
+                  } finally {
+                    setBulkLoading(null);
+                  }
+                }}
+              >
+                {bulkLoading === "approve_flagged" ? "APPROVING..." : "✓ APPROVE ALL FLAGGED"}
+              </button>
+              <button
+                style={{
+                  ...btnStyle("neutral"),
+                  padding: "8px 16px",
+                  fontSize: 11,
+                  letterSpacing: 1.5,
+                  opacity: bulkLoading ? 0.6 : 1,
+                }}
+                disabled={!!bulkLoading}
+                onClick={async () => {
+                  if (!window.confirm("Re-queue ALL mod_failed posts for re-moderation?")) return;
+                  setBulkLoading("remod_failed");
+                  try {
+                    const r = await adminFetch("/api/v1/admin/pipeline/bulk", {
+                      method: "POST",
+                      body: JSON.stringify({ action: "remod_failed" }),
+                    });
+                    const d = await r.json();
+                    alert(`Done. ${d.rows_affected ?? 0} posts re-queued.`);
+                    loadPipeline();
+                  } finally {
+                    setBulkLoading(null);
+                  }
+                }}
+              >
+                {bulkLoading === "remod_failed" ? "RE-QUEUING..." : "↺ RE-MOD ALL FAILED"}
+              </button>
+            </div>
 
             {/* Pipeline stats */}
             {pipelineData && (
