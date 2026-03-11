@@ -1,0 +1,5 @@
+output/
+tmp/
+data/performance.jsonl
+data/next-batch.json
+data/video-manifest.json
