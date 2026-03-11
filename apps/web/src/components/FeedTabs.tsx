@@ -16,8 +16,11 @@ const TABS: { id: SortTab; label: string }[] = [
 export default function FeedTabs({ active, onChange }: FeedTabsProps) {
   return (
     <div
-      style={{ borderBottom: "1px solid #1F1F1F" }}
-      className="flex"
+      style={{
+        display: "flex",
+        gap: "0",
+        borderBottom: "1px solid #1F1F1F",
+      }}
     >
       {TABS.map((tab) => (
         <button
@@ -25,19 +28,17 @@ export default function FeedTabs({ active, onChange }: FeedTabsProps) {
           onClick={() => onChange(tab.id)}
           style={{
             fontFamily: "var(--font-mono), monospace",
-            letterSpacing: "0.06em",
-            fontSize: "0.8125rem",
-            fontWeight: 500,
-            color: active === tab.id ? "#FFFFFF" : "#777777",
-            borderBottom: active === tab.id ? "2px solid #FFFFFF" : "2px solid transparent",
-            marginBottom: "-1px",
-            paddingBottom: "10px",
-            paddingTop: "10px",
-            paddingLeft: "16px",
-            paddingRight: "16px",
+            letterSpacing: "0.08em",
+            fontSize: "0.5625rem",
+            fontWeight: active === tab.id ? 700 : 400,
+            color: active === tab.id ? "#FFFFFF" : "#555555",
             background: "transparent",
+            border: "none",
+            borderBottom: active === tab.id ? "1px solid #FFFFFF" : "1px solid transparent",
+            padding: "8px 16px",
             cursor: "pointer",
             transition: "color 150ms",
+            marginBottom: "-1px",
           }}
         >
           {tab.label}

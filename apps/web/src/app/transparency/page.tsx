@@ -87,7 +87,7 @@ export default function TransparencyPage() {
             {[
               { label: "TOTAL REVIEWS", value: stats.total || 0, color: "#FFFFFF" },
               { label: "APPROVED", value: stats.approve || 0, color: "#22C55E" },
-              { label: "REMOVED", value: stats.remove || 0, color: "#FF3333" },
+              { label: "FLAGGED", value: (stats.flag || 0) + (stats.warn || 0), color: "#EAB308" },
               { label: "APPROVAL RATE", value: `${approvalRate}%`, color: "#FFFFFF" },
             ].map((s) => (
               <div key={s.label} style={{ background: "#000", padding: "20px", textAlign: "center" }}>
@@ -125,7 +125,6 @@ export default function TransparencyPage() {
           {[
             { key: null, label: "ALL" },
             { key: "approve", label: "APPROVED" },
-            { key: "remove", label: "REMOVED" },
             { key: "flag", label: "FLAGGED" },
           ].map((tab) => (
             <button

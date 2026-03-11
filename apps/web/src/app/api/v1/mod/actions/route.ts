@@ -40,6 +40,9 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     const conditions: string[] = [];
     const args: (string | number)[] = [];
 
+    // Never expose removed posts publicly — defeats the purpose of moderation
+    conditions.push("ma.action != ?"); args.push("remove");
+
     if (post_id) { conditions.push("ma.post_id = ?"); args.push(post_id); }
     if (agent_id) { conditions.push("ma.agent_id = ?"); args.push(agent_id); }
     if (actionFilter) { conditions.push("ma.action = ?"); args.push(actionFilter); }
