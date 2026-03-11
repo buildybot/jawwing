@@ -21,6 +21,7 @@ export interface Post {
   expires_at?: number;
   territoryName?: string;
   user_id?: string;
+  author_id?: string;
   metro?: string | null;
   image_url?: string | null;
   video_url?: string | null;
@@ -673,8 +674,9 @@ function PostCard({ post, variant = "card", feedScope }: PostCardProps) {
 
   const handleBlock = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!post.user_id) return;
-    blockUser(post.user_id);
+    const blockId = post.author_id || post.user_id;
+    if (!blockId) return;
+    blockUser(blockId);
     toast.show("BLOCKED", 2000);
   };
 
@@ -930,7 +932,7 @@ function PostCard({ post, variant = "card", feedScope }: PostCardProps) {
           </div>
 
           {/* Block */}
-          {post.user_id && (
+          {(post.author_id || post.user_id) && (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
               <button
                 onClick={handleBlock}
@@ -1091,7 +1093,7 @@ function PostCard({ post, variant = "card", feedScope }: PostCardProps) {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "6px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           <ReportButton postId={post.id} size="sm" />
-          {post.user_id && (
+          {(post.author_id || post.user_id) && (
             <button
               onClick={handleBlock}
               title="Block this user"

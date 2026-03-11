@@ -97,13 +97,19 @@ function extractVideoMeta(content: string): VideoMeta | null {
 // ─── Privacy: strip exact coordinates from responses ──────────────────────────
 // Round to 2 decimal places (~1.1km) so client can still compute approximate
 // distance but nobody can pinpoint the poster's exact location.
-function sanitizePostForResponse<T extends { lat: number; lng: number; ip_hash?: string | null; user_id?: string | null }>(post: T): T {
+function sanitizePostForResponse<T extends { lat: number; lng: number; ip_hash?: string | null; user_id?: string | null }>(post: T): T & { author_id?: string } {
   return {
     ...post,
     lat: Math.round(post.lat * 100) / 100,
     lng: Math.round(post.lng * 100) / 100,
     ip_hash: undefined,  // never expose IP hash to clients
     user_id: undefined,  // never expose user_id to clients
+    // Expose a truncated, non-reversible author identifier for blocking
+    author_id: (post as Record<string, unknown>).ip_hash
+      ? String((post as Record<string, unknown>).ip_hash).slice(0, 12)
+      : (post as Record<string, unknown>).user_id
+        ? String((post as Record<string, unknown>).user_id).slice(0, 12)
+        : undefined,
   };
 }
 
