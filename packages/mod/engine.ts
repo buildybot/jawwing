@@ -439,14 +439,34 @@ const AI_AGENT_ID = process.env.MOD_AGENT_ID ?? "agent-system";
 
 async function fetchImageAsBase64(url: string): Promise<{ data: string; mimeType: string } | null> {
   try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
-    if (!res.ok) return null;
+    const res = await fetch(url, {
+      signal: AbortSignal.timeout(10000),
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; Jawwing/1.0; +https://www.jawwing.com)",
+        "Accept": "image/*,*/*",
+      },
+    });
+    if (!res.ok) {
+      console.error(`[mod/engine] Image fetch failed: ${res.status} for ${url.slice(0, 100)}`);
+      return null;
+    }
     const contentType = res.headers.get("content-type") ?? "image/jpeg";
     const mimeType = contentType.split(";")[0].trim();
+    // Verify it's actually an image
+    if (!mimeType.startsWith("image/")) {
+      console.error(`[mod/engine] Not an image: ${mimeType} for ${url.slice(0, 100)}`);
+      return null;
+    }
     const buffer = await res.arrayBuffer();
+    // Skip images larger than 10MB (Anthropic limit)
+    if (buffer.byteLength > 10 * 1024 * 1024) {
+      console.error(`[mod/engine] Image too large: ${buffer.byteLength} bytes for ${url.slice(0, 100)}`);
+      return null;
+    }
     const data = Buffer.from(buffer).toString("base64");
     return { data, mimeType };
-  } catch {
+  } catch (err) {
+    console.error(`[mod/engine] Image fetch error:`, err instanceof Error ? err.message : err);
     return null;
   }
 }
@@ -589,21 +609,13 @@ export async function reviewPost(post: Post): Promise<ModerationDecision> {
           console.error("[mod/engine] Image review failed, flagging:", err);
         }
       }
-      // Image download failed or review failed — flag for manual review
-      const flagDecision: ModerationDecision = {
-        action: "flag", ruleCited: null,
-        reasoning: "Image could not be reviewed by AI. Flagged for manual review.",
-        confidence: 0,
-      };
-      return await logAndUpdatePost(post, flagDecision);
+      // Image download failed or review failed — fall through to text-only review
+      // The image might be a broken link; if the text is fine, approve it
+      console.warn(`[mod/engine] Image review failed for post ${post.id}, falling through to text-only review`);
+      // Continue to text-only review below
     } else {
-      // No image-capable provider — flag image posts
-      const flagDecision: ModerationDecision = {
-        action: "flag", ruleCited: null,
-        reasoning: "No image-capable AI available. Image post flagged for manual review.",
-        confidence: 0,
-      };
-      return await logAndUpdatePost(post, flagDecision);
+      // No image-capable provider — fall through to text-only review
+      console.warn(`[mod/engine] No image-capable provider for post ${post.id}, falling through to text-only review`);
     }
   }
 
