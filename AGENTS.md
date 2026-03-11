@@ -81,7 +81,7 @@ All secrets live in Vercel project settings. NEVER hardcode.
 | `PHONE_HASH_SALT` | Legacy (unused) |
 | `RESEND_API_KEY` | Email delivery |
 | `BLOB_READ_WRITE_TOKEN` | Vercel Blob image storage |
-| `ADMIN_API_KEY` | `***REDACTED_ADMIN_KEY***` — admin API access |
+| `ADMIN_API_KEY` | `jaw_admin_s3cr3t_k3y_2026` — admin API access |
 | `NEXT_PUBLIC_APP_URL` | `https://www.jawwing.com` |
 | `NEXT_PUBLIC_APP_NAME` | `Jawwing` |
 
@@ -207,7 +207,7 @@ Quick rules:
 
 - **Only admin:** `benl1291@gmail.com` (`is_admin=1` in accounts table)
 - **Admin dashboard:** `/admin` (JWT-gated, checks `is_admin`)
-- **Admin API:** `x-admin-key: ***REDACTED_ADMIN_KEY***` header bypasses rate limits + auth
+- **Admin API:** `x-admin-key: jaw_admin_s3cr3t_k3y_2026` header bypasses rate limits + auth
 
 ## Feed Behavior
 

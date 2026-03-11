@@ -55,7 +55,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // httpOnly JWT for security (web)
     response.headers.append("Set-Cookie", cookieHeader);
     // Non-httpOnly flag so client JS can detect login state
-    response.headers.append("Set-Cookie", `jw_account_ok=1; Path=/; SameSite=Lax; Max-Age=${60 * 60 * 24 * 365}`);
+    const secureFlag = process.env.NODE_ENV === "production" ? "; Secure" : "";
+    response.headers.append("Set-Cookie", `jw_account_ok=1; Path=/; SameSite=Lax; Max-Age=${60 * 60 * 24 * 365}${secureFlag}`);
     return response;
   } catch (err) {
     console.error("[POST /api/auth/verify]", err);

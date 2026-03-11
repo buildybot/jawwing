@@ -32,9 +32,14 @@ export function hashEmailForAccount(email: string): string {
 // ─── Email encryption (AES-256-GCM) ──────────────────────────────────────────
 
 function getEncryptionKey(): Buffer {
+  const encKey = process.env.EMAIL_ENCRYPTION_KEY;
+  if (encKey) {
+    return crypto.createHash("sha256").update(encKey).digest();
+  }
+  // Backward compatibility: fall back to JWT_SECRET with a warning
   const secret = process.env.JWT_SECRET;
-  if (!secret) throw new Error("JWT_SECRET env var is required");
-  // Derive a 32-byte key from the JWT secret
+  if (!secret) throw new Error("EMAIL_ENCRYPTION_KEY (or JWT_SECRET) env var is required");
+  console.warn("[security] EMAIL_ENCRYPTION_KEY is not set — falling back to JWT_SECRET for email encryption. Set EMAIL_ENCRYPTION_KEY to a separate value.");
   return crypto.createHash("sha256").update(secret).digest();
 }
 
@@ -86,12 +91,14 @@ export function verifyAccountToken(token: string): AccountPayload | null {
   }
 }
 
+const SECURE_FLAG = process.env.NODE_ENV === "production" ? "; Secure" : "";
+
 export function buildAccountCookieHeader(token: string): string {
-  return `${ACCOUNT_COOKIE}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${COOKIE_MAX_AGE}`;
+  return `${ACCOUNT_COOKIE}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${COOKIE_MAX_AGE}${SECURE_FLAG}`;
 }
 
 export function buildAccountCookieClearHeader(): string {
-  return `${ACCOUNT_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`;
+  return `${ACCOUNT_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${SECURE_FLAG}`;
 }
 
 // ─── Find or create account ───────────────────────────────────────────────────

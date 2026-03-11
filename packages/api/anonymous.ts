@@ -35,8 +35,10 @@ export function getAnonymousId(req: NextRequest): string {
  * Build the Set-Cookie header value for the anonymous session cookie.
  * Call this and add to your NextResponse headers when a new ID is generated.
  */
+const SECURE_FLAG = process.env.NODE_ENV === "production" ? "; Secure" : "";
+
 export function buildSessionCookieHeader(id: string): string {
-  return `${SESSION_COOKIE}=${id}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${COOKIE_MAX_AGE}`;
+  return `${SESSION_COOKIE}=${id}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${COOKIE_MAX_AGE}${SECURE_FLAG}`;
 }
 
 /**
@@ -59,7 +61,13 @@ export function getIpHash(req: NextRequest): string {
   const forwarded = req.headers.get("x-forwarded-for");
   const ip = forwarded ? forwarded.split(",")[0].trim() : (req.ip ?? "");
   if (!ip) return "unknown";
-  return crypto.createHash("sha256").update(ip).digest("hex");
+  // Salt prevents rainbow-table attacks against the full IPv4 space (~137GB unsalted).
+  // Uses IP_HASH_SALT if set, falls back to PHONE_HASH_SALT, then errors loudly.
+  const salt = process.env.IP_HASH_SALT ?? process.env.PHONE_HASH_SALT;
+  if (!salt) {
+    console.error("[getIpHash] IP_HASH_SALT / PHONE_HASH_SALT env var is not set — IP hashing is insecure!");
+  }
+  return crypto.createHash("sha256").update((salt ?? "") + ip).digest("hex");
 }
 
 // ─── getFingerprint ───────────────────────────────────────────────────────────

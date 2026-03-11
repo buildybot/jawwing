@@ -1,6 +1,6 @@
 // seed-images.mjs — upload city images to Vercel Blob and create posts
 
-const ADMIN_KEY = "***REDACTED_ADMIN_KEY***";
+const ADMIN_KEY = "jaw_admin_s3cr3t_k3y_2026";
 const BASE = "https://www.jawwing.com/api/v1/admin";
 
 const cities = [

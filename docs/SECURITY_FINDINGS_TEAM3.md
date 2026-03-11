@@ -15,13 +15,13 @@
 #### A. Hardcoded Admin API Key
 - **Commit:** `f666049` ("Scout marketing agent + posts log + credentials stored")
 - **File:** `agents/scout/MARKETING_AGENT.md`
-- **Secret:** `***REDACTED_ADMIN_KEY***` (admin key for `/api/v1/admin/*` routes)
+- **Secret:** `jaw_admin_s3cr3t_k3y_2026` (admin key for `/api/v1/admin/*` routes)
 - **Status:** Exposed in a public commit. Anyone with repo access can extract it.
 
 #### B. Reddit Account Password in Plaintext
 - **Commit:** `f666049`
 - **File:** `agents/scout/MARKETING_AGENT.md`
-- **Secret:** `***REDACTED_PASSWORD***` (Reddit u/jawwing password)
+- **Secret:** `mfb9vab.zfh6xqm5BAK` (Reddit u/jawwing password)
 - **Status:** Exposed in public git history.
 
 **Immediate actions required:**
@@ -33,8 +33,8 @@
    brew install bfg
    
    # Create a secrets file
-   echo '***REDACTED_ADMIN_KEY***' > secrets.txt
-   echo '***REDACTED_PASSWORD***' >> secrets.txt
+   echo 'jaw_admin_s3cr3t_k3y_2026' > secrets.txt
+   echo 'mfb9vab.zfh6xqm5BAK' >> secrets.txt
    
    # Clean history
    bfg --replace-text secrets.txt jawwing.git
@@ -184,7 +184,7 @@ Applied to all `/api/` routes in middleware. **Pass.**
 
 | # | Finding | Severity | Status |
 |---|---------|----------|--------|
-| 1a | Admin key in git history (`***REDACTED_ADMIN_KEY***`) | 🔴 CRITICAL | ROTATE + BFG |
+| 1a | Admin key in git history (`jaw_admin_s3cr3t_k3y_2026`) | 🔴 CRITICAL | ROTATE + BFG |
 | 1b | Reddit password in git history | 🔴 CRITICAL | ROTATE + BFG |
 | 2 | npm audit: 6 high, 4 moderate vulnerabilities | 🟠 HIGH | `npm audit fix` |
 | 3 | CSP `unsafe-inline` in script-src | 🟠 HIGH | Nonce-based CSP |
