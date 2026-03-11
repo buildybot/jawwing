@@ -1,24 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, posts } from "@jawwing/db";
 import { eq } from "drizzle-orm";
-
-// ─── Auth helper ──────────────────────────────────────────────────────────────
-
-function requireAdminKey(req: NextRequest): NextResponse | null {
-  const key = req.headers.get("x-admin-key");
-  if (!process.env.ADMIN_API_KEY || key !== process.env.ADMIN_API_KEY?.trim()) {
-    return NextResponse.json({ error: "Unauthorized", code: "UNAUTHORIZED" }, { status: 401 });
-  }
-  return null;
-}
+import { isAdmin } from "@jawwing/api/admin";
 
 // ─── POST /api/v1/admin/votes ─────────────────────────────────────────────────
 // Body: { "post_id": "...", "score": 5 }
 // Directly sets the score on a post (bypasses normal vote logic).
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
-  const authErr = requireAdminKey(req);
-  if (authErr) return authErr;
+  if (!isAdmin(req)) {
+    return NextResponse.json({ error: "Unauthorized", code: "UNAUTHORIZED" }, { status: 401 });
+  }
 
   try {
     let body: { post_id: string; score: number };

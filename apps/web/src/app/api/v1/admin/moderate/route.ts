@@ -2,24 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, posts } from "@jawwing/db";
 import { isNull, eq } from "drizzle-orm";
 import { reviewPost } from "@jawwing/mod/engine";
-
-// ─── Auth helper ──────────────────────────────────────────────────────────────
-
-function requireAdminKey(req: NextRequest): NextResponse | null {
-  const key = req.headers.get("x-admin-key");
-  if (!process.env.ADMIN_API_KEY || key !== process.env.ADMIN_API_KEY?.trim()) {
-    return NextResponse.json({ error: "Unauthorized", code: "UNAUTHORIZED" }, { status: 401 });
-  }
-  return null;
-}
+import { isAdmin } from "@jawwing/api/admin";
 
 // ─── POST /api/v1/admin/moderate ──────────────────────────────────────────────
 // Body: { "post_id": "..." } — moderate a single post
 // Body: { "all": true }      — moderate all posts where mod_confidence IS NULL
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
-  const authErr = requireAdminKey(req);
-  if (authErr) return authErr;
+  if (!isAdmin(req)) {
+    return NextResponse.json({ error: "Unauthorized", code: "UNAUTHORIZED" }, { status: 401 });
+  }
 
   try {
     let body: { post_id?: string; all?: boolean };

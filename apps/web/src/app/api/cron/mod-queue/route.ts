@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@libsql/client";
 import { reviewPost } from "@jawwing/mod/engine";
 import type { Post } from "@jawwing/db";
+import { isAdmin } from "@jawwing/api/admin";
 
 /**
  * GET /api/cron/mod-queue
@@ -19,10 +20,10 @@ export const maxDuration = 60;
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const cronSecret = process.env.CRON_SECRET;
   const authHeader = req.headers.get("Authorization");
-  const adminKey = req.headers.get("x-admin-key");
 
-  // Allow cron secret OR admin key
-  if ((!cronSecret || authHeader !== `Bearer ${cronSecret}`) && (!adminKey || adminKey.trim() !== process.env.ADMIN_API_KEY?.trim())) {
+  // Allow cron secret OR admin key (timing-safe)
+  const validCron = cronSecret && authHeader === `Bearer ${cronSecret}`;
+  if (!validCron && !isAdmin(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

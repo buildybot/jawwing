@@ -16,6 +16,7 @@ import {
 } from "@jawwing/api/anonymous";
 import { getAccountFromToken } from "@jawwing/api/accounts";
 import { isBanned } from "@jawwing/api/bans";
+import { isAdmin } from "@jawwing/api/admin";
 import { moderatePost } from "@jawwing/mod/automod";
 import { CONSTITUTION_RULES, getStrikeCooldown } from "@jawwing/mod/engine";
 
@@ -378,8 +379,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
 
     // Admin key bypass: skip rate limiting if valid x-admin-key header is present
-    const adminKey = req.headers.get("x-admin-key");
-    const isAdminRequest = adminKey && process.env.ADMIN_API_KEY && adminKey === process.env.ADMIN_API_KEY;
+    const isAdminRequest = isAdmin(req);
 
     if (!isAdminRequest) {
       // Rate limit: 10 posts/hour per IP hash

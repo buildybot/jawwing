@@ -1,9 +1,11 @@
+export const runtime = "nodejs";
+export const maxDuration = 60;
+
 import { NextRequest, NextResponse } from "next/server";
 import { db, posts, nanoid } from "@jawwing/db";
 import { eq } from "drizzle-orm";
 import { createClient } from "@libsql/client";
 import { latLngToH3 } from "@jawwing/api/geo";
-import crypto from "crypto";
 import { isAdmin } from "@jawwing/api/admin";
 
 function getClient() {
@@ -61,17 +63,10 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
 // ─── POST /api/v1/admin/posts ─────────────────────────────────────────────────
 
-function requireAdminKey(req: NextRequest): NextResponse | null {
-  const key = req.headers.get("x-admin-key");
-  if (!process.env.ADMIN_API_KEY || key !== process.env.ADMIN_API_KEY?.trim()) {
+export async function POST(req: NextRequest): Promise<NextResponse> {
+  if (!isAdmin(req)) {
     return NextResponse.json({ error: "Unauthorized", code: "UNAUTHORIZED" }, { status: 401 });
   }
-  return null;
-}
-
-export async function POST(req: NextRequest): Promise<NextResponse> {
-  const authErr = requireAdminKey(req);
-  if (authErr) return authErr;
 
   try {
     const body = await req.json();
@@ -120,14 +115,34 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       score: score ?? 0,
       reply_count: 0,
       created_at, expires_at,
-      status: "active",
+      status: "pending",
       image_url: image_url ?? null,
       image_width: image_width ?? null,
       image_height: image_height ?? null,
       video_url, video_thumbnail,
     }).returning();
 
-    return NextResponse.json({ post: created }, { status: 201 });
+    // Run through AI moderation pipeline (same as user posts)
+    let modResult: { action?: string; confidence?: number; reasoning?: string } = {};
+    try {
+      const { reviewPost } = await import("@jawwing/mod/engine");
+      const decision = await reviewPost({
+        postId: id,
+        content: sanitized,
+        imageUrl: image_url ?? undefined,
+      });
+      const statusMap: Record<string, string> = { approve: "active", remove: "removed", flag: "flagged", warn: "flagged" };
+      const newStatus = statusMap[decision.action] ?? "active";
+      await db.update(posts).set({ status: newStatus, mod_confidence: decision.confidence }).where(eq(posts.id, id));
+      modResult = { action: decision.action, confidence: decision.confidence, reasoning: decision.reasoning };
+    } catch (modErr) {
+      // Mod failure: auto-approve to avoid stuck posts, but flag low confidence
+      console.error("[admin/posts] moderation failed, auto-approving:", modErr);
+      await db.update(posts).set({ status: "active", mod_confidence: 0 }).where(eq(posts.id, id));
+      modResult = { action: "approve", confidence: 0, reasoning: "Moderation failed, auto-approved" };
+    }
+
+    return NextResponse.json({ post: { ...created, status: modResult.action === "approve" ? "active" : created.status }, moderation: modResult }, { status: 201 });
   } catch (err) {
     console.error("[POST /api/v1/admin/posts]", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
