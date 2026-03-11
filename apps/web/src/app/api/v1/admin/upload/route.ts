@@ -1,16 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { put } from "@vercel/blob";
 import { nanoid } from "@jawwing/db";
-
-// ─── Auth helper ──────────────────────────────────────────────────────────────
-
-function requireAdminKey(req: NextRequest): NextResponse | null {
-  const key = req.headers.get("x-admin-key");
-  if (!process.env.ADMIN_API_KEY || key !== process.env.ADMIN_API_KEY?.trim()) {
-    return NextResponse.json({ error: "Unauthorized", code: "UNAUTHORIZED" }, { status: 401 });
-  }
-  return null;
-}
+import { validateUrl } from "@/lib/ssrf-guard";
+import { isAdmin } from "@jawwing/api/admin";
 
 // ─── POST /api/v1/admin/upload ────────────────────────────────────────────────
 // Body: { "url": "https://...", "filename": "image.jpg" }
@@ -18,8 +10,9 @@ function requireAdminKey(req: NextRequest): NextResponse | null {
 // Returns the blob URL for use in seeded posts.
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
-  const authErr = requireAdminKey(req);
-  if (authErr) return authErr;
+  if (!isAdmin(req)) {
+    return NextResponse.json({ error: "Unauthorized", code: "UNAUTHORIZED" }, { status: 401 });
+  }
 
   try {
     let body: { url: string; filename?: string };
@@ -34,6 +27,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: "url is required", code: "VALIDATION_ERROR" }, { status: 400 });
     }
 
+    // SSRF protection: validate scheme and resolve DNS before fetching
+    const safeUrl = await validateUrl(url);
+    if (!safeUrl) {
+      return NextResponse.json({ error: "Invalid URL", code: "VALIDATION_ERROR" }, { status: 400 });
+    }
+
     if (!process.env.BLOB_READ_WRITE_TOKEN) {
       return NextResponse.json(
         { error: "BLOB_READ_WRITE_TOKEN not configured", code: "SERVICE_UNAVAILABLE" },
@@ -41,10 +40,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // Fetch the image from the source URL
+    // Fetch the image from the validated source URL
     let fetchRes: Response;
     try {
-      fetchRes = await fetch(url);
+      fetchRes = await fetch(safeUrl, { signal: AbortSignal.timeout(5000) });
     } catch (e) {
       return NextResponse.json({ error: `Failed to fetch URL: ${e}`, code: "FETCH_ERROR" }, { status: 400 });
     }
