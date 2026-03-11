@@ -100,7 +100,7 @@ export const posts = sqliteTable(
     reply_count: integer("reply_count").notNull().default(0),
     created_at: integer("created_at").notNull(),
     expires_at: integer("expires_at").notNull(),
-    status: text("status", { enum: ["pending", "active", "moderated", "removed"] })
+    status: text("status", { enum: ["pending", "active", "moderated", "removed", "expired"] })
       .notNull()
       .default("pending"),
     mod_action_id: text("mod_action_id"),

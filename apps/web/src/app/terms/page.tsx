@@ -11,7 +11,7 @@ const SECTION_LABEL = { ...MONO, letterSpacing: "0.08em", fontSize: "0.6875rem",
 const sections = [
   {
     title: "1. Who We Are",
-    body: `Jawwing is an anonymous, location-based social platform. We let people post short public content tied to a geographic location — no account required, no identity required. Posts expire after 24 hours. Content is moderated by AI, not humans.
+    body: `Jawwing is an anonymous, location-based social platform. We let people post short public content tied to a geographic location — no account required, no identity required. Posts expire from public feeds after 48 hours but remain in your account history. Content is moderated by AI, not humans.
 
 Jawwing does not currently operate as a registered legal entity. References to "Jawwing," "we," "us," and "our" mean Jawwing and its operators, administrators, and developers.`,
   },
@@ -61,7 +61,7 @@ Section 230 Notice: Jawwing is an interactive computer service provider, not the
   },
   {
     title: "8. Images and Uploaded Media",
-    body: `Images are stored on Vercel Blob CDN, are publicly visible as part of your post, and are automatically deleted when the post expires (~24 hours). All uploaded images are scanned by AI moderation for prohibited content.
+    body: `Images are stored on Vercel Blob CDN, are publicly visible as part of your post, and are automatically deleted when the post expires from feeds (~48 hours). All uploaded images are scanned by AI moderation for prohibited content.
 
 We do not strip Exif metadata automatically. If your image contains embedded GPS coordinates or device info, that data may be accessible to anyone who downloads the image. Strip Exif data before uploading if this concerns you.`,
   },
@@ -107,7 +107,7 @@ There is no right of appeal for bans at this time.`,
     title: "15. Disclaimers",
     body: `THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, ACCURACY, RELIABILITY, OR NON-INFRINGEMENT.
 
-We do not guarantee that the Service will be available at any given time, that content will be accurate, that moderation will catch all prohibited content, that your anonymity will be preserved, or that posts will expire at exactly 24 hours.`,
+We do not guarantee that the Service will be available at any given time, that content will be accurate, that moderation will catch all prohibited content, that your anonymity will be preserved, or that posts will expire at exactly 48 hours.`,
   },
   {
     title: "16. Limitation of Liability",

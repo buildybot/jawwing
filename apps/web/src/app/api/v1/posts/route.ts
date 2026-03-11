@@ -467,7 +467,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     const h3_index = latLngToH3(lat, lng);
     const nowTs = now();
-    const expires_at = nowTs + 24 * 60 * 60;
+    const expires_at = nowTs + 48 * 60 * 60; // 48 hours
     const id = nanoid();
 
     // ── Video domain check (AV-1) ─────────────────────────────────────────────
