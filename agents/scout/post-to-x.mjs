@@ -6,7 +6,7 @@
  * Usage: node post-to-x.mjs [--hours=24] [--limit=3]
  */
 
-const ADMIN_KEY = "***REDACTED_ADMIN_KEY***";
+const ADMIN_KEY = process.env.ADMIN_API_KEY; // Set ADMIN_API_KEY env var
 const BASE = "https://www.jawwing.com";
 
 // Metro display names for tweets

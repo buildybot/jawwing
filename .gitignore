@@ -6,7 +6,11 @@ node_modules/
 # Env files (NEVER commit these)
 .env
 .env.local
+.env.production
 .env.*.local
+
+# Agent logs
+agents/scout/posts-log.jsonl
 
 # Build outputs
 .next/

@@ -21,7 +21,7 @@ Anonymous, location-based social platform. Like Yik Yak for 2026, but better:
 
 ## API Access
 - **Base URL:** https://www.jawwing.com/api/v1
-- **Admin key header:** `x-admin-key: ***REDACTED_ADMIN_KEY***`
+- **Admin key header:** `x-admin-key: $ADMIN_API_KEY` (set via environment variable)
 - **Admin post endpoint:** `POST /api/v1/admin/posts` (bypasses rate limits + moderation)
   - Body: `{"content": "...", "lat": 38.9, "lng": -77.0}`
   - Optional: `"image_url": "..."`, `"video_url": "..."`

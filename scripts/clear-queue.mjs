@@ -5,7 +5,7 @@ async function clearQueue() {
   for (let i=0; i<30; i++) {
     try {
       const res = await fetch("https://www.jawwing.com/api/cron/mod-queue", { 
-        headers: { "x-admin-key": "***REDACTED_ADMIN_KEY***" } 
+        headers: { "x-admin-key": process.env.ADMIN_API_KEY } 
       });
       const data = await res.json();
       console.log(`Batch ${i+1}: processed=${data.processed} approved=${data.approved} flagged=${data.flagged} pending=${data.pendingRemaining}`);

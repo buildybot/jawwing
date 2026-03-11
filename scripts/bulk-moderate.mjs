@@ -13,7 +13,7 @@ console.log(`Reset mod_confidence on ${r.rowsAffected} pending posts`);
 
 // Now call admin moderate endpoint in batches
 const BASE = "https://www.jawwing.com";
-const KEY = "***REDACTED_ADMIN_KEY***";
+const KEY = process.env.ADMIN_API_KEY; // Set ADMIN_API_KEY env var
 
 let total = 0;
 for (let batch = 0; batch < 20; batch++) {

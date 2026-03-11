@@ -1,4 +1,4 @@
-const ADMIN_KEY = "***REDACTED_ADMIN_KEY***";
+const ADMIN_KEY = process.env.ADMIN_API_KEY; // Set ADMIN_API_KEY env var
 const BASE_URL = "https://www.jawwing.com/api/v1/admin/posts";
 
 const posts = [

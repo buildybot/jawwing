@@ -13,7 +13,7 @@ Anonymous, location-based social. Like Yik Yak for 2026 but web-first, AI-modera
 
 ### Jawwing Admin API
 - **Base:** https://www.jawwing.com/api/v1
-- **Admin key:** `x-admin-key: ***REDACTED_ADMIN_KEY***`
+- **Admin key:** `x-admin-key: $ADMIN_API_KEY` (set via environment variable)
 - **Top posts:** `GET /api/v1/admin/top-posts?hours=24&limit=10` (with admin key)
 - **Dashboard:** `GET /api/v1/admin/dashboard` (with admin key)
 - **Seed posts:** `POST /api/v1/admin/posts` with `{"content":"...","lat":38.9,"lng":-77.0}`
@@ -25,7 +25,7 @@ Anonymous, location-based social. Like Yik Yak for 2026 but web-first, AI-modera
 
 ### Reddit — u/jawwing
 - Username: jawwing
-- Password: ***REDACTED_PASSWORD***
+- Password: (set via REDDIT_PASSWORD env var)
 - Use browser (profile=openclaw) to log in and post
 - ONLY post in appropriate subreddits (see below)
 
