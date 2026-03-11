@@ -410,6 +410,24 @@ export default function AdminPage() {
               )}
             </div>
 
+            {/* Moderation Pipeline */}
+            {dashboard?.moderation && (
+              <div style={{ marginTop: 24, marginBottom: 24, padding: "16px", border: "1px solid #1F1F1F", background: "#0A0A0A" }}>
+                <div style={{ color: "#888", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 12 }}>
+                  MODERATION PIPELINE
+                </div>
+                <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+                  <StatCard label="Awaiting Mod" value={dashboard.moderation.awaiting_moderation}
+                    sub={dashboard.moderation.awaiting_moderation > 0 ? "⚠ QUEUE NOT EMPTY" : "Queue clear"} />
+                  <StatCard label="Flagged" value={dashboard.moderation.flagged_for_review} sub="Needs review" />
+                  <StatCard label="Removed" value={dashboard.moderation.removed} sub="By AI mod" />
+                  <StatCard label="Mod Failed" value={dashboard.moderation.mod_failed} sub="3x retry failed" />
+                  <StatCard label="Open Reports" value={dashboard.moderation.open_reports} sub="User reports" />
+                  <StatCard label="Mod Actions Today" value={dashboard.moderation.mod_actions_today} />
+                </div>
+              </div>
+            )}
+
             {activity.length > 0 && <ActivityChart data={activity} />}
 
             <div style={{ marginTop: 40 }}>

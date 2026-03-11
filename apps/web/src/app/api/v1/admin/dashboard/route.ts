@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, posts, votes, replies, accounts } from "@jawwing/db";
+import { db, posts, votes, replies, accounts, reports, mod_actions } from "@jawwing/db";
 import { sql, eq, gte, desc } from "drizzle-orm";
 import { isAdmin } from "@jawwing/api/admin";
 
@@ -18,18 +18,28 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       accountsActive24h,
       totalPosts,
       pendingPosts,
+      moderatedPosts,
+      removedPosts,
+      modFailedPosts,
       postsToday,
       repliesToday,
       votesToday,
+      reportsOpen,
+      modActionsToday,
     ] = await Promise.all([
       db.select({ count: sql<number>`count(*)` }).from(accounts),
       db.select({ count: sql<number>`count(*)` }).from(accounts).where(gte(accounts.created_at, todayStart)),
       db.select({ count: sql<number>`count(*)` }).from(accounts).where(gte(accounts.last_seen_at, last24h)),
       db.select({ count: sql<number>`count(*)` }).from(posts).where(eq(posts.status, "active")),
       db.select({ count: sql<number>`count(*)` }).from(posts).where(eq(posts.status, "pending")),
+      db.select({ count: sql<number>`count(*)` }).from(posts).where(eq(posts.status, "moderated")),
+      db.select({ count: sql<number>`count(*)` }).from(posts).where(eq(posts.status, "removed")),
+      db.select({ count: sql<number>`count(*)` }).from(posts).where(eq(posts.status, "mod_failed" as "pending")),
       db.select({ count: sql<number>`count(*)` }).from(posts).where(gte(posts.created_at, todayStart)),
       db.select({ count: sql<number>`count(*)` }).from(replies).where(gte(replies.created_at, todayStart)),
       db.select({ count: sql<number>`count(*)` }).from(votes).where(gte(votes.created_at, todayStart)),
+      db.select({ count: sql<number>`count(*)` }).from(reports).where(eq(reports.resolved, false)),
+      db.select({ count: sql<number>`count(*)` }).from(mod_actions).where(gte(mod_actions.created_at, todayStart)),
     ]);
 
     // Top trending posts (highest score last 24h)
@@ -73,6 +83,14 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         posts_today: Number(postsToday[0]?.count ?? 0),
         replies_today: Number(repliesToday[0]?.count ?? 0),
         votes_today: Number(votesToday[0]?.count ?? 0),
+      },
+      moderation: {
+        awaiting_moderation: Number(pendingPosts[0]?.count ?? 0),
+        flagged_for_review: Number(moderatedPosts[0]?.count ?? 0),
+        removed: Number(removedPosts[0]?.count ?? 0),
+        mod_failed: Number(modFailedPosts[0]?.count ?? 0),
+        open_reports: Number(reportsOpen[0]?.count ?? 0),
+        mod_actions_today: Number(modActionsToday[0]?.count ?? 0),
       },
       trending_h3: trendingH3,
       trending_posts: trendingPosts,
