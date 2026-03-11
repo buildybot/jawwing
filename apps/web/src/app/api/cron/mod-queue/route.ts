@@ -14,7 +14,7 @@ import type { Post } from "@jawwing/db";
  * Posts should NEVER appear in feeds without moderation approval.
  */
 
-export async function GET(req: NextRequest): Promise<NextResponse> {
+export const maxDuration = 60;\n\nexport async function GET(req: NextRequest): Promise<NextResponse> {
   const cronSecret = process.env.CRON_SECRET;
   const authHeader = req.headers.get("Authorization");
   const adminKey = req.headers.get("x-admin-key");

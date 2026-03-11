@@ -1,184 +1,175 @@
 {
   "target": "https://www.jawwing.com",
-  "timestamp": "2026-03-11T00:26:49.741Z",
-  "elapsed_seconds": 11.9,
-  "total": 70,
-  "passed": 66,
-  "failed": 4,
+  "timestamp": "2026-03-11T00:36:20.457Z",
+  "elapsed_seconds": 11.3,
+  "total": 69,
+  "passed": 69,
+  "failed": 0,
   "results": [
     {
       "name": "GET /api/health returns ok + db ok",
       "pass": true,
-      "ms": 815
+      "ms": 292
     },
     {
       "name": "Security headers present",
       "pass": true,
-      "ms": 39
+      "ms": 111
     },
     {
       "name": "CSP allows YouTube iframes",
       "pass": true,
-      "ms": 58
+      "ms": 46
     },
     {
       "name": "CORS headers on API routes",
       "pass": true,
-      "ms": 34
+      "ms": 42
     },
     {
       "name": "robots.txt exists and blocks /api/",
       "pass": true,
-      "ms": 77
+      "ms": 136
     },
     {
       "name": "sitemap.xml exists",
       "pass": true,
-      "ms": 46
+      "ms": 103
     },
     {
       "name": "GET / — Feed / home page",
       "pass": true,
-      "ms": 46
-    },
-    {
-      "name": "GET /about — About page",
-      "pass": false,
-      "ms": 55,
-      "error": "Status 404"
+      "ms": 47
     },
     {
       "name": "GET /constitution — Constitution page",
       "pass": true,
-      "ms": 75
+      "ms": 180
     },
     {
       "name": "GET /terms — Terms of Service",
       "pass": true,
-      "ms": 50
+      "ms": 178
     },
     {
       "name": "GET /privacy — Privacy Policy",
       "pass": true,
-      "ms": 51
+      "ms": 184
     },
     {
       "name": "GET /transparency — Transparency page",
       "pass": true,
-      "ms": 46
+      "ms": 105
     },
     {
       "name": "GET /signin — Sign in page",
       "pass": true,
-      "ms": 43
+      "ms": 327
     },
     {
       "name": "GET /age-restricted — Age restricted page",
       "pass": true,
-      "ms": 43
+      "ms": 155
     },
     {
       "name": "GET /login redirects to / (no dead page)",
       "pass": true,
-      "ms": 57
+      "ms": 123
     },
     {
       "name": "GET /nonexistent returns 404",
       "pass": true,
-      "ms": 87
+      "ms": 54
     },
     {
       "name": "GET /api/v1/posts — returns posts array with required fields",
       "pass": true,
-      "ms": 210
+      "ms": 73
     },
     {
       "name": "GET /api/v1/posts — mode=radius works",
       "pass": true,
-      "ms": 114
+      "ms": 129
     },
     {
       "name": "GET /api/v1/posts — mode=territory works",
       "pass": true,
-      "ms": 177
+      "ms": 123
     },
     {
       "name": "GET /api/v1/posts — sort=hot/new/top all work",
       "pass": true,
-      "ms": 254
+      "ms": 307
     },
     {
       "name": "GET /api/v1/posts — remote city (NYC) returns posts",
       "pass": true,
-      "ms": 113
+      "ms": 108
     },
     {
       "name": "GET /api/v1/posts — metro label present in country mode",
       "pass": true,
-      "ms": 82
+      "ms": 66
     },
     {
       "name": "GET /api/v1/posts/new — polling endpoint works",
       "pass": true,
-      "ms": 114
+      "ms": 70
     },
     {
       "name": "POST /api/v1/posts — missing location returns 400 or 429",
-      "pass": false,
-      "ms": 77,
-      "error": "Expected 400/429, got 500"
+      "pass": true,
+      "ms": 61
     },
     {
       "name": "POST /api/v1/posts — null island (0,0) returns 422 or 429",
-      "pass": false,
-      "ms": 55,
-      "error": "Expected 422/400/429, got 500"
+      "pass": true,
+      "ms": 58
     },
     {
       "name": "POST /api/v1/posts — empty content returns 400 or 429",
-      "pass": false,
-      "ms": 91,
-      "error": "Expected 400/429, got 500"
+      "pass": true,
+      "ms": 55
     },
     {
       "name": "POST /api/v1/admin/posts — creates post with admin key",
       "pass": true,
-      "ms": 209
+      "ms": 157
     },
     {
       "name": "GET /api/v1/posts/[id] — returns full post with votes",
       "pass": true,
-      "ms": 127
+      "ms": 111
     },
     {
       "name": "GET /api/v1/posts/NONEXISTENT — returns 404",
       "pass": true,
-      "ms": 99
+      "ms": 86
     },
     {
       "name": "GET /post/[id] page renders post content",
       "pass": true,
-      "ms": 283
+      "ms": 396
     },
     {
       "name": "POST /api/v1/posts/[id]/vote — upvote works",
       "pass": true,
-      "ms": 268
+      "ms": 223
     },
     {
       "name": "POST /api/v1/posts/[id]/vote — duplicate vote returns unchanged",
       "pass": true,
-      "ms": 78
+      "ms": 81
     },
     {
       "name": "POST /api/v1/posts/[id]/vote — switch to downvote works",
       "pass": true,
-      "ms": 296
+      "ms": 202
     },
     {
       "name": "POST /api/v1/posts/[id]/vote — verify score updated",
       "pass": true,
-      "ms": 111
+      "ms": 101
     },
     {
       "name": "POST /api/v1/posts/[id]/vote — invalid value rejected",
@@ -188,17 +179,17 @@
     {
       "name": "POST /api/v1/posts/FAKE/vote — nonexistent post 404",
       "pass": true,
-      "ms": 85
+      "ms": 65
     },
     {
       "name": "POST /api/v1/posts/[id]/replies — create reply",
       "pass": true,
-      "ms": 323
+      "ms": 202
     },
     {
       "name": "GET /api/v1/posts/[id]/replies — returns replies array",
       "pass": true,
-      "ms": 168
+      "ms": 73
     },
     {
       "name": "POST /api/v1/posts/[id]/replies — nested reply (may rate limit)",
@@ -208,157 +199,157 @@
     {
       "name": "POST /api/v1/posts/[id]/replies — empty content rejected",
       "pass": true,
-      "ms": 115
+      "ms": 61
     },
     {
       "name": "GET /api/v1/posts/[id] — reply_count correct",
       "pass": true,
-      "ms": 95
+      "ms": 72
     },
     {
       "name": "POST /api/v1/reports — report a post",
       "pass": true,
-      "ms": 137
+      "ms": 199
     },
     {
       "name": "POST /api/v1/reports — missing post_id rejected (400 or 429)",
       "pass": true,
-      "ms": 54
+      "ms": 50
     },
     {
       "name": "POST /api/v1/reports — missing reason rejected (400 or 429)",
       "pass": true,
-      "ms": 60
+      "ms": 48
     },
     {
       "name": "GET /api/v1/mod/constitution — returns rules",
       "pass": true,
-      "ms": 64
+      "ms": 91
     },
     {
       "name": "GET /api/v1/constitution/versions — returns versions",
       "pass": true,
-      "ms": 109
+      "ms": 249
     },
     {
       "name": "GET /api/v1/constitution/amendments — returns amendments",
       "pass": true,
-      "ms": 89
+      "ms": 119
     },
     {
       "name": "GET /api/v1/territories — returns list",
       "pass": true,
-      "ms": 307
+      "ms": 123
     },
     {
       "name": "POST /api/auth/send-code — invalid email rejected",
       "pass": true,
-      "ms": 61
+      "ms": 204
     },
     {
       "name": "POST /api/auth/verify — wrong code rejected",
       "pass": true,
-      "ms": 88
+      "ms": 176
     },
     {
       "name": "GET /api/auth/me — no token returns 401",
       "pass": true,
-      "ms": 60
+      "ms": 124
     },
     {
       "name": "GET /api/auth/me — invalid token returns 401",
       "pass": true,
-      "ms": 57
+      "ms": 49
     },
     {
       "name": "GET /api/v1/my/posts — no token returns 401",
       "pass": true,
-      "ms": 76
+      "ms": 122
     },
     {
       "name": "GET /api/v1/notifications — no token returns 401",
       "pass": true,
-      "ms": 64
+      "ms": 177
     },
     {
       "name": "GET /api/v1/saved — no token returns 401",
       "pass": true,
-      "ms": 104
+      "ms": 82
     },
     {
       "name": "POST /api/v1/admin/posts — no key returns 401/403",
       "pass": true,
-      "ms": 182
+      "ms": 54
     },
     {
       "name": "POST /api/v1/admin/posts — wrong key rejected",
       "pass": true,
-      "ms": 66
+      "ms": 54
     },
     {
       "name": "POST /api/v1/admin/votes — works with admin key",
       "pass": true,
-      "ms": 162
+      "ms": 176
     },
     {
       "name": "GET /api/v1/mod/actions — returns mod actions",
       "pass": true,
-      "ms": 151
+      "ms": 145
     },
     {
       "name": "POST /api/v1/admin/moderate — trigger moderation with admin key",
       "pass": true,
-      "ms": 3034
+      "ms": 2133
     },
     {
       "name": "GET /api/v1/og — fetches OpenGraph data",
       "pass": true,
-      "ms": 41
+      "ms": 341
     },
     {
       "name": "GET /api/v1/og — missing url returns 400",
       "pass": true,
-      "ms": 62
+      "ms": 58
     },
     {
       "name": "POST /api/v1/upload — no file returns error",
       "pass": true,
-      "ms": 197
+      "ms": 264
     },
     {
       "name": "Feed posts have no ip_hash, user_id, or exact coords",
       "pass": true,
-      "ms": 159
+      "ms": 193
     },
     {
       "name": "Post detail has no ip_hash or user_id",
       "pass": true,
-      "ms": 87
+      "ms": 153
     },
     {
       "name": "Replies have no ip_hash or user_id",
       "pass": true,
-      "ms": 87
+      "ms": 112
     },
     {
       "name": "New posts endpoint has no ip_hash",
       "pass": true,
-      "ms": 133
+      "ms": 87
     },
     {
       "name": "GET /api/cron/cleanup — requires auth",
       "pass": true,
-      "ms": 144
+      "ms": 193
     },
     {
       "name": "DELETE test post via admin API",
       "pass": true,
-      "ms": 521
+      "ms": 176
     },
     {
       "name": "Deleted post is gone or removed",
       "pass": true,
-      "ms": 79
+      "ms": 65
     }
   ]
 }
