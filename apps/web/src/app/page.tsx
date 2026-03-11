@@ -131,7 +131,7 @@ function toCardPost(
 
 export default function FeedPage() {
   const { isBlocked } = useBlockedUsers();
-  const [activeTab, setActiveTab] = useState<SortTab>("hot");
+  const [activeTab, setActiveTab] = useState<SortTab>("new");
   const [showModal, setShowModal] = useState(false);
 
   // Scope selector: LOCAL / METRO / COUNTRY
