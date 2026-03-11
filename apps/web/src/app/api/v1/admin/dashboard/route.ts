@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, posts, votes, replies, accounts, territories } from "@jawwing/db";
+import { db, posts, votes, replies, accounts } from "@jawwing/db";
 import { sql, eq, gte, desc } from "drizzle-orm";
 import { isAdmin } from "@jawwing/api/admin";
 
@@ -8,7 +8,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   if (!admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const now = Math.floor(Date.now() / 1000);
-  const todayStart = now - (now % 86400); // midnight UTC
+  const todayStart = now - (now % 86400);
   const last24h = now - 86400;
 
   try {
@@ -17,6 +17,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       accountsToday,
       accountsActive24h,
       totalPosts,
+      pendingPosts,
       postsToday,
       repliesToday,
       votesToday,
@@ -25,35 +26,13 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       db.select({ count: sql<number>`count(*)` }).from(accounts).where(gte(accounts.created_at, todayStart)),
       db.select({ count: sql<number>`count(*)` }).from(accounts).where(gte(accounts.last_seen_at, last24h)),
       db.select({ count: sql<number>`count(*)` }).from(posts).where(eq(posts.status, "active")),
+      db.select({ count: sql<number>`count(*)` }).from(posts).where(eq(posts.status, "pending")),
       db.select({ count: sql<number>`count(*)` }).from(posts).where(gte(posts.created_at, todayStart)),
       db.select({ count: sql<number>`count(*)` }).from(replies).where(gte(replies.created_at, todayStart)),
       db.select({ count: sql<number>`count(*)` }).from(votes).where(gte(votes.created_at, todayStart)),
     ]);
 
-    // Top 5 trending territories (most posts last 24h)
-    const trendingTerritories = await db.execute(sql`
-      SELECT t.id, t.name, COUNT(p.id) as post_count
-      FROM territories t
-      LEFT JOIN posts p ON p.h3_index IN (
-        SELECT DISTINCT h3_index FROM posts 
-        WHERE created_at >= ${last24h} AND status = 'active'
-      ) AND p.created_at >= ${last24h} AND p.status = 'active'
-      GROUP BY t.id, t.name
-      ORDER BY post_count DESC
-      LIMIT 5
-    `);
-
-    // Simpler approach: get top h3_indexes by post count last 24h
-    const trendingH3 = await db.execute(sql`
-      SELECT h3_index, COUNT(*) as post_count
-      FROM posts
-      WHERE created_at >= ${last24h} AND status = 'active'
-      GROUP BY h3_index
-      ORDER BY post_count DESC
-      LIMIT 5
-    `);
-
-    // Top 5 trending posts (highest score last 24h)
+    // Top trending posts (highest score last 24h)
     const trendingPosts = await db
       .select({
         id: posts.id,
@@ -68,7 +47,21 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       .from(posts)
       .where(gte(posts.created_at, last24h))
       .orderBy(desc(posts.score))
-      .limit(5);
+      .limit(10);
+
+    // Top metros by recent post count
+    let trendingH3: Array<Record<string, unknown>> = [];
+    try {
+      const h3Result = await db.execute(sql`
+        SELECT h3_index, COUNT(*) as post_count
+        FROM posts
+        WHERE created_at >= ${last24h} AND status = 'active'
+        GROUP BY h3_index
+        ORDER BY post_count DESC
+        LIMIT 10
+      `);
+      trendingH3 = h3Result.rows as Array<Record<string, unknown>>;
+    } catch { /* graceful */ }
 
     return NextResponse.json({
       stats: {
@@ -76,11 +69,12 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         accounts_today: Number(accountsToday[0]?.count ?? 0),
         accounts_active_24h: Number(accountsActive24h[0]?.count ?? 0),
         total_posts: Number(totalPosts[0]?.count ?? 0),
+        pending_posts: Number(pendingPosts[0]?.count ?? 0),
         posts_today: Number(postsToday[0]?.count ?? 0),
         replies_today: Number(repliesToday[0]?.count ?? 0),
         votes_today: Number(votesToday[0]?.count ?? 0),
       },
-      trending_h3: trendingH3.rows,
+      trending_h3: trendingH3,
       trending_posts: trendingPosts,
     });
   } catch (err) {

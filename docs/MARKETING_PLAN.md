@@ -1,151 +1,127 @@
-# JAWWING MARKETING PLAN
-> Budget: $0. Strategy: Content IS the product IS the marketing.
+# Jawwing Viral Marketing Plan
 
-## The Core Insight
+## What Is Jawwing?
+Anonymous, location-based social app. Think Yik Yak rebuilt for 2026 — but better. AI-only moderation (no human mods), public constitution, 48-hour post expiry, GPS-locked posting. No accounts required. Just open and talk.
 
-Anonymous local posts are inherently shareable. If the content is funny enough, people screenshot it and share it. That's the entire growth engine.
+**URL:** https://www.jawwing.com
+**Tagline:** Anonymous. Local. Unfiltered.
 
-Yik Yak didn't spend on ads to grow. It spread because someone showed their friend a funny post in a lecture hall. We need the same thing to happen, but in 2026 that means TikTok.
+## Why Yik Yak Went Viral (2013-2014)
+1. **College campuses** — critical mass in a small geographic area. One dorm = enough users for a feed.
+2. **Anonymity + proximity** — "someone near me posted this" is psychologically addictive.
+3. **Word of mouth** — people showed their phones to friends. "Look what someone said."
+4. **Low friction** — no signup, just open and post.
+5. **Controversy** — media coverage (both positive and negative) drove downloads.
+6. **FOMO** — "everyone's on it, what are they saying about our campus/neighborhood?"
 
-## Phase 1: Seeding (Week 1, Before Any Marketing)
+## Why Yik Yak Died
+- Added usernames (killed anonymity)
+- Removed the college geo-fence (diluted local feel)
+- Moderation couldn't keep up (harassment spiraled)
+- Couldn't monetize
 
-**Goal:** Make jawwing.com feel alive. No one posts to an empty feed.
+## Why Jawwing Is Better (2026)
+- **AI moderation** — Claude Haiku reviews every post before it goes live. No human mods needed. Scales infinitely.
+- **Public constitution** — rules are transparent, not arbitrary. Users trust the system.
+- **Web-first** — no app store needed. Share a link, they're in.
+- **48-hour expiry** — keeps content fresh, reduces moderation debt.
+- **GPS-locked posting, not viewing** — browse anywhere, but post where you are.
+- **No accounts required** — true zero-friction.
 
-1. AI agents post 10-15 posts/day in DC Metro territory
-2. Ben posts 5-10 real posts/day (genuine observations, hot takes)
-3. Recruit 5-10 friends to post organically
-4. Ensure every post has at least 1 reply within 2 hours
-5. Upvote the best content to create a healthy "HOT" tab
+## Phase 1: DC Metro Soft Launch (Week 1-2)
 
-**The feed must look like 50+ real people are already using it before any stranger visits.**
+### Target: 500 daily active users in DC Metro
 
-## Phase 2: TikTok-First Launch (Week 2)
+**Strategy: Campus + Reddit + Local Community Seeding**
 
-### Why TikTok
-- 150M US users, skews young (our demo)
-- Algorithm rewards new creators (we don't need followers)
-- Screen recording app content is a proven format
-- "Anonymous local gossip" is inherently engaging content for TikTok
+1. **Reddit** (r/washingtondc, r/nova, r/maryland, r/gwu, r/umd, r/georgetown, r/americanuniversity)
+   - Organic posts: "Found this anonymous local posting site for DC. It's like Yik Yak but web-only and AI-moderated. www.jawwing.com"
+   - NOT spammy. Genuine discovery tone. One post per subreddit, different accounts.
+   - Time: Tuesday-Thursday evenings (peak Reddit for local subs)
 
-### Content Playbook
+2. **College campuses** (GWU, Georgetown, AU, UMD, GMU, Howard, Catholic, GW Law)
+   - QR code flyers: "WHAT'S YOUR CAMPUS REALLY THINKING? jawwing.com" 
+   - Bathroom stalls, bulletin boards, laundry rooms, library study rooms
+   - Each campus needs 20-30 seed posts that feel local
 
-**Video Format 1: "POV Reacts" (highest potential)**
-- Screen record the Jawwing feed scrolling through funny posts
-- Add text overlay: "This anonymous app is already UNHINGED in DC"
-- React face in corner (optional)
-- Duration: 15-30 seconds
-- Post 2x/day for first 2 weeks
+3. **Twitter/X**
+   - @PincerApi account can mention it
+   - Target DC-local accounts, journalists, local influencers
+   - "Someone built a new anonymous local posting site for DC. Feels like 2014 Yik Yak but with AI mods. jawwing.com"
 
-**Video Format 2: "Reading Anonymous Posts Near Me"**
-- Sit in recognizable DC locations (Georgetown waterfront, Metro, National Mall)
-- Open Jawwing, read posts out loud, react
-- "People really said THIS about Adams Morgan"
-- Great for location-specific content
+4. **Instagram/TikTok**
+   - Screenshot feed content, post as Reels/Stories
+   - "POV: You open an anonymous site for your city"
+   - Short screen recordings scrolling through local posts
 
-**Video Format 3: "What Your Neighborhood Really Thinks"**
-- Compile 5-7 posts from specific DC neighborhoods
-- Quick cuts, trending audio underneath
-- "Exposing DC neighborhoods through anonymous posts"
+5. **Nextdoor / Facebook Groups**
+   - DC neighborhood groups
+   - Softer pitch: "New way to hear what your neighbors are actually thinking"
 
-**Video Format 4: "I Built an App and..."**
-- Founder story angle: "I built an anonymous app for my neighborhood and here's what happened"
-- Authentic, vulnerable, behind-the-scenes
-- Tech TikTok loves this format
+6. **Local media / blogs**
+   - DCist, Washingtonian, Washington City Paper
+   - Pitch angle: "DC startup builds AI-moderated anonymous social app — no human mods, public rulebook"
+   - The AI constitution angle is genuinely newsworthy
 
-### Posting Schedule
-- TikTok: 2 videos/day, 7 days/week for first month
-- Best times: 7-9 AM, 12-1 PM, 7-10 PM EST
-- Cross-post to Instagram Reels and YouTube Shorts
+### Seed Content Strategy
+- Each metro needs 30-50 posts that feel organic
+- Mix: funny observations, local complaints, questions, hot takes, events
+- NO corporate-sounding posts. Typos welcome. Shorthand fine.
+- Topics: metro delays, restaurant recs, dating scene, weather, local politics, sports, construction, traffic
 
-## Phase 3: Campus Blitz (Week 2-3)
+## Phase 2: Multi-City Expansion (Week 3-4)
 
-### The Yik Yak Playbook (Updated for 2026)
+### Target: 2,000 DAU across 5 metros
 
-**Target: GWU, Georgetown, UMD, Howard, American University**
+**Add:** New York, Boston, Austin, Nashville, Miami
 
-1. **GroupMe / Discord infiltration**
-   - Find the class-of-2028/2029 group chats
-   - Don't spam. Post one genuine message: "someone built an anonymous app for DC and people are already roasting [campus dining hall]. jawwing.com"
-   - Let curiosity do the work
+Same playbook per city:
+1. Seed 30-50 posts
+2. Hit local subreddits
+3. College campus flyers (digital if no physical access)
+4. Local Twitter/Instagram
 
-2. **Physical campus seeding**
-   - QR code stickers on campus bulletin boards, bathroom stalls, library desks
-   - Simple design: "YOUR CAMPUS IS TALKING → JAWWING.COM" with QR code
-   - Cost: ~$20 for 200 stickers at FedEx
-   - This is literally what Yik Yak did
+**New channels:**
+- **Product Hunt** launch — "Anonymous local social, AI-moderated, no signup required"
+- **Hacker News** — technical angle: "We built an anonymous social network with zero human moderators"
+- **Indie Hackers** — builder story
+- **Tech Twitter** — the AI moderation constitution is a genuinely interesting technical story
 
-3. **Campus ambassador (1 per school)**
-   - Find the "meme account" person at each school
-   - They post 5x/day from campus, recruit friends
-   - Incentive: "founding member" status, potential future role if this takes off
+## Phase 3: Growth Loop (Week 5+)
 
-4. **Lecture hall moment**
-   - The dream: someone posts something funny about a specific class/professor
-   - Other students in the class see it and laugh
-   - They show their friends
-   - This is how it went viral at every school Yik Yak launched at
+### Target: 10,000+ DAU
 
-## Phase 4: Reddit + Hacker News (Week 3)
+By this point, content should be self-sustaining. Focus:
+1. **Notification hooks** — email notifications for signed-in users when their post trends
+2. **Share mechanics** — easy sharing of individual posts to Twitter/Instagram
+3. **Territory leaderboards** — "NYC is more active than DC this week"
+4. **Media outreach** — pitch to tech blogs (TechCrunch, The Verge) once there's real traction
+5. **Controversy management** — if content goes viral (good or bad), have response ready
 
-### Reddit
-- r/washingtondc: genuine post, not promotional. "Someone built a Yik Yak-style app for DC and the posts are hilarious"
-- r/privacy: "This anonymous social app publishes its entire AI moderation constitution publicly"
-- r/artificial: "We're using AI agents to moderate AND participate in an anonymous social app"
-- r/yikyak (if it exists): nostalgia angle
+## Scout Agent Responsibilities
+Scout is the marketing agent. It:
+1. **Creates Jawwing accounts** via email verification to post from real accounts
+2. **Seeds content** in target metros — human-sounding, locally relevant posts
+3. **Monitors engagement** — which posts get votes, which metros are active
+4. **Reports back** — daily briefing on engagement metrics, what's working
+5. **Drafts social media posts** for review (Reddit, Twitter, etc.)
+6. **Tracks competitors** — what's happening in anonymous social space
 
-### Hacker News
-- "Show HN: Jawwing - Anonymous local posts moderated by AI with a public constitution"
-- Lead with the technical/philosophical angle, not the product
-- HN loves: public constitutions, AI governance, privacy-first design
-- Be ready to answer questions in comments for 24 hours
+## Key Rules
+- **NEVER reveal that posts are seeded by an agent.** Posts must feel human.
+- **NEVER spam.** Quality over quantity. 5 great posts > 50 generic ones.
+- **NEVER use the same writing style across posts.** Vary voice, grammar, length.
+- **All external posts (Reddit, Twitter) go through Ben for approval** before posting.
+- **Content must pass our own moderation.** If Haiku would flag it, don't post it.
+- **No fake engagement.** No vote manipulation. Only seed content, not votes.
+- **Track everything.** Every post ID, every metro, every engagement metric.
 
-## Phase 5: Local DC Press (Week 4)
-
-- **DCist / Washingtonian**: "New anonymous app lets DC residents say what they really think"
-- **GW Hatchet / Georgetown Voice / Diamondback**: Campus newspapers love local app stories
-- **Washington Post "The Locals" section**: Hyperlocal tech angle
-
-## What Makes This Actually Interesting
-
-### The Pitch (different for each audience):
-
-**For Gen Z / College students:**
-"It's like the group chat for your entire neighborhood. Post anything. No one knows it's you."
-
-**For Tech / HN crowd:**
-"AI moderation governed by a public constitution. Every mod decision is logged. The rules are amendable by the community."
-
-**For Privacy advocates:**
-"No accounts. No email. No phone number. Just anonymous posts from your location. The app literally cannot identify you."
-
-**For Press:**
-"The Yik Yak successor that replaced human moderators with AI agents governed by a public constitution. Is this the future of content moderation?"
-
-## Metrics That Matter
-
-| Week | Target | How We Know It's Working |
-|---|---|---|
-| Week 1 | 50 organic (non-seed) posts | People are actually posting |
-| Week 2 | 500 unique visitors/day | TikTok is driving traffic |
-| Week 3 | 100 posts/day, 30% from new users | Retention is happening |
-| Week 4 | 1,000 DAU, someone screenshots a post organically | Product-market fit signal |
-
-## Budget
-
-| Item | Cost |
-|---|---|
-| QR stickers (200) | $20 |
-| Apple Developer Program | $99 |
-| Domain (jawwing.com) | Already owned |
-| Hosting (Vercel) | Free tier |
-| DB (Turso) | Free tier |
-| AI moderation (Gemini) | ~$5/day at 1,000 posts |
-| **Total to launch** | **~$120** |
-
-## The Honest Truth
-
-This works if the content is good enough to screenshot and share. That's it. No amount of marketing fixes a boring feed. The seed content and first 100 organic posts determine everything.
-
-If someone visits jawwing.com and laughs at 3 posts in the first 10 seconds, they'll post something. If the feed is mid, they'll close the tab and never come back.
-
-**Priority #1 is content quality. Everything else is secondary.**
+## Metrics to Track
+- Daily active users (unique IPs hitting feed)
+- Posts per metro per day
+- Votes per post (avg)
+- Reply rate
+- New accounts created
+- Bounce rate (visit but don't engage)
+- Top posts by score
+- Geographic spread of activity
