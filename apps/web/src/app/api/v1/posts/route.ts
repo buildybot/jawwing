@@ -399,7 +399,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
 
     // Check moderation cooldown (escalating based on strike history)
-    if (!isAdmin) {
+    if (!isAdminRequest) {
       try {
         const cooldown = await getStrikeCooldown(ipHash, accountId);
         if (!cooldown.canPost) {
