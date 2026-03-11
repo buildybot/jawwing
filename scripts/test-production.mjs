@@ -12,7 +12,7 @@ const BASE = process.argv.find(a => a.startsWith('--base='))?.split('=')[1]
   || process.argv[process.argv.indexOf('--base') + 1] 
   || 'https://www.jawwing.com';
 const ADMIN_KEY = process.argv.find(a => a.startsWith('--admin-key='))?.split('=')[1]
-  || '***REDACTED_ADMIN_KEY***';
+  || process.env.ADMIN_API_KEY;
 
 const results = [];
 let testPostId = null;
