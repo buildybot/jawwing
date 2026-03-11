@@ -395,13 +395,18 @@ export default function FeedPage() {
         }
 
         if (reset) {
-          setPosts(fetchedPosts);
-          if (fetchedPosts.length > 0) {
-            latestTimestampRef.current = Math.max(...fetchedPosts.map((p) => p.created_at));
-            try { localStorage.setItem(FEED_CACHE_KEY, JSON.stringify(fetchedPosts)); } catch { /* noop */ }
+          const unique = Array.from(new Map(fetchedPosts.map(p => [p.id, p])).values());
+          setPosts(unique);
+          if (unique.length > 0) {
+            latestTimestampRef.current = Math.max(...unique.map((p) => p.created_at));
+            try { localStorage.setItem(FEED_CACHE_KEY, JSON.stringify(unique)); } catch { /* noop */ }
           }
         } else {
-          setPosts((prev) => [...prev, ...fetchedPosts]);
+          setPosts((prev) => {
+            const existingIds = new Set(prev.map(p => p.id));
+            const newPosts = fetchedPosts.filter(p => !existingIds.has(p.id));
+            return [...prev, ...newPosts];
+          });
         }
         setOffset(currentOffset + fetchedPosts.length);
         setHasMore(fetchedPosts.length === LIMIT);
