@@ -149,14 +149,18 @@ export async function buildFeedQuery(params: FeedParams) {
   const hexes = precomputedHexes ?? getHexesForRadius(lat, lng, radiusMeters);
   const nowTs = Math.floor(Date.now() / 1000);
 
-  const conditions = and(
+  // TOP ALL TIME ignores expiry — shows best posts ever in this area
+  const baseConditions = and(
     inArray(posts.h3_index, hexes),
-    gt(posts.expires_at, nowTs),
     eq(posts.status, "active"),
     blockedUserIds && blockedUserIds.length > 0
       ? notInArray(posts.user_id, blockedUserIds)
       : undefined
   );
+
+  const conditions = sort === "top"
+    ? baseConditions
+    : and(baseConditions, gt(posts.expires_at, nowTs));
 
   if (sort === "new") {
     return db
@@ -169,7 +173,7 @@ export async function buildFeedQuery(params: FeedParams) {
   }
 
   if (sort === "top") {
-    // TOP: sort by total engagement (upvotes + downvotes), most interacted-with first
+    // TOP ALL TIME: best posts ever, no expiry filter
     return db
       .select()
       .from(posts)

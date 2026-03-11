@@ -256,13 +256,15 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     // EVERYWHERE mode: return all active posts, no geo filter
     if (mode === "everywhere") {
       const nowTs = Math.floor(Date.now() / 1000);
-      const conditions = and(gt(posts.expires_at, nowTs), eq(posts.status, "active"));
+      // TOP ALL TIME: no expiry filter. HOT/NEW: respect expiry.
+      const baseConditions = eq(posts.status, "active");
+      const conditions = sort === "top" ? baseConditions : and(baseConditions, gt(posts.expires_at, nowTs));
       const HOT_GRAVITY = 1.2;
       let results;
       if (sort === "new") {
         results = await db.select().from(posts).where(conditions).orderBy(desc(posts.created_at)).limit(limit).offset(offset);
       } else if (sort === "top") {
-        // TOP: most interacted-with posts (total engagement = upvotes + downvotes)
+        // TOP ALL TIME: best posts ever, no expiry filter
         results = await db.select().from(posts).where(conditions).orderBy(desc(sql<number>`CAST(${posts.upvotes} AS INTEGER) + CAST(${posts.downvotes} AS INTEGER)`)).limit(limit).offset(offset);
       } else {
         // HOT: engagement-aware ranking (Wilson + engagement boost + controversy)
@@ -473,7 +475,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     const h3_index = latLngToH3(lat, lng);
     const nowTs = now();
-    const expires_at = nowTs + 120 * 60 * 60; // 5 days
+    const expires_at = nowTs + 30 * 24 * 60 * 60; // 30 days
     const id = nanoid();
 
     // ── Video domain check (AV-1) ─────────────────────────────────────────────

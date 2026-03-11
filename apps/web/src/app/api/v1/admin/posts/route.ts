@@ -88,7 +88,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const id = nanoid();
     const ip_hash = crypto.randomBytes(8).toString("hex");
     const created_at = body.created_at ?? Math.floor(Date.now() / 1000);
-    const expires_at = body.expires_at ?? created_at + 120 * 3600; // 5 days
+    const expires_at = body.expires_at ?? created_at + 30 * 24 * 3600; // 5 days
 
     // Extract video metadata
     let video_url: string | null = null;

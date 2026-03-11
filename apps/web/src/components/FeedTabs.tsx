@@ -10,7 +10,7 @@ interface FeedTabsProps {
 const TABS: { id: SortTab; label: string }[] = [
   { id: "hot", label: "HOT" },
   { id: "new", label: "NEW" },
-  { id: "top", label: "TOP" },
+  { id: "top", label: "TOP ALL TIME" },
 ];
 
 export default function FeedTabs({ active, onChange }: FeedTabsProps) {
