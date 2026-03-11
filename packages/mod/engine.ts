@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { createClient } from "@libsql/client";
-import { db, mod_actions, posts, nanoid, now } from "@jawwing/db";
+import { db, mod_actions, posts, mod_strikes, nanoid, now } from "@jawwing/db";
 import { eq } from "drizzle-orm";
 import type { Post } from "@jawwing/db";
 
@@ -480,8 +480,71 @@ async function logAndUpdatePost(post: Post, decision: ModerationDecision): Promi
     console.error("[mod/engine] Failed to update post status:", updateErr);
   }
 
+  // Record a strike if post was removed
+  if (decision.action === "remove" && post.ip_hash) {
+    try {
+      await db.insert(mod_strikes).values({
+        id: nanoid(),
+        ip_hash: post.ip_hash,
+        account_id: post.account_id ?? null,
+        post_id: post.id,
+        rule_cited: decision.ruleCited ?? null,
+        created_at: now(),
+      });
+      console.log(`[MOD] Strike recorded for ip_hash=${post.ip_hash?.slice(0, 8)}...`);
+    } catch (strikeErr) {
+      console.error("[mod/engine] Failed to record strike:", strikeErr);
+    }
+  }
+
   console.log('[MOD] Decision for', post.id, ':', decision.action, 'confidence:', decision.confidence);
   return decision;
+}
+
+// ─── Cooldown system ──────────────────────────────────────────────────────────
+// Escalating cooldowns based on strikes in the last 24h
+// Strike 1: 5 min, Strike 2: 30 min, Strike 3: 2 hours, Strike 4: 12 hours, Strike 5+: 24 hours
+
+const COOLDOWN_TIERS = [
+  0,        // 0 strikes: no cooldown
+  5 * 60,   // 1 strike: 5 minutes
+  30 * 60,  // 2 strikes: 30 minutes
+  2 * 3600, // 3 strikes: 2 hours
+  12 * 3600,// 4 strikes: 12 hours
+  24 * 3600,// 5+ strikes: 24 hours
+];
+
+export async function getStrikeCooldown(ipHash: string, accountId?: string | null): Promise<{ strikes: number; cooldownSeconds: number; cooldownUntil: number | null; canPost: boolean }> {
+  const oneDayAgo = now() - 24 * 3600;
+  
+  // Count strikes in last 24h (check both ip_hash and account_id)
+  const rawClient = getRawClient();
+  let result;
+  if (accountId) {
+    result = await rawClient.execute({
+      sql: "SELECT COUNT(*) as c, MAX(created_at) as last_strike FROM mod_strikes WHERE (ip_hash = ? OR account_id = ?) AND created_at > ?",
+      args: [ipHash, accountId, oneDayAgo],
+    });
+  } else {
+    result = await rawClient.execute({
+      sql: "SELECT COUNT(*) as c, MAX(created_at) as last_strike FROM mod_strikes WHERE ip_hash = ? AND created_at > ?",
+      args: [ipHash, oneDayAgo],
+    });
+  }
+  
+  const strikes = Number(result.rows[0]?.c ?? 0);
+  const lastStrike = Number(result.rows[0]?.last_strike ?? 0);
+  
+  if (strikes === 0) {
+    return { strikes: 0, cooldownSeconds: 0, cooldownUntil: null, canPost: true };
+  }
+  
+  const tierIndex = Math.min(strikes, COOLDOWN_TIERS.length - 1);
+  const cooldownSeconds = COOLDOWN_TIERS[tierIndex];
+  const cooldownUntil = lastStrike + cooldownSeconds;
+  const canPost = now() >= cooldownUntil;
+  
+  return { strikes, cooldownSeconds, cooldownUntil, canPost };
 }
 
 export async function reviewPost(post: Post): Promise<ModerationDecision> {

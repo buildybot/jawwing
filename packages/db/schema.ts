@@ -434,6 +434,29 @@ export const blocks = sqliteTable(
   })
 );
 
+// ─── mod_strikes ──────────────────────────────────────────────────────────────
+// Tracks moderation removals per user — used for escalating cooldowns
+
+export const mod_strikes = sqliteTable(
+  "mod_strikes",
+  {
+    id: text("id").primaryKey(),
+    ip_hash: text("ip_hash").notNull(),
+    account_id: text("account_id"),
+    post_id: text("post_id").notNull(),
+    rule_cited: text("rule_cited"),
+    created_at: integer("created_at").notNull(),
+  },
+  (t) => ({
+    idxStrikesIp: index("idx_strikes_ip").on(t.ip_hash),
+    idxStrikesAccount: index("idx_strikes_account").on(t.account_id),
+    idxStrikesCreated: index("idx_strikes_created").on(t.created_at),
+  })
+);
+
+export type ModStrike = typeof mod_strikes.$inferSelect;
+export type NewModStrike = typeof mod_strikes.$inferInsert;
+
 // ─── Type exports ─────────────────────────────────────────────────────────────
 
 export type User = typeof users.$inferSelect;

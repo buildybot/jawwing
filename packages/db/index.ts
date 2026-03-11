@@ -48,6 +48,7 @@ export {
   notifications,
   blocks,
   banned_ips,
+  mod_strikes,
 } from "./schema";
 
 // ─── Re-export types ──────────────────────────────────────────────────────────

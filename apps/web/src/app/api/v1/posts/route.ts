@@ -17,7 +17,7 @@ import {
 import { getAccountFromToken } from "@jawwing/api/accounts";
 import { isBanned } from "@jawwing/api/bans";
 import { moderatePost } from "@jawwing/mod/automod";
-import { CONSTITUTION_RULES } from "@jawwing/mod/engine";
+import { CONSTITUTION_RULES, getStrikeCooldown } from "@jawwing/mod/engine";
 
 // ─── Video URL extraction ─────────────────────────────────────────────────────
 
@@ -389,6 +389,28 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
             },
           }
         );
+      }
+    }
+
+    // Check moderation cooldown (escalating based on strike history)
+    if (!isAdmin) {
+      try {
+        const cooldown = await getStrikeCooldown(ipHash, accountId);
+        if (!cooldown.canPost) {
+          const waitMinutes = Math.ceil((cooldown.cooldownUntil! - Math.floor(Date.now() / 1000)) / 60);
+          return NextResponse.json(
+            {
+              error: `You are on a moderation cooldown. ${cooldown.strikes} post(s) were removed in the last 24 hours. You can post again in ${waitMinutes} minute(s).`,
+              code: "MOD_COOLDOWN",
+              strikes: cooldown.strikes,
+              cooldownUntil: cooldown.cooldownUntil,
+              cooldownSeconds: cooldown.cooldownSeconds,
+            },
+            { status: 429 }
+          );
+        }
+      } catch (cooldownErr) {
+        console.error("[POST /api/v1/posts] Cooldown check failed (allowing post):", cooldownErr);
       }
     }
 
