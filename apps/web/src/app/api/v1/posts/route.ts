@@ -383,7 +383,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     if (!isAdminRequest) {
       // Rate limit: 10 posts/hour per IP hash
-      const rateLimit = checkRateLimit(ipHash, "human", "post");
+      const rateLimit = await checkRateLimit(ipHash, "human", "post");
       if (!rateLimit.allowed) {
         return NextResponse.json(
           { error: "Rate limit exceeded", code: "RATE_LIMIT", resetAt: rateLimit.resetAt },

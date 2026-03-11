@@ -62,7 +62,7 @@ export async function POST(req: NextRequest, context: RouteContext): Promise<Nex
     }
 
     // ── Rate limit: shared across posts AND replies per IP (10/hour) ────────
-    const rateLimit = checkRateLimit(ipHash, "human", "post");
+    const rateLimit = await checkRateLimit(ipHash, "human", "post");
     if (!rateLimit.allowed) {
       return NextResponse.json(
         { error: "Rate limit exceeded. Try again later.", code: "RATE_LIMITED", resetAt: rateLimit.resetAt },

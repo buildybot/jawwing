@@ -30,7 +30,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
 
     // Email rate limit: 3 attempts per email per hour
-    const rateLimit = checkEmailRateLimit(email, "send-code");
+    const rateLimit = await checkEmailRateLimit(email, "send-code");
     if (!rateLimit.allowed) {
       return NextResponse.json(
         { error: "Too many code requests. Please wait before trying again.", code: "RATE_LIMIT", resetAt: rateLimit.resetAt },

@@ -5,6 +5,7 @@ import { validate, VoteSchema } from "@jawwing/api/validation";
 import { getIpHash } from "@jawwing/api/anonymous";
 import { isBanned } from "@jawwing/api/bans";
 import { getOptionalAccountId } from "@jawwing/api/optionalAuth";
+import { checkRateLimit } from "@jawwing/api/rateLimit";
 
 type RouteContext = { params: Promise<{ id: string }> };
 

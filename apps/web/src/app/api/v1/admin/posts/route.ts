@@ -1,6 +1,7 @@
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
+import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { db, posts, nanoid } from "@jawwing/db";
 import { eq } from "drizzle-orm";

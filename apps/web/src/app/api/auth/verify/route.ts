@@ -24,7 +24,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const { email, code } = parsed.data;
 
     // Email rate limit: 5 verify attempts per email per 10 minutes
-    const rateLimit = checkEmailRateLimit(email, "verify");
+    const rateLimit = await checkEmailRateLimit(email, "verify");
     if (!rateLimit.allowed) {
       return NextResponse.json(
         { error: "Too many verification attempts. Please wait before trying again.", code: "RATE_LIMIT", resetAt: rateLimit.resetAt },
