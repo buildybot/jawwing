@@ -150,16 +150,6 @@ Privacy: privacy@jawwing.com`,
 export default function TermsPage() {
   return (
     <div style={{ background: "#000000", minHeight: "100vh" }}>
-      <nav style={{ borderBottom: "1px solid #1F1F1F" }} className="px-6 py-4 flex items-center justify-between">
-        <Link href="/" style={{ ...MONO, letterSpacing: "0.12em", fontWeight: 700, fontSize: "0.875rem", color: "#FFFFFF", textDecoration: "none" }}>
-          JAWWING
-        </Link>
-        <Link href="/" style={{ ...MONO, color: "#777777", fontSize: "0.6875rem", letterSpacing: "0.06em", textDecoration: "none" }}
-          className="hover:text-white transition-colors">
-          ← HOME
-        </Link>
-      </nav>
-
       <main style={{ maxWidth: "640px", margin: "0 auto", padding: "48px 24px 96px" }}>
         <p style={SECTION_LABEL} className="mb-4">LEGAL</p>
         <h1 style={{ fontSize: "2rem", fontWeight: 700, letterSpacing: "-0.02em", color: "#FFFFFF", marginBottom: "8px" }}>

@@ -498,30 +498,6 @@ export default function PostPage() {
   return (
     <ToastProvider>
       <div style={{ background: "#000000", minHeight: "100vh" }}>
-        {/* Nav */}
-        <nav style={{ borderBottom: "1px solid #1F1F1F" }} className="px-4 py-4 flex items-center gap-3">
-          <button
-            onClick={() => router.back()}
-            style={{
-              ...MONO, color: "#777777", background: "none", border: "none",
-              cursor: "pointer", fontSize: "0.875rem", letterSpacing: "0.04em",
-            }}
-            className="hover:text-white transition-colors"
-          >
-            ← BACK
-          </button>
-          <span style={{ color: "#1F1F1F", ...MONO }}>|</span>
-          <Link
-            href="/"
-            style={{
-              ...MONO, letterSpacing: "0.12em", fontWeight: 700,
-              fontSize: "0.875rem", color: "#FFFFFF", textDecoration: "none",
-            }}
-          >
-            JAWWING
-          </Link>
-        </nav>
-
         <main style={{ maxWidth: "480px", paddingBottom: "120px" }} className="mx-auto">
 
           {/* Post loading skeleton */}

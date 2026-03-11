@@ -140,25 +140,6 @@ export default function SettingsPage() {
 
   return (
     <div style={{ background: "#000000", minHeight: "100vh" }}>
-      {/* Header */}
-      <div
-        style={{
-          borderBottom: "1px solid #1F1F1F",
-          padding: "16px",
-          display: "flex",
-          alignItems: "center",
-          gap: "12px",
-        }}
-      >
-        <Link
-          href="/"
-          style={{ ...MONO, color: "#888888", fontSize: "0.75rem", letterSpacing: "0.06em", textDecoration: "none" }}
-          className="hover:text-white transition-colors"
-        >
-          ← BACK
-        </Link>
-      </div>
-
       <main
         style={{
           maxWidth: "480px",

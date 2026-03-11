@@ -45,17 +45,6 @@ export default function TransparencyPage() {
   return (
     <div style={{ background: "#000000", minHeight: "100vh" }}>
       {/* Nav */}
-      <nav style={{ borderBottom: "1px solid #1F1F1F" }} className="px-6 py-4 flex items-center gap-3">
-        <Link
-          href="/"
-          style={{ ...MONO, letterSpacing: "0.12em", fontWeight: 700, fontSize: "0.875rem", color: "#FFFFFF", textDecoration: "none" }}
-        >
-          JAWWING
-        </Link>
-        <span style={{ color: "#333333", ...MONO }}>/ </span>
-        <span style={{ ...MONO, color: "#777777", fontSize: "0.75rem", letterSpacing: "0.06em" }}>TRANSPARENCY</span>
-      </nav>
-
       <main style={{ maxWidth: "760px" }} className="mx-auto px-4 py-16">
         {/* Header */}
         <div style={{ marginBottom: "40px" }}>

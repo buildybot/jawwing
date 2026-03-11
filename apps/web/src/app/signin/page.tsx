@@ -96,22 +96,6 @@ export default function SignInPage() {
       }}
     >
       <div style={{ width: "100%", maxWidth: 400 }}>
-        {/* Header */}
-        <Link
-          href="/"
-          style={{
-            ...MONO,
-            color: "#333",
-            fontSize: "0.75rem",
-            letterSpacing: "0.14em",
-            textDecoration: "none",
-            display: "block",
-            marginBottom: 40,
-          }}
-        >
-          ← JAWWING
-        </Link>
-
         <h1
           style={{
             ...MONO,

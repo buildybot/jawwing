@@ -57,6 +57,8 @@ export const metadata: Metadata = {
   },
 };
 
+import NavShell from "@/components/NavShell";
+
 export default function RootLayout({
   children,
 }: {
@@ -68,6 +70,7 @@ export default function RootLayout({
         style={{ background: "#000000", color: "#FFFFFF" }}
         className="font-sans min-h-screen antialiased"
       >
+        <NavShell />
         {children}
       </body>
     </html>
