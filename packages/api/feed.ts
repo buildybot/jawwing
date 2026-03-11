@@ -185,7 +185,7 @@ export async function buildFeedQuery(params: FeedParams) {
       .select()
       .from(posts)
       .where(conditions)
-      .orderBy(desc(sql<number>`CAST(${posts.upvotes} AS INTEGER) + CAST(${posts.downvotes} AS INTEGER)`))
+      .orderBy(desc(sql<number>`CAST(${posts.upvotes} AS INTEGER) - CAST(${posts.downvotes} AS INTEGER)`))
       .limit(limit)
       .offset(offset);
   }

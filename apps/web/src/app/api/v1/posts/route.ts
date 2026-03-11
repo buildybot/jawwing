@@ -281,7 +281,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         results = await db.select().from(posts).where(conditions).orderBy(desc(posts.created_at)).limit(limit).offset(offset);
       } else if (sort === "top") {
         // TOP ALL TIME: best posts ever, no expiry filter
-        results = await db.select().from(posts).where(conditions).orderBy(desc(sql<number>`CAST(${posts.upvotes} AS INTEGER) + CAST(${posts.downvotes} AS INTEGER)`)).limit(limit).offset(offset);
+        results = await db.select().from(posts).where(conditions).orderBy(desc(sql<number>`CAST(${posts.upvotes} AS INTEGER) - CAST(${posts.downvotes} AS INTEGER)`)).limit(limit).offset(offset);
       } else {
         // HOT: engagement-aware ranking (Wilson + engagement boost + controversy)
         const z2 = 1.96 * 1.96;
