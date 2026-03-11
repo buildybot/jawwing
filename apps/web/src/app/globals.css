@@ -146,6 +146,137 @@ html {
   }
 }
 
+/* ── Post card meta row — two-row on mobile ────────────────────────────────── */
+
+.post-meta-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.post-meta-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.post-meta-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.post-meta-bottom {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* Desktop only: show mod badge inside the link row */
+.post-meta-modbadge-mobile { display: none !important; }
+
+@media (max-width: 480px) {
+  .post-meta-wrap {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+  }
+  .post-meta-top {
+    justify-content: space-between;
+    padding-bottom: 6px;
+  }
+  .post-meta-bottom {
+    justify-content: space-between;
+    padding-top: 6px;
+    border-top: 1px solid #1A1A1A;
+  }
+  /* On mobile hide mod badge in the link, show the standalone one */
+  .post-meta-modbadge-desktop { display: none !important; }
+  .post-meta-modbadge-mobile { display: inline-flex !important; }
+}
+
+/* ── Header secondary nav — scroll hint gradient ────────────────────────────── */
+
+.header-subnav-wrap {
+  position: relative;
+}
+
+.header-subnav-wrap::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 32px;
+  background: linear-gradient(to right, transparent, #000000);
+  pointer-events: none;
+}
+
+@media (min-width: 481px) {
+  .header-subnav-wrap::after { display: none; }
+}
+
+/* ── Welcome banner compact on mobile ───────────────────────────────────────── */
+
+@media (max-width: 480px) {
+  .welcome-banner {
+    padding: 14px 12px !important;
+  }
+  .welcome-heading {
+    font-size: 0.8125rem !important;
+    margin-bottom: 6px !important;
+  }
+  .welcome-desc {
+    font-size: 0.75rem !important;
+  }
+  .welcome-expires {
+    display: none !important;
+  }
+}
+
+/* ── Scope selector — bigger tap targets on mobile ──────────────────────────── */
+
+@media (max-width: 480px) {
+  .scope-btn {
+    padding: 6px 14px !important;
+  }
+}
+
+/* ── Feed footer details/summary collapse on mobile ─────────────────────────── */
+
+.feed-how-details summary {
+  list-style: none;
+  cursor: pointer;
+  display: none; /* hidden on desktop — always expanded */
+}
+
+.feed-how-details summary::-webkit-details-marker { display: none; }
+
+/* Desktop: always show body, hide duplicate heading from summary */
+.feed-how-details { display: block; }
+.feed-how-details .feed-how-body { display: block; }
+
+@media (max-width: 480px) {
+  /* Show the summary toggle */
+  .feed-how-details summary {
+    display: block;
+  }
+  /* Hide body by default (collapsed) */
+  .feed-how-details .feed-how-body {
+    display: none;
+  }
+  /* When open, show body */
+  .feed-how-details[open] .feed-how-body {
+    display: block;
+  }
+}
+
 /* ── TikTok-style snap scroll (mobile) ─────────────────────────────────────── */
 
 @media (max-width: 639px) {

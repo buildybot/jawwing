@@ -656,7 +656,7 @@ export default function FeedPage() {
           </div>
 
           {/* Content type filters */}
-          <div style={{ display: "flex", gap: "12px", padding: "4px 0 8px", borderBottom: "1px solid #1A1A1A" }}>
+          <div style={{ display: "flex", gap: "14px", flexWrap: "wrap", padding: "4px 0 8px", borderBottom: "1px solid #1A1A1A" }}>
             {(["text", "image", "video", "link"] as PostContentType[]).map(type => (
               <label
                 key={type}
@@ -664,7 +664,7 @@ export default function FeedPage() {
                   ...MONO,
                   display: "flex",
                   alignItems: "center",
-                  gap: "4px",
+                  gap: "5px",
                   fontSize: "0.5625rem",
                   letterSpacing: "0.08em",
                   color: contentFilters[type] ? "#AAAAAA" : "#333333",
@@ -680,8 +680,8 @@ export default function FeedPage() {
                   style={{
                     appearance: "none",
                     WebkitAppearance: "none",
-                    width: "12px",
-                    height: "12px",
+                    width: "14px",
+                    height: "14px",
                     border: `1px solid ${contentFilters[type] ? "#AAAAAA" : "#333333"}`,
                     background: contentFilters[type] ? "#FFFFFF" : "transparent",
                     cursor: "pointer",
@@ -714,6 +714,7 @@ export default function FeedPage() {
                     try { localStorage.setItem(FEED_SCOPE_KEY, scope); } catch { /* noop */ }
                   }}
                   disabled={disabled}
+                  className="scope-btn"
                   style={{
                     ...MONO,
                     background: active ? "#FFFFFF" : "transparent",
@@ -773,6 +774,7 @@ export default function FeedPage() {
           {/* Welcome card */}
           {!welcomeDismissed && (
             <div
+              className="welcome-banner"
               style={{
                 background: "#0A0A0A",
                 border: "1px solid #1F1F1F",
@@ -786,13 +788,13 @@ export default function FeedPage() {
               }}
             >
               <div>
-                <p style={{ ...MONO, color: "#FFFFFF", fontSize: "1rem", fontWeight: 700, letterSpacing: "0.08em", marginBottom: "10px", lineHeight: 1.2 }}>
+                <p className="welcome-heading" style={{ ...MONO, color: "#FFFFFF", fontSize: "1rem", fontWeight: 700, letterSpacing: "0.08em", marginBottom: "10px", lineHeight: 1.2 }}>
                   YOUR NEIGHBORHOOD<br />IS TALKING
                 </p>
-                <p style={{ color: "#C0C0C0", fontSize: "0.875rem", lineHeight: 1.6, marginBottom: "6px" }}>
+                <p className="welcome-desc" style={{ color: "#C0C0C0", fontSize: "0.875rem", lineHeight: 1.6, marginBottom: "6px" }}>
                   Anonymous posts from people near you. No accounts. No names. Just 300 characters and an opinion.
                 </p>
-                <p style={{ color: "#AAAAAA", fontSize: "0.8125rem", lineHeight: 1.5, marginBottom: "14px" }}>
+                <p className="welcome-expires" style={{ color: "#AAAAAA", fontSize: "0.8125rem", lineHeight: 1.5, marginBottom: "14px" }}>
                   Posts expire in 30 days. What happens here, stays here.
                 </p>
                 <Link
@@ -985,9 +987,22 @@ export default function FeedPage() {
             margin: "40px 0 0",
             padding: "32px 16px 24px",
           }}>
-            {/* Algorithm explainer */}
-            <div style={{ marginBottom: "28px" }}>
-              <h3 style={{
+            {/* Algorithm explainer — collapsible on mobile */}
+            <details className="feed-how-details" style={{ marginBottom: "28px" }} open>
+              <summary style={{
+                ...MONO,
+                color: "#555555",
+                fontSize: "0.625rem",
+                letterSpacing: "0.12em",
+                fontWeight: 700,
+                marginBottom: "16px",
+                padding: "4px 0",
+              }}>
+                HOW THE FEED WORKS ▸
+              </summary>
+
+              {/* Always-visible heading on desktop */}
+              <h3 className="feed-how-body" style={{
                 ...MONO,
                 color: "#555555",
                 fontSize: "0.625rem",
@@ -998,7 +1013,7 @@ export default function FeedPage() {
                 HOW THE FEED WORKS
               </h3>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div className="feed-how-body" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                 {/* Sort modes */}
                 <div>
                   <h4 style={{ ...MONO, color: "#888888", fontSize: "0.625rem", letterSpacing: "0.08em", fontWeight: 600, marginBottom: "6px" }}>
@@ -1053,7 +1068,7 @@ export default function FeedPage() {
                   </div>
                 </div>
               </div>
-            </div>
+            </details>
 
             <p style={{ ...MONO, color: "#333333", fontSize: "0.5625rem", letterSpacing: "0.06em" }}>
               JAWWING · 2026

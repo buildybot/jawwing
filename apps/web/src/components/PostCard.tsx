@@ -1026,133 +1026,143 @@ function PostCard({ post, variant = "card", feedScope }: PostCardProps) {
         </div>
       )}
 
-      {/* Meta row */}
-      <div className="flex items-center justify-between" style={{ marginTop: "12px" }}>
-        {/* Voting */}
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => vote("up")}
-            disabled={voting}
-            style={{
-              color: voted === "up" ? "#FFFFFF" : "#AAAAAA",
-              background: "none",
-              border: "none",
-              cursor: voting ? "wait" : "pointer",
-              transform: voteAnim === "up" ? "scale(1.2)" : "scale(1)",
-              transition: "color 150ms, transform 150ms",
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              minWidth: "44px",
-              minHeight: "44px",
-              fontSize: "1rem",
-            }}
-            aria-label="Upvote"
-          >
-            ▲
-          </button>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "2px" }}>
-            <AnimatedScore value={score} voted={voted} />
-            {controversial && (
-              <span style={{ fontSize: "0.65rem", color: "#FFF", lineHeight: 1 }} title="Hot debate">⚡</span>
-            )}
+      {/* Meta row — two rows on mobile (<480px), single row on desktop */}
+      <div className="post-meta-wrap" style={{ marginTop: "12px" }}>
+
+        {/* Top row: vote buttons + info */}
+        <div className="post-meta-top">
+          {/* Voting */}
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", flexShrink: 0 }}>
+            <button
+              onClick={() => vote("up")}
+              disabled={voting}
+              style={{
+                color: voted === "up" ? "#FFFFFF" : "#AAAAAA",
+                background: "none",
+                border: "none",
+                cursor: voting ? "wait" : "pointer",
+                transform: voteAnim === "up" ? "scale(1.2)" : "scale(1)",
+                transition: "color 150ms, transform 150ms",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                minWidth: "44px",
+                minHeight: "44px",
+                fontSize: "1rem",
+              }}
+              aria-label="Upvote"
+            >
+              ▲
+            </button>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "2px" }}>
+              <AnimatedScore value={score} voted={voted} />
+              {controversial && (
+                <span style={{ fontSize: "0.65rem", color: "#FFF", lineHeight: 1 }} title="Hot debate">⚡</span>
+              )}
+            </div>
+            <button
+              onClick={() => vote("down")}
+              disabled={voting}
+              style={{
+                color: voted === "down" ? "#C0C0C0" : "#AAAAAA",
+                opacity: voted === "down" ? 1 : 0.6,
+                background: "none",
+                border: "none",
+                cursor: voting ? "wait" : "pointer",
+                transform: voteAnim === "down" ? "scale(1.2)" : "scale(1)",
+                transition: "color 150ms, transform 150ms, opacity 150ms",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                minWidth: "44px",
+                minHeight: "44px",
+                fontSize: "1rem",
+              }}
+              aria-label="Downvote"
+            >
+              ▼
+            </button>
           </div>
-          <button
-            onClick={() => vote("down")}
-            disabled={voting}
-            style={{
-              color: voted === "down" ? "#C0C0C0" : "#AAAAAA",
-              opacity: voted === "down" ? 1 : 0.6,
-              background: "none",
-              border: "none",
-              cursor: voting ? "wait" : "pointer",
-              transform: voteAnim === "down" ? "scale(1.2)" : "scale(1)",
-              transition: "color 150ms, transform 150ms, opacity 150ms",
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              minWidth: "44px",
-              minHeight: "44px",
-              fontSize: "1rem",
-            }}
-            aria-label="Downvote"
+
+          {/* Right info — clicks navigate to post detail */}
+          <Link
+            href={`/post/${post.id}`}
+            style={{ color: "#AAAAAA", textDecoration: "none", ...MONO, letterSpacing: "0.02em", flex: 1, minWidth: 0 }}
+            className="post-meta-info text-xs hover:text-[#A0A0A0] transition-colors"
           >
-            ▼
-          </button>
+            {post.expires_at && <ExpiryIndicator expiresAt={post.expires_at} />}
+            <span style={{ display: "flex", alignItems: "center", gap: "4px", flexShrink: 0 }}>
+              <span>💬</span>
+              <span style={{ ...MONO, fontSize: "0.75rem" }}>{replyCount}</span>
+            </span>
+            {post.distance && (
+              <>
+                <span style={{ color: "#1F1F1F" }}>·</span>
+                <span style={{ textTransform: "uppercase", flexShrink: 0 }}>{post.distance}</span>
+              </>
+            )}
+            {post.timeAgo && (
+              <>
+                <span style={{ color: "#1F1F1F" }}>·</span>
+                <span style={{ flexShrink: 0 }}>{post.timeAgo}</span>
+              </>
+            )}
+            {feedScope === "country" && post.metro && (
+              <>
+                <span style={{ color: "#1F1F1F" }}>·</span>
+                <span style={{ ...MONO, fontSize: "0.625rem", letterSpacing: "0.08em", color: "#888888", textTransform: "uppercase", flexShrink: 0 }}>{post.metro}</span>
+              </>
+            )}
+            {/* Mod badge visible on desktop only */}
+            {(post.mod_confidence !== undefined) && (
+              <span className="post-meta-modbadge-desktop" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                <span style={{ color: "#1F1F1F" }}>·</span>
+                <ModBadge postId={post.id} modConfidence={post.mod_confidence} />
+              </span>
+            )}
+          </Link>
         </div>
 
-        {/* Right meta — clicking anywhere navigates to post detail */}
-        <Link
-          href={`/post/${post.id}`}
-          style={{ color: "#AAAAAA", textDecoration: "none", display: "flex", alignItems: "center", gap: "10px", ...MONO, letterSpacing: "0.02em" }}
-          className="text-xs hover:text-[#A0A0A0] transition-colors"
-          onClick={(e) => {
-            // Don't intercept the share button click (it's a sibling, not nested here)
-          }}
-        >
-          {post.expires_at && <ExpiryIndicator expiresAt={post.expires_at} />}
-          {/* Comment count */}
-          <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-            <span>💬</span>
-            <span style={{ ...MONO, fontSize: "0.75rem" }}>{replyCount}</span>
-          </span>
-          {post.distance && (
-            <>
-              <span style={{ color: "#1F1F1F" }}>·</span>
-              <span style={{ textTransform: "uppercase" }}>{post.distance}</span>
-            </>
-          )}
-          {post.timeAgo && (
-            <>
-              <span style={{ color: "#1F1F1F" }}>·</span>
-              <span>{post.timeAgo}</span>
-            </>
-          )}
-          {feedScope === "country" && post.metro && (
-            <>
-              <span style={{ color: "#1F1F1F" }}>·</span>
-              <span style={{ ...MONO, fontSize: "0.625rem", letterSpacing: "0.08em", color: "#888888", textTransform: "uppercase" }}>{post.metro}</span>
-            </>
-          )}
-          {(post.mod_confidence !== undefined) && (
-            <>
-              <span style={{ color: "#1F1F1F" }}>·</span>
-              <ModBadge postId={post.id} modConfidence={post.mod_confidence} />
-            </>
-          )}
-        </Link>
-
-        {/* Report / Share / Block — inline on same row */}
-        <div style={{ display: "flex", alignItems: "center", gap: "6px", marginLeft: "auto", paddingLeft: "8px", flexShrink: 0 }}>
-          <ReportButton postId={post.id} size="sm" />
-          <button
-            onClick={handleShare}
-            style={{
-              color: copyLabel === "COPIED ✓" ? "#FFFFFF" : "#888888",
-              background: "none", border: "none", cursor: "pointer", padding: "2px 4px",
-              fontSize: "0.6875rem", lineHeight: 1, ...MONO, letterSpacing: "0.04em", transition: "color 150ms",
-            }}
-            className="hover:text-[#A0A0A0]"
-            aria-label="Share post"
-            title="Copy link"
-          >
-            ↗
-          </button>
-          {(post.author_id || post.user_id) && (
+        {/* Bottom row: report/share/block (left) + mod badge (right, mobile only) */}
+        <div className="post-meta-bottom">
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <ReportButton postId={post.id} size="sm" />
             <button
-              onClick={handleBlock}
-              title="Block this user"
-              aria-label="Block user"
+              onClick={handleShare}
               style={{
-                background: "none", border: "none", cursor: "pointer", color: "#888888",
-                fontSize: "0.6875rem", lineHeight: 1, padding: "2px 4px", ...MONO, transition: "color 150ms",
+                color: copyLabel === "COPIED ✓" ? "#FFFFFF" : "#888888",
+                background: "none", border: "none", cursor: "pointer", padding: "2px 4px",
+                fontSize: "0.6875rem", lineHeight: 1, ...MONO, letterSpacing: "0.04em", transition: "color 150ms",
               }}
               className="hover:text-[#A0A0A0]"
+              aria-label="Share post"
+              title="Copy link"
             >
-              🚫
+              ↗
             </button>
+            {(post.author_id || post.user_id) && (
+              <button
+                onClick={handleBlock}
+                title="Block this user"
+                aria-label="Block user"
+                style={{
+                  background: "none", border: "none", cursor: "pointer", color: "#888888",
+                  fontSize: "0.6875rem", lineHeight: 1, padding: "2px 4px", ...MONO, transition: "color 150ms",
+                }}
+                className="hover:text-[#A0A0A0]"
+              >
+                🚫
+              </button>
+            )}
+          </div>
+          {/* Mod badge — mobile only (right side of bottom row) */}
+          {(post.mod_confidence !== undefined) && (
+            <span className="post-meta-modbadge-mobile" style={{ alignItems: "center" }}>
+              <ModBadge postId={post.id} modConfidence={post.mod_confidence} />
+            </span>
           )}
         </div>
+
       </div>
     </article>
   );

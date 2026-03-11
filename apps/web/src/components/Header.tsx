@@ -151,37 +151,42 @@ export default function Header({
         </div>
       </div>
 
-      {/* Secondary nav — legible links */}
-      <div
-        className="feed-container mx-auto flex items-center gap-5 px-4"
-        style={{
-          borderTop: "1px solid #1A1A1A",
-          paddingTop: "6px",
-          paddingBottom: "6px",
-        }}
-      >
-        {[
-          { href: "/constitution", label: "CONSTITUTION" },
-          { href: "/transparency", label: "TRANSPARENCY" },
-          { href: "/terms", label: "TERMS" },
-          { href: "/privacy", label: "PRIVACY" },
-        ].map(({ href, label }) => (
-          <Link
-            key={href}
-            href={href}
-            style={{
-              ...MONO,
-              fontSize: "0.6875rem",
-              letterSpacing: "0.06em",
-              color: "#AAAAAA",
-              textDecoration: "none",
-              fontWeight: 500,
-            }}
-            className="hover:text-[#FFFFFF] transition-colors"
-          >
-            {label}
-          </Link>
-        ))}
+      {/* Secondary nav — legible links, scrollable on mobile with gradient hint */}
+      <div className="header-subnav-wrap" style={{ borderTop: "1px solid #1A1A1A" }}>
+        <div
+          className="feed-container mx-auto flex items-center gap-5 px-4"
+          style={{
+            paddingTop: "6px",
+            paddingBottom: "6px",
+            overflowX: "auto",
+            WebkitOverflowScrolling: "touch" as React.CSSProperties["WebkitOverflowScrolling"],
+            scrollbarWidth: "none",
+          } as React.CSSProperties}
+        >
+          {[
+            { href: "/constitution", label: "CONSTITUTION" },
+            { href: "/transparency", label: "TRANSPARENCY" },
+            { href: "/terms", label: "TERMS" },
+            { href: "/privacy", label: "PRIVACY" },
+          ].map(({ href, label }) => (
+            <Link
+              key={href}
+              href={href}
+              style={{
+                ...MONO,
+                fontSize: "0.6875rem",
+                letterSpacing: "0.06em",
+                color: "#AAAAAA",
+                textDecoration: "none",
+                fontWeight: 500,
+                flexShrink: 0,
+              }}
+              className="hover:text-[#FFFFFF] transition-colors"
+            >
+              {label}
+            </Link>
+          ))}
+        </div>
       </div>
     </header>
   );
