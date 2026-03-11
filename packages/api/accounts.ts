@@ -122,6 +122,10 @@ export async function findOrCreateAccount(
     return updated;
   }
 
+  // Auto-admin for configured admin emails
+  const adminEmails = (process.env.ADMIN_EMAILS ?? "benl1291@gmail.com").toLowerCase().split(",").map(e => e.trim());
+  const isAdmin = adminEmails.includes(email.toLowerCase().trim()) ? 1 : 0;
+
   // Create new account
   const [created] = await db
     .insert(accounts)
@@ -131,6 +135,7 @@ export async function findOrCreateAccount(
       email_encrypted: emailEncrypted,
       session_ids: JSON.stringify([sessionId]),
       notification_prefs: '{"replies":true,"trending":false}',
+      is_admin: isAdmin,
       created_at: ts,
       last_seen_at: ts,
     })

@@ -33,7 +33,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
 
     // Verify the 6-digit code (uses the existing in-memory code store)
-    checkAndConsumeCode(email, code);
+    await checkAndConsumeCode(email, code);
 
     // Get the current anonymous session ID to link to this account
     const sessionId = getAnonymousId(req);

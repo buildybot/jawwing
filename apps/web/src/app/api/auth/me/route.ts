@@ -1,31 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getAccountFromRequest, decryptEmail } from "@jawwing/api/accounts";
 
 /**
  * GET /api/auth/me
- * Validates the Bearer token and returns current user info.
- * The client-side auth context can call this to re-validate a stored token.
- *
- * For now, we decode the JWT client-side for expiry. This endpoint
- * provides server-side validation when needed.
+ * Returns current account info from JWT cookie or Bearer token.
  */
 export async function GET(req: NextRequest) {
-  const authHeader = req.headers.get("authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const token = authHeader.slice(7);
-
   try {
-    // Dynamically import server-only auth so this only runs on server
-    const { validateSession } = await import("@jawwing/api/auth");
-    const payload = validateSession(token);
+    const account = await getAccountFromRequest(req);
+    if (!account) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Decrypt email for display (masked on client side)
+    let email: string | null = null;
+    try {
+      if (account.email_encrypted) {
+        email = decryptEmail(account.email_encrypted);
+      }
+    } catch { /* can't decrypt — that's fine */ }
 
     return NextResponse.json({
-      user: {
-        id: payload.sub,
-        type: payload.type,
-      },
+      id: account.id,
+      email,
+      isAdmin: account.is_admin === 1,
+      createdAt: account.created_at,
     });
   } catch {
     return NextResponse.json({ error: "Invalid or expired token" }, { status: 401 });

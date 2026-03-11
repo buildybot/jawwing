@@ -34,23 +34,18 @@ export interface ApiKeyResult {
   id: string;    // record id
 }
 
-// ─── In-memory code store (v1) ────────────────────────────────────────────────
+// ─── Verification code store (Turso DB) ───────────────────────────────────────
 
-interface PendingCode {
-  code: string;
-  expiresAt: number; // unix ms
-}
+import { createClient as createTursoClient } from "@libsql/client";
 
-const pendingCodes = new Map<string, PendingCode>();
 const CODE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
-// Prune expired entries periodically
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, val] of pendingCodes.entries()) {
-    if (val.expiresAt < now) pendingCodes.delete(key);
-  }
-}, 60_000);
+function getCodeClient() {
+  return createTursoClient({
+    url: process.env.TURSO_DATABASE_URL!,
+    authToken: process.env.TURSO_AUTH_TOKEN,
+  });
+}
 
 // ─── Display name wordlists ───────────────────────────────────────────────────
 
@@ -164,9 +159,13 @@ export async function sendVerificationCode(email: string): Promise<void> {
     html,
   });
 
-  pendingCodes.set(normalized, {
-    code,
-    expiresAt: Date.now() + CODE_TTL_MS,
+  // Store code in DB (survives across serverless instances)
+  const codeClient = getCodeClient();
+  const emailHash = hashEmail(normalized);
+  const expiresAt = Date.now() + CODE_TTL_MS;
+  await codeClient.execute({
+    sql: "INSERT OR REPLACE INTO verification_codes (email_hash, code, expires_at) VALUES (?, ?, ?)",
+    args: [emailHash, code, expiresAt],
   });
 }
 
@@ -177,16 +176,30 @@ export async function sendVerificationCode(email: string): Promise<void> {
  * Used by the optional email accounts system.
  * Throws if code is invalid/expired.
  */
-export function checkAndConsumeCode(email: string, code: string): void {
+export async function checkAndConsumeCode(email: string, code: string): Promise<void> {
   const normalized = normalizeEmail(email);
-  const pending = pendingCodes.get(normalized);
-  if (!pending) throw new Error("No pending verification code for this email");
-  if (Date.now() > pending.expiresAt) {
-    pendingCodes.delete(normalized);
-    throw new Error("Verification code has expired");
-  }
-  if (pending.code !== code.trim()) throw new Error("Invalid verification code");
-  pendingCodes.delete(normalized);
+  const emailHash = hashEmail(normalized);
+  const codeClient = getCodeClient();
+
+  const result = await codeClient.execute({
+    sql: "SELECT code, expires_at FROM verification_codes WHERE email_hash = ?",
+    args: [emailHash],
+  });
+
+  if (result.rows.length === 0) throw new Error("No pending verification code for this email");
+
+  const row = result.rows[0];
+  const storedCode = String(row.code);
+  const expiresAt = Number(row.expires_at);
+
+  // Always delete after lookup (one-time use)
+  await codeClient.execute({
+    sql: "DELETE FROM verification_codes WHERE email_hash = ?",
+    args: [emailHash],
+  });
+
+  if (Date.now() > expiresAt) throw new Error("Verification code has expired");
+  if (storedCode !== code.trim()) throw new Error("Invalid verification code");
 }
 
 /** Verify code, create user if new, return JWT session token. */
@@ -194,18 +207,9 @@ export async function verifyCode(
   email: string,
   code: string
 ): Promise<AuthResult> {
+  // Consume the code from DB (throws on invalid/expired)
+  await checkAndConsumeCode(email, code);
   const normalized = normalizeEmail(email);
-  const pending = pendingCodes.get(normalized);
-
-  if (!pending) throw new Error("No pending verification code for this email");
-  if (Date.now() > pending.expiresAt) {
-    pendingCodes.delete(normalized);
-    throw new Error("Verification code has expired");
-  }
-  if (pending.code !== code.trim()) throw new Error("Invalid verification code");
-
-  // Code consumed — delete immediately
-  pendingCodes.delete(normalized);
 
   const emailHash = hashEmail(email);
 
