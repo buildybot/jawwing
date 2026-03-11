@@ -33,6 +33,15 @@ export async function POST(req: NextRequest, context: RouteContext): Promise<Nex
       return NextResponse.json({ error: "Forbidden", code: "BANNED" }, { status: 403 });
     }
 
+    // Rate limit: 30 votes per IP per hour
+    const voteRateLimit = await checkRateLimit(`vote:${ipHash}`, 60 * 60, 30);
+    if (!voteRateLimit.allowed) {
+      return NextResponse.json(
+        { error: "Too many votes. Slow down.", code: "RATE_LIMITED" },
+        { status: 429 }
+      );
+    }
+
     // Optional account auth
     const accountId = await getOptionalAccountId(req);
 
