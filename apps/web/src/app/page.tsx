@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import Header from "@/components/Header";
-import FeedTabs, { SortTab } from "@/components/FeedTabs";
+import FeedTabs, { SortTab, TopRange } from "@/components/FeedTabs";
 import PostCard, { Post as PostCardPost } from "@/components/PostCard";
 import CreatePostModal from "@/components/CreatePostModal";
 import InlineCompose from "@/components/InlineCompose";
@@ -154,6 +154,7 @@ function toCardPost(
 export default function FeedPage() {
   const { isBlocked } = useBlockedUsers();
   const [activeTab, setActiveTab] = useState<SortTab>("new");
+  const [topRange, setTopRange] = useState<TopRange>("all");
   const [showModal, setShowModal] = useState(false);
 
   // Scope selector: LOCAL / METRO / COUNTRY
@@ -348,7 +349,8 @@ export default function FeedPage() {
           LIMIT,
           currentOffset,
           apiMode,
-          radiusMeters
+          radiusMeters,
+          activeTab === "top" ? topRange : undefined
         );
         fetchedPosts = data.posts;
 
@@ -364,7 +366,8 @@ export default function FeedPage() {
           for (const step of expansionSteps) {
             if (fetchedPosts.length >= MIN_POSTS) break;
             const fallback = await fetchPosts(
-              feedLat, feedLng, activeTab as "hot" | "new" | "top", LIMIT, 0, step.mode, step.radius
+              feedLat, feedLng, activeTab as "hot" | "new" | "top", LIMIT, 0, step.mode, step.radius,
+              activeTab === "top" ? topRange : undefined
             );
             if (fallback.posts.length > fetchedPosts.length) {
               fetchedPosts = fallback.posts;
@@ -379,7 +382,7 @@ export default function FeedPage() {
         // Only triggers if user hasn't manually saved a scope preference.
         const savedPref = typeof window !== "undefined" && localStorage.getItem(FEED_SCOPE_KEY);
         if (reset && !savedPref && feedScope !== "country" && fetchedPosts.length < 3) {
-          const countryData = await fetchPosts(feedLat, feedLng, activeTab as "hot" | "new" | "top", LIMIT, 0, "everywhere");
+          const countryData = await fetchPosts(feedLat, feedLng, activeTab as "hot" | "new" | "top", LIMIT, 0, "everywhere", undefined, activeTab === "top" ? topRange : undefined);
           if (countryData.posts.length > fetchedPosts.length) {
             fetchedPosts = countryData.posts;
             setFeedScope("country");
@@ -413,7 +416,7 @@ export default function FeedPage() {
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [userLat, userLng, activeTab, offset, selectedTerritory, feedScope]
+    [userLat, userLng, activeTab, offset, selectedTerritory, feedScope, topRange]
   );
 
   // Load on mount + when tab/territory/scope changes (wait until scope is hydrated from localStorage)
@@ -421,7 +424,7 @@ export default function FeedPage() {
     if (!scopeReady) return;
     loadFeed(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, selectedTerritory, feedScope, scopeReady]);
+  }, [activeTab, selectedTerritory, feedScope, scopeReady, topRange]);
 
   // Reload with refined coords when GPS comes in
   useEffect(() => {
@@ -622,7 +625,7 @@ export default function FeedPage() {
           {/* Feed tabs + refresh */}
           <div style={{ display: "flex", alignItems: "center" }}>
             <div style={{ flex: 1 }}>
-              <FeedTabs active={activeTab} onChange={setActiveTab} />
+              <FeedTabs active={activeTab} onChange={setActiveTab} topRange={topRange} onTopRangeChange={setTopRange} />
             </div>
             <button
               onClick={() => loadFeed(true)}
@@ -1007,7 +1010,7 @@ export default function FeedPage() {
                     </p>
                     <p style={{ color: "#555555", fontSize: "0.75rem", lineHeight: 1.5, margin: 0 }}>
                       <span style={{ ...MONO, color: "#888888", fontSize: "0.625rem", letterSpacing: "0.06em" }}>TOP </span>
-                      Sorted by total engagement (upvotes + downvotes combined). The most interacted-with posts rise to the top, regardless of whether people agreed or not.
+                      Sorted by total engagement (upvotes + downvotes combined). Filter by 24H, WEEK, MONTH, or ALL TIME to see the best posts from any period.
                     </p>
                   </div>
                 </div>

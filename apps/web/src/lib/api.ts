@@ -127,7 +127,8 @@ export async function fetchPosts(
   limit = 20,
   offset = 0,
   mode: "auto" | "radius" | "territory" | "everywhere" = "auto",
-  radiusMeters?: number
+  radiusMeters?: number,
+  topRange?: "24h" | "week" | "month" | "all"
 ): Promise<{ posts: Post[]; meta: { limit: number; offset: number; count: number; mode?: string; territoryId?: string } }> {
   const params = new URLSearchParams({
     lat: String(lat),
@@ -138,6 +139,7 @@ export async function fetchPosts(
     mode,
   });
   if (radiusMeters != null) params.set("radius", String(radiusMeters));
+  if (topRange && sort === "top") params.set("topRange", topRange);
   return request(`/v1/posts?${params}`);
 }
 

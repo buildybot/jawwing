@@ -17,6 +17,8 @@ export interface FeedParams {
   hexes?: string[];
   /** If provided, filter out posts from these user_ids (blocks) */
   blockedUserIds?: string[];
+  /** For TOP sort: minimum created_at timestamp (time range filter) */
+  topRangeMinTs?: number;
 }
 
 // ─── Scoring ──────────────────────────────────────────────────────────────────
@@ -144,12 +146,13 @@ export async function buildFeedQuery(params: FeedParams) {
     offset = 0,
     hexes: precomputedHexes,
     blockedUserIds,
+    topRangeMinTs,
   } = params;
 
   const hexes = precomputedHexes ?? getHexesForRadius(lat, lng, radiusMeters);
   const nowTs = Math.floor(Date.now() / 1000);
 
-  // TOP ALL TIME ignores expiry — shows best posts ever in this area
+  // TOP ignores expiry but supports time range filtering
   const baseConditions = and(
     inArray(posts.h3_index, hexes),
     eq(posts.status, "active"),
@@ -158,8 +161,12 @@ export async function buildFeedQuery(params: FeedParams) {
       : undefined
   );
 
+  const topConditions = topRangeMinTs
+    ? and(baseConditions, gt(posts.created_at, topRangeMinTs))
+    : baseConditions;
+
   const conditions = sort === "top"
-    ? baseConditions
+    ? topConditions
     : and(baseConditions, gt(posts.expires_at, nowTs));
 
   if (sort === "new") {

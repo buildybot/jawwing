@@ -233,6 +233,19 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     const offset = parseInt(searchParams.get("offset") ?? "0", 10);
     const mode = searchParams.get("mode") ?? "auto"; // "auto" | "radius" | "territory" | "everywhere"
     const territoryParam = searchParams.get("territory"); // explicit territory ID
+    const topRange = searchParams.get("topRange") ?? "all"; // "24h" | "week" | "month" | "all"
+
+    // Compute the minimum created_at timestamp for TOP range filtering
+    let topRangeMinTs: number | undefined;
+    if (sort === "top" && topRange !== "all") {
+      const nowSec = Math.floor(Date.now() / 1000);
+      const rangeSeconds: Record<string, number> = {
+        "24h": 24 * 3600,
+        "week": 7 * 24 * 3600,
+        "month": 30 * 24 * 3600,
+      };
+      topRangeMinTs = nowSec - (rangeSeconds[topRange] ?? 0);
+    }
 
     if (!["hot", "new", "top"].includes(sort)) {
       return NextResponse.json({ error: "sort must be hot, new, or top", code: "INVALID_PARAMS" }, { status: 400 });
@@ -256,9 +269,12 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     // EVERYWHERE mode: return all active posts, no geo filter
     if (mode === "everywhere") {
       const nowTs = Math.floor(Date.now() / 1000);
-      // TOP ALL TIME: no expiry filter. HOT/NEW: respect expiry.
+      // TOP: no expiry filter but optional time range. HOT/NEW: respect expiry.
       const baseConditions = eq(posts.status, "active");
-      const conditions = sort === "top" ? baseConditions : and(baseConditions, gt(posts.expires_at, nowTs));
+      const topConditions = topRangeMinTs
+        ? and(baseConditions, gt(posts.created_at, topRangeMinTs))
+        : baseConditions;
+      const conditions = sort === "top" ? topConditions : and(baseConditions, gt(posts.expires_at, nowTs));
       const HOT_GRAVITY = 1.2;
       let results;
       if (sort === "new") {
@@ -338,6 +354,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       offset,
       hexes: territoryHexes,
       blockedUserIds,
+      topRangeMinTs: topRangeMinTs,
     });
 
     const resultsWithMetro = results.map((p) => sanitizePostForResponse({ ...p, metro: getMetroName(p.lat, p.lng) }));
