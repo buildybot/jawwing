@@ -46,6 +46,24 @@ const IMAGE_RE = /https?:\/\/[^\s<>"')\]]+\.(?:jpg|jpeg|png|gif|webp)(\?[^\s<>"'
 // Video domains — skip OG preview for these, just show plain link
 const VIDEO_DOMAIN_RE = /(?:youtube\.com|youtu\.be|tiktok\.com|vimeo\.com|twitch\.tv|dailymotion\.com)/i;
 
+/** Domains that get rich previews without warnings */
+const TRUSTED_DOMAINS = new Set([
+  "youtube.com", "youtu.be", "tiktok.com", "vimeo.com", "twitch.tv", "instagram.com",
+  "reddit.com", "old.reddit.com", "twitter.com", "x.com",
+  "nytimes.com", "washingtonpost.com", "bbc.com", "bbc.co.uk", "cnn.com", "npr.org",
+  "apnews.com", "reuters.com", "theguardian.com", "wsj.com",
+  "wikipedia.org", "en.wikipedia.org",
+  "github.com", "medium.com", "substack.com",
+  "jawwing.com", "www.jawwing.com",
+]);
+
+function isDomainTrusted(url: string): boolean {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, "").toLowerCase();
+    return TRUSTED_DOMAINS.has(host) || Array.from(TRUSTED_DOMAINS).some(d => host.endsWith("." + d));
+  } catch { return false; }
+}
+
 function matchImageUrls(content: string): string[] {
   IMAGE_RE.lastIndex = 0;
   return Array.from(new Set(content.match(IMAGE_RE) || []));
@@ -83,17 +101,32 @@ function ContentWithLinks({ content, fontSize }: { content: string; fontSize?: s
   while ((m = re.exec(content)) !== null) {
     if (m.index > last) parts.push(content.slice(last, m.index));
     const url = m[0];
+    const trusted = isDomainTrusted(url);
     parts.push(
-      <a
-        key={m.index}
-        href={url}
-        target="_blank"
-        rel="noopener noreferrer"
-        style={{ color: "#FFFFFF", textDecoration: "underline" }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {shortenUrl(url)}
-      </a>
+      <span key={m.index} style={{ display: "inline" }}>
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: "#FFFFFF", textDecoration: "underline" }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {shortenUrl(url)}
+        </a>
+        {!trusted && (
+          <span
+            title="This link has not been verified by Jawwing. Visit at your own risk."
+            style={{
+              display: "inline-block",
+              marginLeft: "4px",
+              fontSize: "0.625rem",
+              color: "#EAB308",
+              cursor: "help",
+              verticalAlign: "middle",
+            }}
+          >⚠</span>
+        )}
+      </span>
     );
     last = m.index + url.length;
   }
