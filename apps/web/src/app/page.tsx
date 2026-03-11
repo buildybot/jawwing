@@ -328,6 +328,18 @@ export default function FeedPage() {
           }
         }
 
+        // Smart default: if first load (reset) on metro/local returns very few posts,
+        // auto-switch to COUNTRY so users always see a full feed on arrival.
+        // Only triggers if user hasn't manually saved a scope preference.
+        const savedPref = typeof window !== "undefined" && localStorage.getItem(FEED_SCOPE_KEY);
+        if (reset && !savedPref && feedScope !== "country" && fetchedPosts.length < 3) {
+          const countryData = await fetchPosts(feedLat, feedLng, activeTab as "hot" | "new" | "top", LIMIT, 0, "everywhere");
+          if (countryData.posts.length > fetchedPosts.length) {
+            fetchedPosts = countryData.posts;
+            setFeedScope("country");
+          }
+        }
+
         // Client-side distance-boosted sort for HOT tab
         if (activeTab === "hot") {
           fetchedPosts = sortPostsHot(fetchedPosts, feedLat, feedLng, feedScope);
@@ -944,7 +956,7 @@ export default function FeedPage() {
                   </h4>
                   <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                     <p style={{ color: "#555555", fontSize: "0.75rem", lineHeight: 1.5, margin: 0 }}>
-                      All posts expire after 24 hours. You can only post from your current GPS location, but you can browse and vote from anywhere. Content is moderated by AI agents following our public Constitution. No humans moderate this app.
+                      All posts expire after 48 hours. You can only post from your current GPS location, but you can browse and vote from anywhere. Content is moderated by AI agents following our public Constitution. No humans moderate this app.
                     </p>
                   </div>
                 </div>
