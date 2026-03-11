@@ -44,6 +44,28 @@ const SCOPE_DISTANCE_SCALE: Record<FeedScope, number> = {
 const HOT_GRAVITY_CLIENT = 1.2;
 const SECONDS_PER_HOUR = 3600;
 
+// ─── Post type detection ──────────────────────────────────────────────────────
+const VIDEO_RE = /(?:youtube\.com|youtu\.be|tiktok\.com|vimeo\.com|twitch\.tv|dailymotion\.com)/i;
+const LINK_RE = /https?:\/\/[^\s<>"')\]]+/gi;
+
+type PostContentType = "text" | "image" | "video" | "link";
+
+function getPostType(post: Post): PostContentType {
+  if (post.image_url) return "image";
+  if (post.video_url || VIDEO_RE.test(post.content)) return "video";
+  LINK_RE.lastIndex = 0;
+  if (LINK_RE.test(post.content)) return "link";
+  return "text";
+}
+
+const CONTENT_TYPE_LABELS: Record<PostContentType, string> = {
+  text: "TEXT",
+  image: "IMAGE",
+  video: "VIDEO",
+  link: "LINK",
+};
+const CONTENT_FILTER_KEY = "jawwing_content_filters";
+
 function wilsonScore(ups: number, total: number): number {
   if (total === 0) return 0;
   const z = 1.96;
@@ -140,6 +162,9 @@ export default function FeedPage() {
   const [scopeReady, setScopeReady] = useState(false);
 
   const [posts, setPosts] = useState<Post[]>([]);
+  const [contentFilters, setContentFilters] = useState<Record<PostContentType, boolean>>({
+    text: true, image: true, video: true, link: true,
+  });
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -169,6 +194,14 @@ export default function FeedPage() {
         if (city && city.name && city.lat != null && city.lng != null) {
           setSelectedTerritory({ type: "city", city });
         }
+      }
+      // Restore content type filters
+      const savedFilters = localStorage.getItem(CONTENT_FILTER_KEY);
+      if (savedFilters) {
+        try {
+          const parsed = JSON.parse(savedFilters);
+          setContentFilters(prev => ({ ...prev, ...parsed }));
+        } catch { /* ignore */ }
       }
       // Show cached posts ONLY as a brief flash while real data loads (max 3 seconds)
       const cached = localStorage.getItem(FEED_CACHE_KEY);
@@ -251,6 +284,19 @@ export default function FeedPage() {
   }, []);
 
   const isRemoteTerritory = selectedTerritory.type === "city";
+
+  const toggleContentFilter = useCallback((type: PostContentType) => {
+    setContentFilters(prev => {
+      const next = { ...prev, [type]: !prev[type] };
+      // Don't allow all unchecked — keep at least one
+      if (!next.text && !next.image && !next.video && !next.link) return prev;
+      localStorage.setItem(CONTENT_FILTER_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  // Filter posts by content type
+  const filteredPosts = posts.filter(p => contentFilters[getPostType(p)]);
 
   // Load feed
   const loadFeed = useCallback(
@@ -601,6 +647,44 @@ export default function FeedPage() {
             </button>
           </div>
 
+          {/* Content type filters */}
+          <div style={{ display: "flex", gap: "12px", padding: "4px 0 8px", borderBottom: "1px solid #1A1A1A" }}>
+            {(["text", "image", "video", "link"] as PostContentType[]).map(type => (
+              <label
+                key={type}
+                style={{
+                  ...MONO,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  fontSize: "0.5625rem",
+                  letterSpacing: "0.08em",
+                  color: contentFilters[type] ? "#AAAAAA" : "#333333",
+                  cursor: "pointer",
+                  userSelect: "none",
+                  transition: "color 150ms",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={contentFilters[type]}
+                  onChange={() => toggleContentFilter(type)}
+                  style={{
+                    appearance: "none",
+                    WebkitAppearance: "none",
+                    width: "12px",
+                    height: "12px",
+                    border: `1px solid ${contentFilters[type] ? "#AAAAAA" : "#333333"}`,
+                    background: contentFilters[type] ? "#FFFFFF" : "transparent",
+                    cursor: "pointer",
+                    flexShrink: 0,
+                  }}
+                />
+                {CONTENT_TYPE_LABELS[type]}
+              </label>
+            ))}
+          </div>
+
           {/* Scope selector */}
           <div
             style={{
@@ -802,7 +886,7 @@ export default function FeedPage() {
           )}
 
           {/* Empty */}
-          {!loading && !error && posts.length === 0 && (
+          {!loading && !error && filteredPosts.length === 0 && (
             <div style={{ padding: "60px 16px", textAlign: "center" }}>
               <p style={{ ...MONO, color: "#FFFFFF", fontSize: "0.875rem", fontWeight: 700, letterSpacing: "0.1em", marginBottom: "10px" }}>
                 {feedScope === "local" ? "NOTHING NEARBY" : feedScope === "metro" ? "NOTHING IN THIS METRO" : "NOTHING HERE YET"}
@@ -847,9 +931,9 @@ export default function FeedPage() {
           )}
 
           {/* Posts */}
-          {!loading && !error && posts.length > 0 && (
+          {!loading && !error && filteredPosts.length > 0 && (
             <div className="flex flex-col" style={{ gap: "2px", paddingTop: "2px" }}>
-              {posts
+              {filteredPosts
                 .filter((post) => !post.user_id || !isBlocked(post.user_id))
                 .map((post) => (
                   <div
@@ -875,7 +959,7 @@ export default function FeedPage() {
             </p>
           )}
 
-          {!loading && !hasMore && posts.length > 0 && (
+          {!loading && !hasMore && filteredPosts.length > 0 && (
             <p style={{ ...MONO, color: "#333333", fontSize: "0.6875rem", letterSpacing: "0.06em", textAlign: "center", padding: "40px 0 80px" }}>
               {territoryName
                 ? `${territoryName.toUpperCase()} · TERRITORY`
