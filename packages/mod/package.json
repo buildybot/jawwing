@@ -8,7 +8,8 @@
     ".": "./index.ts",
     "./engine": "./engine.ts",
     "./reviewer": "./reviewer.ts",
-    "./automod": "./automod.ts"
+    "./automod": "./automod.ts",
+    "./constitution": "./constitution.ts"
   },
   "scripts": {
     "build": "tsc",

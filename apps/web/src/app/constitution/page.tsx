@@ -13,7 +13,7 @@ import {
   type ConstitutionVersionSummary,
   type ConstitutionAmendment,
 } from "@/lib/api";
-import { CONSTITUTION_RULES } from "@jawwing/mod/engine";
+import { CONSTITUTION_RULES } from "@jawwing/mod/constitution";
 
 const MONO = { fontFamily: "var(--font-mono), monospace" } as const;
 
