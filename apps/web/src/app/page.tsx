@@ -306,27 +306,14 @@ export default function FeedPage() {
         );
         fetchedPosts = data.posts;
 
-        // Auto-expand: if fewer than 10 posts, progressively widen
-        const MIN_POSTS = 10;
-        if (reset && fetchedPosts.length < MIN_POSTS) {
-          const expansionSteps: Array<{ mode: "radius" | "territory" | "everywhere"; radius?: number; label: string }> = [];
-
-          if (feedScope === "local") {
-            expansionSteps.push(
-              { mode: "radius", radius: 10000, label: "10KM" },
-              { mode: "radius", radius: 20000, label: "20KM" },
-            );
-            if (isRemoteTerritory) {
-              expansionSteps.push({ mode: "radius", radius: 30000, label: "METRO" });
-            } else {
-              expansionSteps.push({ mode: "territory", label: "METRO" });
-            }
-            expansionSteps.push({ mode: "everywhere", label: "EVERYWHERE" });
-          } else if (feedScope === "metro") {
-            expansionSteps.push(
-              { mode: "everywhere", label: "EVERYWHERE" },
-            );
-          }
+        // Auto-expand: LOCAL only expands within local radii (never jumps to metro/country).
+        // METRO and COUNTRY never auto-expand — they show exactly what's in that scope.
+        const MIN_POSTS = 5;
+        if (reset && fetchedPosts.length < MIN_POSTS && feedScope === "local") {
+          const expansionSteps: Array<{ mode: "radius"; radius: number; label: string }> = [
+            { mode: "radius", radius: 10000, label: "10KM" },
+            { mode: "radius", radius: 20000, label: "20KM" },
+          ];
 
           for (const step of expansionSteps) {
             if (fetchedPosts.length >= MIN_POSTS) break;
@@ -645,7 +632,7 @@ export default function FeedPage() {
             })}
             {!isRemoteTerritory && expandedScope && (
               <span style={{ ...MONO, color: "#888888", fontSize: "0.5625rem", letterSpacing: "0.06em", alignSelf: "center", marginLeft: "4px" }}>
-                NO POSTS NEARBY · SHOWING {expandedLabel || "DC METRO"}
+                EXPANDED TO {expandedLabel}
               </span>
             )}
           </div>
@@ -806,11 +793,20 @@ export default function FeedPage() {
           {!loading && !error && posts.length === 0 && (
             <div style={{ padding: "60px 16px", textAlign: "center" }}>
               <p style={{ ...MONO, color: "#FFFFFF", fontSize: "0.875rem", fontWeight: 700, letterSpacing: "0.1em", marginBottom: "10px" }}>
-                NOTHING HERE YET
+                {feedScope === "local" ? "NOTHING NEARBY" : feedScope === "metro" ? "NOTHING IN THIS METRO" : "NOTHING HERE YET"}
               </p>
-              <p style={{ color: "#AAAAAA", fontSize: "0.875rem", marginBottom: "28px" }}>
-                {territoryName ? `Be the first to post in ${territoryName}.` : "Be the first to post in your area."}
+              <p style={{ color: "#AAAAAA", fontSize: "0.875rem", marginBottom: "8px" }}>
+                {feedScope === "local"
+                  ? "No posts within 20km. Be the first to say something."
+                  : feedScope === "metro"
+                  ? `No posts in ${territoryName || "this metro"} yet. Start the conversation.`
+                  : "Be the first to post."}
               </p>
+              {feedScope === "local" && (
+                <p style={{ ...MONO, color: "#555", fontSize: "0.6875rem", letterSpacing: "0.06em", marginBottom: "20px" }}>
+                  TRY <button onClick={() => setFeedScope("metro")} style={{ ...MONO, background: "none", border: "none", color: "#AAAAAA", fontSize: "0.6875rem", letterSpacing: "0.06em", cursor: "pointer", textDecoration: "underline", textUnderlineOffset: "3px", padding: 0 }}>METRO</button> OR <button onClick={() => setFeedScope("country")} style={{ ...MONO, background: "none", border: "none", color: "#AAAAAA", fontSize: "0.6875rem", letterSpacing: "0.06em", cursor: "pointer", textDecoration: "underline", textUnderlineOffset: "3px", padding: 0 }}>COUNTRY</button> FOR MORE
+                </p>
+              )}
               {!isRemoteTerritory && (
                 <button
                   onClick={handleFabClick}
@@ -928,7 +924,7 @@ export default function FeedPage() {
                   <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                     <p style={{ color: "#555555", fontSize: "0.75rem", lineHeight: 1.5, margin: 0 }}>
                       <span style={{ ...MONO, color: "#888888", fontSize: "0.625rem", letterSpacing: "0.06em" }}>LOCAL </span>
-                      Posts within 5 kilometers of your current location. Your immediate neighborhood. If there aren{"'"}t enough posts nearby, the radius automatically expands until you see at least 10.
+                      Posts within 5-20km of you. Your immediate neighborhood. If few posts are nearby, try METRO for the full city.
                     </p>
                     <p style={{ color: "#555555", fontSize: "0.75rem", lineHeight: 1.5, margin: 0 }}>
                       <span style={{ ...MONO, color: "#888888", fontSize: "0.625rem", letterSpacing: "0.06em" }}>METRO </span>
